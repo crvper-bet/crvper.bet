@@ -1,15 +1,19 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// CRVPER.BET — Dynamic Sound System v3
+// CRVPER.BET — Dynamic Sound System v4 (Cross-Device Real-Time)
 // ─────────────────────────────────────────────────────────────────────────
 // Each sound key has ONE of three modes (set by Admin in real-time):
 //   "silent"  → no sound at all
 //   "default" → built-in synthesizer tone
-//   "custom"  → decoded AudioBuffer from IndexedDB (uploaded by Admin)
+//   "custom"  → decoded AudioBuffer from Supabase-synced base64 data URI
 //
-// Audio files are stored in IndexedDB via soundStorage.js (no size limit).
-// Playback uses Web Audio API BufferSource — zero-latency, mobile-safe.
-// crvper_sound_updated  → re-decodes changed key from IndexedDB
-// crvper_settings_updated → re-reads soundModes from adminSettings
+// Audio files live in Supabase (packed in admin_settings.qr_image_url JSON).
+// On startup, the engine fetches the latest config from Supabase and decodes
+// all custom audio. It polls every 30 seconds for admin changes — ensuring
+// all user devices play the latest admin-configured sounds in real-time.
+//
+// Events:
+//   crvper_sound_updated    → re-decodes changed key from remote config
+//   crvper_settings_updated → re-reads soundModes from remote config
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { soundStorage } from './soundStorage';
@@ -29,38 +33,59 @@ class SoundEngine {
     } catch {}
 
     if (typeof window !== 'undefined') {
-      // Pre-load all custom sounds from IndexedDB on startup
-      this._loadAllCustomSounds();
+      // Initial load: sync from Supabase then decode all custom sounds
+      this._initFromRemote();
 
       // Admin uploaded / deleted a specific sound file
       window.addEventListener('crvper_sound_updated', async (e) => {
-        const { key, deleted, all } = e.detail || {};
+        const { key, deleted, all, dataUrl } = e.detail || {};
         if (all && deleted) {
           this.customBuffers = {};
         } else if (key && deleted) {
           delete this.customBuffers[key];
+        } else if (key && dataUrl) {
+          // Directly decode from the data URI provided in the event
+          await this._decodeFromDataUrl(key, dataUrl);
         } else if (key) {
           await this._reloadSound(key);
         }
       });
 
-      // Admin changed a sound mode (silent / default / custom)
-      // No buffer action needed — getSoundMode() is always read live from storage
+      // Admin changed a sound mode — re-check which keys need decoding
       window.addEventListener('crvper_settings_updated', () => {
-        // Modes are read dynamically; nothing extra needed here.
-        // But if custom mode was just set, ensure the buffer is ready.
         SOUND_KEYS.forEach(k => {
           if (this.getSoundMode(k) === 'custom' && !this.customBuffers[k]) {
             this._reloadSound(k);
           }
         });
       });
+
+      // Poll Supabase every 30 seconds for admin sound config changes
+      setInterval(() => soundStorage.syncFromRemote(), 30000);
+
+      // Re-sync when user comes back to the tab / wakes the phone
+      window.addEventListener('focus', () => soundStorage.syncFromRemote());
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') soundStorage.syncFromRemote();
+      });
     }
+  }
+
+  // ─── Boot: sync from Supabase then pre-decode all custom sounds ───────────
+  async _initFromRemote() {
+    try {
+      await soundStorage.syncFromRemote();
+    } catch {}
+    await this._loadAllCustomSounds();
   }
 
   // ─── Read current mode for a key (live from storage) ─────────────────────
   getSoundMode(key) {
     try {
+      // First check the new soundStorage local config (highest priority)
+      const modes = soundStorage.getSoundModes();
+      if (modes[key]) return modes[key];
+      // Fall back to legacy adminSettings
       const settings = storage.getAdminSettings();
       return (settings?.soundModes?.[key]) || 'default';
     } catch {
@@ -86,12 +111,16 @@ class SoundEngine {
 
   isMuted() { return this.muted; }
 
-  // ─── IndexedDB helpers ────────────────────────────────────────────────────
+  // ─── IndexedDB / Storage helpers ─────────────────────────────────────────
   async _loadAllCustomSounds() {
     try {
       const all = await soundStorage.getAllSounds();
       for (const [key, meta] of Object.entries(all)) {
-        if (meta?.buffer) await this._decodeAndCache(key, meta.buffer);
+        if (meta?.buffer) {
+          await this._decodeAndCache(key, meta.buffer);
+        } else if (meta?.dataUrl) {
+          await this._decodeFromDataUrl(key, meta.dataUrl);
+        }
       }
     } catch (err) {
       console.warn('[Audio] Pre-load failed:', err);
@@ -103,10 +132,27 @@ class SoundEngine {
       const meta = await soundStorage.getSound(key);
       if (meta?.buffer) {
         await this._decodeAndCache(key, meta.buffer);
+      } else if (meta?.dataUrl) {
+        await this._decodeFromDataUrl(key, meta.dataUrl);
       } else {
         delete this.customBuffers[key];
       }
     } catch {}
+  }
+
+  async _decodeFromDataUrl(key, dataUrl) {
+    try {
+      if (!dataUrl || !dataUrl.startsWith('data:')) return;
+      const base64 = dataUrl.split(',')[1];
+      if (!base64) return;
+      const binary = atob(base64);
+      const buf = new ArrayBuffer(binary.length);
+      const view = new Uint8Array(buf);
+      for (let i = 0; i < binary.length; i++) view[i] = binary.charCodeAt(i);
+      await this._decodeAndCache(key, buf);
+    } catch (err) {
+      console.warn(`[Audio] Data URL decode failed for "${key}":`, err);
+    }
   }
 
   async _decodeAndCache(key, arrayBuffer) {
@@ -136,9 +182,16 @@ class SoundEngine {
       await this.ctx.resume().catch(() => {});
     }
 
-    // CUSTOM → play decoded AudioBuffer from IndexedDB
+    // CUSTOM → play decoded AudioBuffer
     if (mode === 'custom') {
-      const buffer = this.customBuffers[soundKey];
+      let buffer = this.customBuffers[soundKey];
+
+      // Buffer not decoded yet → try to load and decode now on-demand
+      if (!buffer) {
+        await this._reloadSound(soundKey);
+        buffer = this.customBuffers[soundKey];
+      }
+
       if (buffer) {
         try {
           const source = this.ctx.createBufferSource();
@@ -149,21 +202,8 @@ class SoundEngine {
         } catch (err) {
           console.warn(`[Audio] Custom playback failed for "${soundKey}":`, err);
         }
-      } else {
-        // Buffer not decoded yet → try to load it now
-        await this._reloadSound(soundKey);
-        const buf2 = this.customBuffers[soundKey];
-        if (buf2) {
-          try {
-            const src = this.ctx.createBufferSource();
-            src.buffer = buf2;
-            src.connect(this.ctx.destination);
-            src.start(0);
-            return;
-          } catch {}
-        }
-        // Fall through to synthesizer if custom file unavailable
       }
+      // Fall through to synthesizer if custom file unavailable
     }
 
     // DEFAULT → synthesizer

@@ -40,12 +40,17 @@ export default function AdminPage({ onExit }) {
 
   const loadAudioMeta = async () => {
     const all = await soundStorage.getAllSounds();
-    // Strip ArrayBuffer — keep only display metadata
+    // Strip ArrayBuffer/dataUrl — keep only display metadata
     const meta = {};
     for (const [key, val] of Object.entries(all)) {
       meta[key] = { name: val.name, size: val.size, type: val.type, updatedAt: val.updatedAt };
     }
     setCustomSoundMeta(meta);
+    // Refresh soundModes from the latest local config (already synced from Supabase)
+    const latestModes = soundStorage.getSoundModes();
+    if (latestModes && Object.keys(latestModes).length > 0) {
+      setSoundModes(prev => ({ ...prev, ...latestModes }));
+    }
   };
 
   const loadData = () => {
@@ -64,13 +69,15 @@ export default function AdminPage({ onExit }) {
   useEffect(() => {
     if (adminLoggedIn) {
       loadData();
-      loadAudioMeta();
+      // Sync from Supabase first so admin sees the latest cloud config
+      soundStorage.syncFromRemote().then(() => loadAudioMeta());
       window.addEventListener('crvper_deposits_updated', loadData);
       window.addEventListener('crvper_withdrawals_updated', loadData);
       window.addEventListener('crvper_support_updated', loadData);
       window.addEventListener('crvper_promoter_updated', loadData);
       window.addEventListener('crvper_user_updated', loadData);
       window.addEventListener('crvper_sound_updated', loadAudioMeta);
+      window.addEventListener('crvper_settings_updated', loadAudioMeta);
       return () => {
         window.removeEventListener('crvper_deposits_updated', loadData);
         window.removeEventListener('crvper_withdrawals_updated', loadData);
@@ -78,6 +85,7 @@ export default function AdminPage({ onExit }) {
         window.removeEventListener('crvper_promoter_updated', loadData);
         window.removeEventListener('crvper_user_updated', loadData);
         window.removeEventListener('crvper_sound_updated', loadAudioMeta);
+        window.removeEventListener('crvper_settings_updated', loadAudioMeta);
       };
     }
   }, [adminLoggedIn]);
@@ -161,18 +169,24 @@ export default function AdminPage({ onExit }) {
   };
 
   // Set mode for a sound key: 'silent' | 'default' | 'custom'
-  const handleSetSoundMode = (soundKey, newMode) => {
-    const current = storage.getAdminSettings();
-    const updatedModes = { ...(current.soundModes || {}), [soundKey]: newMode };
-    storage.updateAdminSettings({ soundModes: updatedModes });
-    setSoundModes(updatedModes);
-    // Notify audio engine
-    window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
-    setAudioFeedback(`✓ ${soundKey.toUpperCase()} → ${newMode.toUpperCase()}`);
-    setTimeout(() => setAudioFeedback(''), 2500);
+  // Syncs to Supabase immediately so ALL users hear the change in real-time
+  const handleSetSoundMode = async (soundKey, newMode) => {
+    try {
+      // Write to soundStorage (syncs to Supabase)
+      await soundStorage.setSoundMode(soundKey, newMode);
+      const updatedModes = { ...soundModes, [soundKey]: newMode };
+      setSoundModes(updatedModes);
+      // Also update legacy adminSettings soundModes for backward compat
+      storage.updateAdminSettings({ soundModes: updatedModes });
+      setAudioFeedback(`✓ ${soundKey.toUpperCase()} → ${newMode.toUpperCase()} (synced to all devices)`);
+      setTimeout(() => setAudioFeedback(''), 3000);
+    } catch (err) {
+      setAudioFeedback(`❌ Mode change failed: ${err.message}`);
+      setTimeout(() => setAudioFeedback(''), 3000);
+    }
   };
 
-  // Upload a custom audio file (≤5 MB) to IndexedDB
+  // Upload a custom audio file (≤5 MB) — stored in Supabase, live for ALL users
   const handleUploadSound = async (soundKey, file) => {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
@@ -181,17 +195,17 @@ export default function AdminPage({ onExit }) {
       return;
     }
     try {
-      setAudioFeedback(`⏳ Uploading "${file.name}"…`);
+      setAudioFeedback(`⏳ Uploading "${file.name}" to cloud…`);
+      // saveSound() encodes as base64, stores in Supabase, fires crvper_sound_updated
       await soundStorage.saveSound(soundKey, file);
-      // Auto-switch mode to 'custom' when a file is uploaded
-      const current = storage.getAdminSettings();
-      const updatedModes = { ...(current.soundModes || {}), [soundKey]: 'custom' };
-      storage.updateAdminSettings({ soundModes: updatedModes });
+      // soundStorage.saveSound() already sets mode to 'custom' and pushes to Supabase
+      const updatedModes = { ...soundModes, [soundKey]: 'custom' };
       setSoundModes(updatedModes);
-      window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
+      // Keep legacy soundModes in adminSettings in sync
+      storage.updateAdminSettings({ soundModes: updatedModes });
       await loadAudioMeta();
-      setAudioFeedback(`✓ "${file.name}" uploaded — ${soundKey.toUpperCase()} is now CUSTOM`);
-      setTimeout(() => setAudioFeedback(''), 3500);
+      setAudioFeedback(`✅ "${file.name}" saved to cloud — ${soundKey.toUpperCase()} is now CUSTOM (live for all users)`);
+      setTimeout(() => setAudioFeedback(''), 5000);
     } catch (err) {
       console.error('[Admin] Upload failed:', err);
       setAudioFeedback(`❌ Upload failed: ${err.message}`);
@@ -199,33 +213,42 @@ export default function AdminPage({ onExit }) {
     }
   };
 
-  // Remove custom file for a key and revert to default
+  // Remove custom file for a key and revert to default — syncs to all devices
   const handleResetSound = async (soundKey) => {
-    await soundStorage.deleteSound(soundKey);
-    const current = storage.getAdminSettings();
-    const updatedModes = { ...(current.soundModes || {}), [soundKey]: 'default' };
-    storage.updateAdminSettings({ soundModes: updatedModes });
-    setSoundModes(updatedModes);
-    window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
-    await loadAudioMeta();
-    setAudioFeedback(`✓ ${soundKey.toUpperCase()} reset to DEFAULT synthesizer`);
-    setTimeout(() => setAudioFeedback(''), 3000);
+    try {
+      setAudioFeedback(`⏳ Removing custom sound for ${soundKey.toUpperCase()}…`);
+      await soundStorage.deleteSound(soundKey); // pushes to Supabase
+      const updatedModes = { ...soundModes, [soundKey]: 'default' };
+      setSoundModes(updatedModes);
+      storage.updateAdminSettings({ soundModes: updatedModes });
+      await loadAudioMeta();
+      setAudioFeedback(`✓ ${soundKey.toUpperCase()} reset to DEFAULT synthesizer (synced to all devices)`);
+      setTimeout(() => setAudioFeedback(''), 3000);
+    } catch (err) {
+      setAudioFeedback(`❌ Reset failed: ${err.message}`);
+      setTimeout(() => setAudioFeedback(''), 3000);
+    }
   };
 
-  // Remove all custom files and reset all modes to default
+  // Remove all custom files and reset all modes to default — syncs to all devices
   const handleResetAllSounds = async () => {
-    if (confirm('Reset ALL custom sounds? This will delete all uploaded audio files and revert to built-in synthesizers.')) {
-      await soundStorage.clearAll();
-      const defaultModes = {
-        deposit: 'default', withdraw: 'default', login: 'default', register: 'default',
-        win: 'default', loss: 'default', cashout: 'default', click: 'default'
-      };
-      storage.updateAdminSettings({ soundModes: defaultModes });
-      setSoundModes(defaultModes);
-      window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
-      await loadAudioMeta();
-      setAudioFeedback('✓ All sounds reset to built-in synthesizers');
-      setTimeout(() => setAudioFeedback(''), 3000);
+    if (confirm('Reset ALL custom sounds? This will delete all uploaded audio files and revert to built-in synthesizers for all users.')) {
+      try {
+        setAudioFeedback('⏳ Resetting all sounds…');
+        await soundStorage.clearAll(); // pushes to Supabase
+        const defaultModes = {
+          deposit: 'default', withdraw: 'default', login: 'default', register: 'default',
+          win: 'default', loss: 'default', cashout: 'default', click: 'default'
+        };
+        storage.updateAdminSettings({ soundModes: defaultModes });
+        setSoundModes(defaultModes);
+        await loadAudioMeta();
+        setAudioFeedback('✓ All sounds reset to built-in synthesizers (synced to all devices)');
+        setTimeout(() => setAudioFeedback(''), 3000);
+      } catch (err) {
+        setAudioFeedback(`❌ Reset all failed: ${err.message}`);
+        setTimeout(() => setAudioFeedback(''), 3000);
+      }
     }
   };
 

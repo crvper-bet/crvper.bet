@@ -156,6 +156,32 @@ export const storage = {
 
   // ── Admin Settings ──────────────────────────────────────────────────────────
 
+  // Helper: parse qr_image_url which may be a plain data URI or our JSON envelope
+  _parseQrEnvelope(raw) {
+    if (!raw) return { qrImageUrl: DEFAULT_UPI_QR, soundModes: {}, soundData: {} };
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && parsed.qr !== undefined) {
+        return {
+          qrImageUrl: parsed.qr || DEFAULT_UPI_QR,
+          soundModes: parsed.soundModes || {},
+          soundData: parsed.soundData || {}
+        };
+      }
+    } catch {}
+    // Plain string (legacy — just the QR data URI)
+    return { qrImageUrl: raw, soundModes: {}, soundData: {} };
+  },
+
+  // Build JSON envelope for storing in qr_image_url
+  _buildQrEnvelope(qrImageUrl, soundModes, soundData) {
+    return JSON.stringify({
+      qr: qrImageUrl || DEFAULT_UPI_QR,
+      soundModes: soundModes || {},
+      soundData: soundData || {}
+    });
+  },
+
   async getAdminSettingsAsync() {
     if (isSupabaseReady()) {
       const { data, error } = await supabase
@@ -164,15 +190,41 @@ export const storage = {
         .eq('id', 1)
         .single();
       if (!error && data) {
+        const envelope = this._parseQrEnvelope(data.qr_image_url);
         const settings = {
           upiId: data.upi_id,
           payeeName: data.payee_name,
-          qrImageUrl: data.qr_image_url || DEFAULT_UPI_QR,
+          qrImageUrl: envelope.qrImageUrl,
           minDeposit: Number(data.min_deposit),
           minWithdraw: Number(data.min_withdraw),
-          signupBonus: Number(data.signup_bonus)
+          signupBonus: Number(data.signup_bonus),
+          soundModes: envelope.soundModes,
         };
         localStorage.setItem(STORAGE_KEYS.ADMIN_SETTINGS, JSON.stringify(settings));
+
+        // Also sync sound config into soundStorage local cache (direct localStorage write, no import needed)
+        try {
+          const localConfig = JSON.parse(localStorage.getItem('crvper_sound_config_v3') || '{}');
+          const remoteTs = new Date(data.updated_at || 0).getTime();
+          if (remoteTs > (localConfig.lastRemoteSync || 0)) {
+            const merged = {
+              ...localConfig,
+              qr: envelope.qrImageUrl,
+              soundModes: { ...localConfig.soundModes, ...envelope.soundModes },
+              soundData: { ...localConfig.soundData, ...envelope.soundData },
+              lastRemoteSync: remoteTs
+            };
+            localStorage.setItem('crvper_sound_config_v3', JSON.stringify(merged));
+            // Fire events for changed sounds
+            Object.keys(envelope.soundData || {}).forEach(key => {
+              window.dispatchEvent(new CustomEvent('crvper_sound_updated', {
+                detail: { key, dataUrl: envelope.soundData[key]?.dataUrl, meta: envelope.soundData[key] }
+              }));
+            });
+            window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
+          }
+        } catch {}
+
         return settings;
       }
     }
@@ -187,9 +239,18 @@ export const storage = {
     }
     try {
       const parsed = JSON.parse(data);
+      // Merge soundModes from soundStorage local cache (highest priority)
+      let soundModes = parsed.soundModes || DEFAULT_ADMIN_SETTINGS.soundModes;
+      try {
+        const sc = JSON.parse(localStorage.getItem('crvper_sound_config_v3') || '{}');
+        if (sc.soundModes && Object.keys(sc.soundModes).length > 0) {
+          soundModes = { ...soundModes, ...sc.soundModes };
+        }
+      } catch {}
       return {
         ...DEFAULT_ADMIN_SETTINGS,
         ...parsed,
+        soundModes,
         customSounds: {
           ...DEFAULT_ADMIN_SETTINGS.customSounds,
           ...(parsed.customSounds || {})
@@ -206,11 +267,24 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.ADMIN_SETTINGS, JSON.stringify(updated));
 
     if (isSupabaseReady()) {
+      // Read the current sound data from soundStorage local cache to preserve it
+      let soundData = {};
+      let soundModes = updated.soundModes || {};
+      try {
+        const sc = JSON.parse(localStorage.getItem('crvper_sound_config_v3') || '{}');
+        soundData = sc.soundData || {};
+        // Merge: newSettings soundModes override, but preserve existing if not changed
+        soundModes = { ...(sc.soundModes || {}), ...soundModes };
+      } catch {}
+
+      // Pack everything into the qr_image_url JSON envelope
+      const envelope = this._buildQrEnvelope(updated.qrImageUrl, soundModes, soundData);
+
       await supabase.from('admin_settings').upsert({
         id: 1,
         upi_id: updated.upiId,
         payee_name: updated.payeeName,
-        qr_image_url: updated.qrImageUrl,
+        qr_image_url: envelope,
         min_deposit: updated.minDeposit,
         min_withdraw: updated.minWithdraw,
         signup_bonus: updated.signupBonus,
