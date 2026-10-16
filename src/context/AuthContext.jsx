@@ -44,14 +44,14 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const login = (phone, password) => {
-    const logged = storage.loginUser(phone, password);
+  const login = async (phone, password) => {
+    const logged = await storage.loginUser(phone, password);
     setUser(logged);
     return logged;
   };
 
-  const register = (phone, password, inviteCode) => {
-    const created = storage.registerUser({ phone, password, inviteCode });
+  const register = async (phone, password, inviteCode) => {
+    const created = await storage.registerUser({ phone, password, inviteCode });
     setUser(created);
     return created;
   };

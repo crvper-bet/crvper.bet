@@ -144,7 +144,11 @@ export default function PlinkoGame({ onBack }) {
 
           // Real-time wallet addition
           modifyBalance(winAmount, `Plinko (${landedMultiplier}x)`);
-          sounds.playWin();
+          if (landedMultiplier >= 1.0) {
+            sounds.playWin();
+          } else {
+            sounds.playLoss();
+          }
 
           setLastWin({ amount: winAmount, multiplier: landedMultiplier });
           currentBalls.splice(i, 1);
@@ -248,17 +252,30 @@ export default function PlinkoGame({ onBack }) {
         </div>
 
         {/* Physics Canvas Pegboard */}
-        <div className="bg-[#0c101c] border border-slate-800 rounded-3xl p-3 shadow-2xl relative overflow-hidden flex flex-col items-center">
+        <div className={`bg-[#0c101c] border rounded-3xl p-3 shadow-2xl relative overflow-hidden flex flex-col items-center transition-all duration-300 ${
+          lastWin && lastWin.multiplier >= 2 ? 'border-purple-500/80 shadow-purple-900/40' :
+          lastWin && lastWin.multiplier >= 1 ? 'border-emerald-500/80 shadow-emerald-900/40' : 'border-slate-800'
+        }`}>
+          {/* Subtle neon grid background */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-transparent to-transparent pointer-events-none" />
+
           <canvas
             ref={canvasRef}
             width={360}
             height={380}
-            className="w-full max-w-[360px] h-[380px]"
+            className="w-full max-w-[360px] h-[380px] relative z-10"
           />
 
           {lastWin && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-cyan-950/90 border border-cyan-500/50 px-3 py-1 rounded-full text-xs font-mono font-black text-cyan-300 animate-bounce">
-              🎉 Landed: {lastWin.multiplier}x (+₹{lastWin.amount})
+            <div className={`absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-mono font-black border shadow-xl flex items-center space-x-1.5 z-20 ${
+              lastWin.multiplier >= 2 
+                ? 'bg-purple-950/95 border-purple-400 text-purple-300 animate-win-celebrate shadow-purple-600/40' 
+                : lastWin.multiplier >= 1
+                ? 'bg-emerald-950/95 border-emerald-400 text-emerald-300 animate-pop-in shadow-emerald-600/30'
+                : 'bg-rose-950/90 border-rose-500/50 text-rose-300'
+            }`}>
+              {lastWin.multiplier >= 1 && <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-spin" />}
+              <span>Landed: {lastWin.multiplier}x (+₹{lastWin.amount})</span>
             </div>
           )}
         </div>

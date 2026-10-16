@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, History, AlertCircle, ChevronUp, Check, X, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
+import { getLiveWinGoState, getWinGoHistory, getWinGoOutcomeForRound } from '../services/globalGameEngine';
 
 const NUMBERS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const PRESET_AMOUNTS = [10, 50, 100, 500, 1000];
@@ -9,10 +10,12 @@ const PRESET_AMOUNTS = [10, 50, 100, 500, 1000];
 export default function WinGoGame({ onBack }) {
   const { user, modifyBalance } = useAuth();
 
-  // 60-Second Epoch Timer
-  const [timeLeft, setTimeLeft] = useState(60);
-  const [roundId, setRoundId] = useState(() => 'CRV-' + Math.floor(2026100000 + Math.random() * 90000));
-  const [isLocked, setIsLocked] = useState(false);
+  // Global Synchronized State
+  const initial = getLiveWinGoState();
+  const [timeLeft, setTimeLeft] = useState(initial.secondsLeft);
+  const [roundId, setRoundId] = useState(initial.roundId);
+  const [roundNumber, setRoundNumber] = useState(initial.roundNumber);
+  const [isLocked, setIsLocked] = useState(initial.isLocked);
 
   // Active bets for current round: array of { type, value, amount, multiplier }
   const [currentBets, setCurrentBets] = useState([]);
@@ -24,86 +27,60 @@ export default function WinGoGame({ onBack }) {
   const [selectedMultiplier, setSelectedMultiplier] = useState(1);
   const [wagerBase, setWagerBase] = useState(10);
 
-  // Past outcomes history
-  const [history, setHistory] = useState([
-    { round: '#1008', num: 7, color: 'GREEN', size: 'BIG' },
-    { round: '#1007', num: 2, color: 'RED', size: 'SMALL' },
-    { round: '#1006', num: 0, color: 'RED', size: 'SMALL', isViolet: true },
-    { round: '#1005', num: 9, color: 'GREEN', size: 'BIG' },
-    { round: '#1004', num: 4, color: 'RED', size: 'SMALL' },
-    { round: '#1003', num: 5, color: 'GREEN', size: 'BIG', isViolet: true },
-    { round: '#1002', num: 8, color: 'RED', size: 'BIG' },
-    { round: '#1001', num: 1, color: 'GREEN', size: 'SMALL' },
-  ]);
+  // Past outcomes history — globally synchronized from UTC epoch
+  const [history, setHistory] = useState(() => getWinGoHistory(14));
 
   const [winningAnnouncement, setWinningAnnouncement] = useState(null);
 
-  // Continuous 60s Timer Loop
+  // High-Precision Real-Time Clock Sync Loop
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          // Resolve Round
-          resolveRound();
-          return 60;
+    let lastCheckedRound = Math.floor(Date.now() / 60000);
+
+    const syncInterval = setInterval(() => {
+      const live = getLiveWinGoState();
+      setTimeLeft(live.secondsLeft);
+      setIsLocked(live.isLocked);
+
+      if (live.roundNumber !== lastCheckedRound) {
+        // Round Transitioned! Evaluate previous round result
+        const completedRound = lastCheckedRound;
+        lastCheckedRound = live.roundNumber;
+
+        const result = getWinGoOutcomeForRound(completedRound);
+        setHistory(getWinGoHistory(14));
+        setRoundId(live.roundId);
+        setRoundNumber(live.roundNumber);
+
+        // Evaluate user's bets for the completed round
+        let totalWin = 0;
+        currentBets.forEach((bet) => {
+          if (bet.type === 'number' && bet.value === result.num) {
+            totalWin += bet.amount * 10;
+          } else if (bet.type === 'color' && bet.value === result.color) {
+            totalWin += bet.amount * 2;
+          } else if (bet.type === 'color' && bet.value === 'VIOLET' && result.isViolet) {
+            totalWin += bet.amount * 4.5;
+          } else if (bet.type === 'size' && bet.value === result.size) {
+            totalWin += bet.amount * 2;
+          }
+        });
+
+        if (totalWin > 0) {
+          sounds.playWin();
+          modifyBalance(totalWin, `Win Go Round Won (${result.num} ${result.color})`);
+          setWinningAnnouncement(`🎉 YOU WON ₹${totalWin}! (Result: ${result.num} ${result.color} ${result.size})`);
+        } else if (currentBets.length > 0) {
+          sounds.playLoss();
+          setWinningAnnouncement(`Round Result: ${result.num} ${result.color} ${result.size}`);
         }
-        if (prev <= 11) {
-          setIsLocked(true);
-        } else {
-          setIsLocked(false);
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [currentBets, roundId]);
 
-  const resolveRound = () => {
-    // Pick winning integer between 0 and 9
-    const winningNum = Math.floor(Math.random() * 10);
-    const winningColor = winningNum % 2 === 0 ? 'RED' : 'GREEN';
-    const isViolet = winningNum === 0 || winningNum === 5;
-    const winningSize = winningNum >= 5 ? 'BIG' : 'SMALL';
-
-    const newOutcome = {
-      round: roundId,
-      num: winningNum,
-      color: winningColor,
-      size: winningSize,
-      isViolet
-    };
-
-    setHistory((prev) => [newOutcome, ...prev.slice(0, 14)]);
-
-    // Evaluate current user bets
-    let totalWin = 0;
-    currentBets.forEach((bet) => {
-      if (bet.type === 'number' && bet.value === winningNum) {
-        totalWin += bet.amount * 10; // 10X for exact number
-      } else if (bet.type === 'color' && bet.value === winningColor) {
-        totalWin += bet.amount * 2; // 2X for color
-      } else if (bet.type === 'color' && bet.value === 'VIOLET' && isViolet) {
-        totalWin += bet.amount * 4.5; // 4.5X for violet
-      } else if (bet.type === 'size' && bet.value === winningSize) {
-        totalWin += bet.amount * 2; // 2X for Big / Small
+        setTimeout(() => setWinningAnnouncement(null), 5000);
+        setCurrentBets([]);
       }
-    });
+    }, 250);
 
-    if (totalWin > 0) {
-      sounds.playWin();
-      modifyBalance(totalWin, `Win Go Round Won (${winningNum} ${winningColor})`);
-      setWinningAnnouncement(`🎉 YOU WON ₹${totalWin}! (Result: ${winningNum} ${winningColor} ${winningSize})`);
-    } else if (currentBets.length > 0) {
-      setWinningAnnouncement(`Round Result: ${winningNum} ${winningColor} ${winningSize}`);
-    }
-
-    setTimeout(() => setWinningAnnouncement(null), 5000);
-
-    // Reset for next round
-    setCurrentBets([]);
-    setRoundId('CRV-' + Math.floor(2026100000 + Math.random() * 90000));
-    setIsLocked(false);
-  };
+    return () => clearInterval(syncInterval);
+  }, [currentBets]);
 
   const handleOpenBetSheet = (type, value) => {
     if (isLocked) {
@@ -190,24 +167,33 @@ export default function WinGoGame({ onBack }) {
 
             <div className="text-right">
               <span className="text-xs font-bold text-slate-400 block">Betting Status</span>
-              <span className={`text-xs font-black uppercase font-mono ${isLocked ? 'text-rose-400 animate-pulse' : 'text-emerald-400'}`}>
-                {isLocked ? '🔒 LOCKED (Last 10s)' : '🟢 OPEN'}
+              <span className={`text-xs font-black uppercase font-mono ${isLocked ? 'text-rose-400 animate-pulse' : 'text-emerald-400 flex items-center justify-end space-x-1'}`}>
+                {!isLocked && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-1"></span>}
+                <span>{isLocked ? '🔒 LOCKED (Last 10s)' : '🟢 OPEN FOR BETS'}</span>
               </span>
             </div>
           </div>
 
-          {/* Large Countdown Pulsing Timer */}
-          <div className="my-3 flex items-center justify-center">
-            <div className={`text-5xl sm:text-6xl font-black font-mono tracking-tight transition-all duration-300 ${
-              isLocked ? 'text-rose-500 scale-105 animate-pulse' : 'text-white'
+          {/* Large Countdown Pulsing Timer with Neon Radar Ring */}
+          <div className="my-3 flex items-center justify-center relative">
+            {isLocked && (
+              <div className="absolute w-32 h-16 rounded-full bg-rose-600/20 blur-xl animate-pulse pointer-events-none" />
+            )}
+            <div className={`relative z-10 px-6 py-2 rounded-2xl border transition-all duration-300 ${
+              isLocked 
+                ? 'bg-gradient-to-r from-rose-950/80 via-red-900/40 to-rose-950/80 border-rose-500 shadow-xl shadow-rose-600/30 text-rose-400 scale-105' 
+                : 'bg-[#131b2e]/60 border-slate-700/60 text-white'
             }`}>
-              00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
+              <div className="text-4xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md">
+                00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
+              </div>
             </div>
           </div>
 
           {winningAnnouncement && (
-            <div className="p-2 rounded-xl bg-purple-950/80 border border-purple-500/50 text-xs font-bold text-purple-300 animate-bounce">
-              {winningAnnouncement}
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-950 via-indigo-900 to-purple-950 border-2 border-purple-400 text-sm font-black text-purple-200 animate-win-celebrate shadow-xl shadow-purple-600/40 flex items-center justify-center space-x-2">
+              <Sparkles className="w-4 h-4 text-purple-300 animate-spin" />
+              <span>{winningAnnouncement}</span>
             </div>
           )}
         </div>
@@ -218,10 +204,11 @@ export default function WinGoGame({ onBack }) {
           {/* 1. NUMBERS IN UP (0 - 9) with 10X Payout */}
           <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Select Number
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+                <span>Select Lucky Number</span>
+                <span className="text-[10px] text-slate-500">(0-9)</span>
               </span>
-              <span className="text-[11px] font-black font-mono text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/30">
+              <span className="text-[11px] font-black font-mono text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded-lg border border-amber-500/40 shadow-sm animate-pulse">
                 10X Payout
               </span>
             </div>
@@ -234,15 +221,16 @@ export default function WinGoGame({ onBack }) {
                     key={n}
                     disabled={isLocked}
                     onClick={() => handleOpenBetSheet('number', n)}
-                    className={`py-3 rounded-2xl font-black font-mono text-lg transition transform active:scale-90 border shadow-md disabled:opacity-40 ${
+                    className={`relative overflow-hidden py-3 rounded-2xl font-black font-mono text-xl transition-all duration-200 transform active:scale-90 hover:scale-105 border shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${
                       isPurple
-                        ? 'bg-gradient-to-tr from-purple-700 to-indigo-600 border-purple-400/50 text-white'
+                        ? 'bg-gradient-to-tr from-purple-700 via-indigo-600 to-purple-800 border-purple-400/60 text-white shadow-purple-600/30 hover:border-purple-300'
                         : isEven
-                        ? 'bg-gradient-to-tr from-rose-700 to-red-600 border-rose-400/50 text-white'
-                        : 'bg-gradient-to-tr from-emerald-700 to-teal-600 border-emerald-400/50 text-white'
+                        ? 'bg-gradient-to-tr from-rose-700 via-red-600 to-rose-800 border-rose-400/60 text-white shadow-rose-600/30 hover:border-rose-300'
+                        : 'bg-gradient-to-tr from-emerald-700 via-teal-600 to-emerald-800 border-emerald-400/60 text-white shadow-emerald-600/30 hover:border-emerald-300'
                     }`}
                   >
-                    {n}
+                    <span className="relative z-10">{n}</span>
+                    <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 rounded-full blur-sm transform translate-x-2 -translate-y-2 pointer-events-none" />
                   </button>
                 );
               })}

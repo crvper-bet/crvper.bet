@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS admin_settings (
   upi_id TEXT DEFAULT 'crvper.pay@upi',
   payee_name TEXT DEFAULT 'CRVPER',
   qr_image_url TEXT,
-  min_deposit NUMERIC DEFAULT 200,
-  min_withdraw NUMERIC DEFAULT 200,
+  min_deposit NUMERIC DEFAULT 100,
+  min_withdraw NUMERIC DEFAULT 100,
   signup_bonus NUMERIC DEFAULT 150,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS promoters (
 -- =============================================
 CREATE TABLE IF NOT EXISTS support_chats (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id TEXT NOT NULL REFERENCES users(id),
+  user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
   user_phone TEXT,
   messages JSONB DEFAULT '[]',
   status TEXT DEFAULT 'OPEN',

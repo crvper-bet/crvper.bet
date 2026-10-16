@@ -4,7 +4,7 @@ import { storage } from '../services/storage';
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
 
-export default function WithdrawPage({ onBack, onTriggerCompulsoryModal }) {
+export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToDeposit }) {
   const { user, refreshUser } = useAuth();
   const [amount, setAmount] = useState('');
   const [upiId, setUpiId] = useState('');
@@ -112,26 +112,58 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal }) {
           </div>
         </div>
 
-        {/* Bonus User Warning Banner if not deposited */}
+        {/* ── DEPOSIT REQUIRED BANNER ── shown when user has never deposited ── */}
         {user && !user.hasDeposited && (
-          <div 
-            onClick={onTriggerCompulsoryModal}
-            className="mb-4 bg-amber-950/40 border border-amber-500/40 rounded-2xl p-3.5 flex items-start space-x-3 cursor-pointer hover:bg-amber-950/60 transition"
-          >
-            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="text-xs font-bold text-amber-300 block">
-                Verification Required Before Withdrawal
-              </span>
-              <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
-                You need to deposit at least minimum ₹200 to verify your account and enable withdrawals.
+          <div className="mb-5 relative overflow-hidden rounded-3xl border-2 border-amber-400/70 shadow-2xl shadow-amber-500/30">
+            {/* Animated glow background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/25 via-yellow-500/15 to-orange-600/20 animate-pulse" />
+            <div className="absolute inset-0 bg-[#0f0a00]/60" />
+
+            <div className="relative p-5">
+              {/* Top row: icon + title */}
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg shadow-amber-500/40 shrink-0 animate-bounce">
+                  <ShieldAlert className="w-6 h-6 text-black" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-amber-400 uppercase tracking-widest">
+                    ⚠ Account Not Verified
+                  </p>
+                  <h3 className="text-base font-black text-white leading-tight">
+                    Withdrawals are Locked
+                  </h3>
+                </div>
+              </div>
+
+              {/* Body text */}
+              <p className="text-sm text-slate-200 leading-relaxed mb-4">
+                You need to make a <span className="text-amber-300 font-black">one-time deposit of ₹100</span> to verify your account and unlock instant withdrawals. Your wallet balance is safe!
               </p>
-              <span className="inline-block text-[11px] font-bold text-amber-400 mt-1 underline">
-                Tap here to Deposit ₹200 & Unlock Withdrawals →
-              </span>
+
+              {/* CTA Button — navigates directly to Deposit page */}
+              <button
+                onClick={() => {
+                  sounds.playDeposit();
+                  if (onGoToDeposit) {
+                    onGoToDeposit();
+                  } else if (onTriggerCompulsoryModal) {
+                    onTriggerCompulsoryModal();
+                  }
+                }}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black font-extrabold text-sm flex items-center justify-center space-x-2 shadow-xl shadow-amber-500/40 transition active:scale-95"
+              >
+                <span>💰 Deposit ₹100 &amp; Unlock Withdrawals</span>
+                <span className="text-lg">→</span>
+              </button>
+
+              {/* Small note */}
+              <p className="text-center text-[10px] text-amber-600/80 mt-2 font-semibold">
+                One-time only • Instant credit to wallet • 100% secure
+              </p>
             </div>
           </div>
         )}
+
 
         {/* Balance Card */}
         <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-4 mb-4 flex items-center justify-between">

@@ -24,9 +24,19 @@ const DEFAULT_ADMIN_SETTINGS = {
   upiId: 'crvper.pay@upi',
   payeeName: 'CRVPER ENTERTAINMENT PVT LTD',
   qrImageUrl: DEFAULT_UPI_QR,
-  minDeposit: 200,
-  minWithdraw: 200,
-  signupBonus: 150
+  minDeposit: 100,
+  minWithdraw: 100,
+  signupBonus: 150,
+  soundModes: {
+    deposit: 'default',
+    withdraw: 'default',
+    login: 'default',
+    register: 'default',
+    win: 'default',
+    loss: 'default',
+    cashout: 'default',
+    click: 'default'
+  }
 };
 
 // Seed initial promoter
@@ -129,6 +139,17 @@ function dbPromoterToApp(row) {
   };
 }
 
+// ─── Ensure user exists in Supabase before FK-dependent inserts ───────────────
+// Silently upserts the user row so deposits/transactions never fail with 23502/23503
+async function ensureUserInSupabase(user) {
+  if (!isSupabaseReady() || !user) return;
+  try {
+    await supabase.from('users').upsert(appUserToDb(user), { onConflict: 'id' });
+  } catch (e) {
+    console.warn('[Supabase] ensureUserInSupabase failed:', e.message);
+  }
+}
+
 // ─── Storage Service ──────────────────────────────────────────────────────────
 
 export const storage = {
@@ -164,7 +185,19 @@ export const storage = {
       localStorage.setItem(STORAGE_KEYS.ADMIN_SETTINGS, JSON.stringify(DEFAULT_ADMIN_SETTINGS));
       return DEFAULT_ADMIN_SETTINGS;
     }
-    try { return JSON.parse(data); } catch { return DEFAULT_ADMIN_SETTINGS; }
+    try {
+      const parsed = JSON.parse(data);
+      return {
+        ...DEFAULT_ADMIN_SETTINGS,
+        ...parsed,
+        customSounds: {
+          ...DEFAULT_ADMIN_SETTINGS.customSounds,
+          ...(parsed.customSounds || {})
+        }
+      };
+    } catch {
+      return DEFAULT_ADMIN_SETTINGS;
+    }
   },
 
   async updateAdminSettings(newSettings) {
@@ -220,9 +253,14 @@ export const storage = {
   },
 
   async registerUser({ phone, password, inviteCode }) {
+    const cleanPhone = String(phone || '').replace(/\D/g, '').trim();
+    if (!cleanPhone || cleanPhone.length < 10) {
+      throw new Error('Please enter a valid 10-digit mobile number.');
+    }
+
     const users = this.getUsers();
-    if (users.find(u => u.phone === phone)) {
-      throw new Error('An account with this phone number already exists!');
+    if (users.find(u => String(u.phone).replace(/\D/g, '').trim() === cleanPhone)) {
+      throw new Error('This phone number is already registered. Please log in.');
     }
 
     // Check Supabase too
@@ -230,9 +268,9 @@ export const storage = {
       const { data: existing } = await supabase
         .from('users')
         .select('id')
-        .eq('phone', phone)
+        .eq('phone', cleanPhone)
         .maybeSingle();
-      if (existing) throw new Error('An account with this phone number already exists!');
+      if (existing) throw new Error('This phone number is already registered. Please log in.');
     }
 
     // Check promoter code
@@ -445,6 +483,10 @@ export const storage = {
       createdAt: new Date().toISOString()
     };
 
+    // Guarantee the user exists in Supabase before inserting (FK guard)
+    const currentUser = this.getCurrentUser();
+    await ensureUserInSupabase(currentUser);
+
     // Save to Supabase
     if (isSupabaseReady()) {
       const { error } = await supabase.from('deposits').insert({
@@ -458,7 +500,10 @@ export const storage = {
         status: 'PENDING',
         created_at: newReq.createdAt
       });
-      if (error) console.error('[Supabase] createDepositRequest error:', error.message);
+      if (error) {
+        console.error('[Supabase] createDepositRequest error:', error.message);
+        throw new Error(error.message);
+      }
     }
 
     // Local cache
@@ -640,6 +685,7 @@ export const storage = {
     };
 
     if (isSupabaseReady()) {
+      await ensureUserInSupabase(user);
       const { error } = await supabase.from('withdrawals').insert({
         id: newReq.id,
         user_id: newReq.userId,

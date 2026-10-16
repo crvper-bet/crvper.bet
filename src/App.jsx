@@ -20,6 +20,8 @@ import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
 import AdminPage from './pages/AdminPage';
 import PromoterPage from './pages/PromoterPage';
+import WalletPage from './pages/WalletPage';
+import AccountPage from './pages/AccountPage';
 
 // Games
 import MinesGame from './games/MinesGame';
@@ -77,8 +79,8 @@ export default function App() {
     return <PromoterPage onExit={() => setCurrentView('home')} />;
   }
 
-  // ROUTE 3: AUTHENTICATION PAGE (Login / Register)
-  if (currentView === 'auth') {
+  // FIRST-VISIT AUTH GATE: Unauthenticated visitors see Registration/Login first
+  if (!user || currentView === 'auth') {
     return (
       <AuthPage
         onAdminClick={() => setCurrentView('admin')}
@@ -102,7 +104,35 @@ export default function App() {
     return (
       <WithdrawPage
         onBack={() => setCurrentView('home')}
+        onGoToDeposit={() => setCurrentView('deposit')}
         onTriggerCompulsoryModal={() => setShowCompulsoryModal(true)}
+      />
+    );
+  }
+
+  // ROUTE 6: FULL WALLET DASHBOARD
+  if (currentView === 'wallet') {
+    return (
+      <WalletPage
+        onBack={() => setCurrentView('home')}
+        onGoToDeposit={() => setCurrentView('deposit')}
+        onGoToWithdraw={() => setCurrentView('withdraw')}
+        onTriggerCompulsoryModal={() => setShowCompulsoryModal(true)}
+      />
+    );
+  }
+
+  // ROUTE 7: DEDICATED FULL ACCOUNT PAGE
+  if (currentView === 'account') {
+    return (
+      <AccountPage
+        onBack={() => setCurrentView('home')}
+        onGoToWallet={() => setCurrentView('wallet')}
+        onGoToDeposit={() => setCurrentView('deposit')}
+        onGoToWithdraw={() => setCurrentView('withdraw')}
+        onGoToActivity={() => setCurrentView('activity')}
+        onGoToPromoter={() => setCurrentView('promoter')}
+        onOpenSupport={() => setSupportModalOpen(true)}
       />
     );
   }
@@ -175,7 +205,7 @@ export default function App() {
         onOpenSupport={() => setSupportModalOpen(true)}
         onOpenProfile={() => {
           if (!user) setCurrentView('auth');
-          else setProfileModalOpen(true);
+          else setCurrentView('account');
         }}
         onOpenPromoter={() => setCurrentView('promoter')}
         onOpenAdmin={() => setCurrentView('admin')}
@@ -188,6 +218,7 @@ export default function App() {
 
         {/* Live Wallet Card */}
         <WalletCard
+          onWalletClick={() => requireAuth(() => setCurrentView('wallet'))}
           onDepositClick={() => requireAuth(() => setCurrentView('deposit'))}
           onWithdrawClick={() => requireAuth(() => {
             if (!user?.hasDeposited) {
@@ -235,9 +266,9 @@ export default function App() {
         activeTab={currentView}
         onChangeTab={(tab) => {
           if (tab === 'wallet') {
-            requireAuth(() => setCurrentView('deposit'));
+            requireAuth(() => setCurrentView('wallet'));
           } else if (tab === 'account') {
-            requireAuth(() => setProfileModalOpen(true));
+            requireAuth(() => setCurrentView('account'));
           } else {
             setCurrentView(tab);
           }
@@ -265,12 +296,6 @@ export default function App() {
       <CustomerSupportModal
         isOpen={supportModalOpen}
         onClose={() => setSupportModalOpen(false)}
-      />
-
-      {/* User Profile Modal */}
-      <ProfileModal
-        isOpen={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
       />
     </div>
   );

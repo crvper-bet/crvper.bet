@@ -79,7 +79,7 @@ export default function QuantumDiceGame({ onBack }) {
       setLastOutcome({ number: finalNum, won: true, payout });
       setHistory((prev) => [{ num: finalNum, won: true }, ...prev.slice(0, 9)]);
     } else {
-      sounds.playBomb();
+      sounds.playLoss();
       setLastOutcome({ number: finalNum, won: false, payout: 0 });
       setHistory((prev) => [{ num: finalNum, won: false }, ...prev.slice(0, 9)]);
     }
@@ -143,19 +143,54 @@ export default function QuantumDiceGame({ onBack }) {
         </div>
 
         {/* The Massive Digital Target Number Display */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 shadow-xl text-center relative overflow-hidden">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">
-            Roll Outcome
-          </span>
-          <div className={`text-6xl sm:text-7xl font-black font-mono tracking-tight transition duration-200 ${
-            lastOutcome?.won ? 'text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.4)]' :
-            lastOutcome?.won === false ? 'text-rose-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'text-white'
-          }`}>
-            {displayNumber}
+        <div className={`bg-[#0f172a] border rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden transition-all duration-300 ${
+          lastOutcome?.won ? 'border-emerald-500/70 shadow-emerald-500/20' :
+          lastOutcome?.won === false ? 'border-rose-500/60 shadow-rose-500/20' : 'border-slate-800'
+        }`}>
+          {/* Neon background ambient glow */}
+          <div className={`absolute inset-0 opacity-15 pointer-events-none transition-all duration-500 ${
+            lastOutcome?.won ? 'bg-gradient-to-b from-emerald-500 via-transparent to-emerald-950' :
+            lastOutcome?.won === false ? 'bg-gradient-to-b from-rose-600 via-transparent to-red-950' :
+            rolling ? 'bg-gradient-to-b from-cyan-500 via-blue-500/10 to-transparent animate-pulse' : 'bg-transparent'
+          }`} />
+
+          {/* Cyber scanline sweep when rolling */}
+          {rolling && (
+            <div className="absolute inset-0 animate-shimmer pointer-events-none opacity-40" />
+          )}
+
+          <div className="relative z-10">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">
+              {rolling ? '🎲 Decrypting Quantum Seed...' : 'Roll Outcome'}
+            </span>
+            <div className={`text-6xl sm:text-7xl font-black font-mono tracking-tight transition duration-200 ${
+              rolling ? 'text-cyan-300 animate-pulse scale-105' :
+              lastOutcome?.won ? 'text-emerald-400 drop-shadow-[0_0_30px_rgba(16,185,129,0.8)] animate-win-celebrate' :
+              lastOutcome?.won === false ? 'text-rose-500 drop-shadow-[0_0_25px_rgba(239,68,68,0.7)] animate-bomb-shake' : 'text-white'
+            }`}>
+              {displayNumber}
+            </div>
+
+            {/* Win/Loss pill overlay */}
+            {lastOutcome && !rolling && (
+              <div className="mt-2 flex justify-center">
+                {lastOutcome.won ? (
+                  <span className="px-3 py-1 rounded-full text-xs font-black font-mono bg-emerald-950/90 border border-emerald-400 text-emerald-300 animate-pop-in shadow-lg shadow-emerald-500/30 flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-300 animate-spin" />
+                    <span>WON ₹{lastOutcome.payout} ({multiplier}x)!</span>
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full text-xs font-black font-mono bg-rose-950/90 border border-rose-500 text-rose-300 animate-bomb-shake flex items-center space-x-1">
+                    <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                    <span>MISSED TARGET</span>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Interactive Probability Slider */}
-          <div className="mt-6 px-2">
+          <div className="mt-5 px-2 relative z-10">
             <div className="relative mb-2">
               <input
                 type="range"
@@ -165,13 +200,15 @@ export default function QuantumDiceGame({ onBack }) {
                 disabled={rolling}
                 value={target}
                 onChange={(e) => setTarget(Number(e.target.value))}
-                className="w-full h-3 bg-gradient-to-r from-rose-500 to-emerald-500 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                className="w-full h-3 bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 rounded-lg appearance-none cursor-pointer accent-cyan-400"
               />
             </div>
             <div className="flex justify-between text-xs font-mono font-bold text-slate-400">
-              <span>0</span>
-              <span className="text-cyan-400">Target: {target.toFixed(2)}</span>
-              <span>100</span>
+              <span className="text-rose-400">0.00</span>
+              <span className="text-cyan-400 px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 font-black">
+                Target: {target.toFixed(2)}
+              </span>
+              <span className="text-emerald-400">100.00</span>
             </div>
           </div>
         </div>

@@ -24,13 +24,13 @@ export default function CompulsoryDepositModal({ isOpen, onClose, onGoToDeposit 
         </h3>
 
         <p className="text-sm text-slate-200 mt-2 font-semibold leading-relaxed">
-          You need to deposit at least minimum <span className="text-amber-400 font-black">₹200</span>.
+          You need to deposit at least minimum <span className="text-amber-400 font-black">₹100</span>.
         </p>
 
         <div className="bg-[#162032] border border-amber-500/20 rounded-2xl p-3.5 my-4 text-left">
           <div className="flex items-center space-x-2 text-xs text-amber-300 font-medium">
             <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Complete a deposit of ≥ ₹200 to verify and unlock withdrawals.</span>
+            <span>Complete a deposit of ≥ ₹100 to verify and unlock withdrawals.</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1 pl-6">
             All your balance and winnings remain 100% safe in your wallet!
@@ -45,7 +45,7 @@ export default function CompulsoryDepositModal({ isOpen, onClose, onGoToDeposit 
             }}
             className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-extrabold rounded-2xl flex items-center justify-center space-x-2 shadow-xl shadow-amber-500/20 transition transform active:scale-95"
           >
-            <span>Deposit ₹200 Now</span>
+            <span>Deposit ₹100 Now</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 

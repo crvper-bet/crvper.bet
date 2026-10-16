@@ -3,15 +3,18 @@ import { ArrowLeft, History, Plus, Minus, CheckCircle2, ShieldAlert, Lock } from
 import { useAuth } from '../context/AuthContext';
 import { storage } from '../services/storage';
 import { sounds } from '../services/audio';
+import { getLiveAviatorState, getAviatorHistory } from '../services/globalGameEngine';
 
 export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
   const { user, modifyBalance } = useAuth();
 
-  // Flight State: 'WAITING' (Boarding) | 'FLYING' | 'CRASHED'
-  const [gameState, setGameState] = useState('WAITING');
-  const [multiplier, setMultiplier] = useState(1.00);
-  const [crashPoint, setCrashPoint] = useState(2.20);
-  const [countdown, setCountdown] = useState(5);
+  // Global Synchronized State from Epoch
+  const initial = getLiveAviatorState();
+  const [gameState, setGameState] = useState(initial.gameState);
+  const [multiplier, setMultiplier] = useState(initial.multiplier);
+  const [crashPoint, setCrashPoint] = useState(initial.crashPoint);
+  const [countdown, setCountdown] = useState(initial.countdown);
+  const [currentRoundId, setCurrentRoundId] = useState(initial.roundId);
 
   // --- DUAL BET PANEL 1 STATE ---
   const [panel1Amount, setPanel1Amount] = useState('50');
@@ -29,16 +32,15 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
   const [panel2ActiveBet, setPanel2ActiveBet] = useState(null);
   const [panel2QueuedBet, setPanel2QueuedBet] = useState(null);
 
-  // History strip
-  const [crashHistory, setCrashHistory] = useState([
-    2.15, 1.85, 3.40, 1.62, 5.80, 2.40, 1.75, 8.20, 1.95, 2.70
-  ]);
+  // History strip — globally synchronized across all devices
+  const [crashHistory, setCrashHistory] = useState(() => getAviatorHistory(10));
 
   const canvasRef = useRef(null);
   const requestRef = useRef(null);
-  const startTimeRef = useRef(null);
-  const currentMultiplierRef = useRef(1.00);
-  const crashPointRef = useRef(2.20);
+  const currentMultiplierRef = useRef(initial.multiplier);
+  const crashPointRef = useRef(initial.crashPoint);
+  const gameStateRef = useRef(initial.gameState);
+  gameStateRef.current = gameState;
 
   const isLockedByWinningCap = Boolean(user && Number(user.walletBalance || 0) >= 100000);
 
@@ -52,194 +54,129 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
     return false;
   };
 
-  // Pre-deposit Safe Mode helper (Requires at least 200 real deposit to unlock real money mode)
-  const checkIsRealDepositor = () => {
-    const freshUser = storage.getCurrentUser();
-    return Boolean(
-      freshUser && 
-      freshUser.hasDeposited === true && 
-      Number(freshUser.totalDeposited || 0) >= 200
-    );
-  };
-
-  // Main 5-second countdown timer during WAITING phase
+  // ── High-Precision Global Engine Sync Loop ──
   useEffect(() => {
-    let interval = null;
+    let lastRoundId = initial.roundId;
+    let lastState = initial.gameState;
 
-    if (gameState === 'WAITING') {
-      currentMultiplierRef.current = 1.00;
-      setMultiplier(1.00);
+    const syncInterval = setInterval(() => {
+      const live = getLiveAviatorState();
+      crashPointRef.current = live.crashPoint;
+      setCrashPoint(live.crashPoint);
+      setCurrentRoundId(live.roundId);
 
-      const freshUser = storage.getCurrentUser();
-      const isCapped = Boolean(freshUser && Number(freshUser.walletBalance || 0) >= 100000);
+      // Round Transition (New round has arrived!)
+      if (live.roundId !== lastRoundId) {
+        lastRoundId = live.roundId;
+        setCrashHistory(getAviatorHistory(10));
+      }
 
-      // Place Panel 1 Bet if queued or auto-bet
-      if (!isCapped && (panel1QueuedBet || panel1AutoBet)) {
-        const betToPlace = panel1QueuedBet || Number(panel1Amount);
-        if (freshUser && freshUser.walletBalance >= betToPlace) {
-          modifyBalance(-betToPlace, 'Aviator Bet Panel 1');
-          setPanel1ActiveBet({ amount: betToPlace, cashedOut: false });
+      // Handle Game State Transitions
+      if (live.gameState !== lastState) {
+        lastState = live.gameState;
+        setGameState(live.gameState);
+
+        if (live.gameState === 'WAITING') {
+          // Reset bets and process queues for new flight
+          const freshUser = storage.getCurrentUser();
+          const isCapped = Boolean(freshUser && Number(freshUser.walletBalance || 0) >= 100000);
+
+          // Panel 1 auto/queued placement
+          if (!isCapped && (panel1QueuedBet || panel1AutoBet)) {
+            const betToPlace = panel1QueuedBet || Number(panel1Amount);
+            if (freshUser && freshUser.walletBalance >= betToPlace && betToPlace >= 10) {
+              modifyBalance(-betToPlace, 'Aviator Bet Panel 1');
+              setPanel1ActiveBet({ amount: betToPlace, cashedOut: false });
+            } else if (panel1AutoBet) {
+              setPanel1AutoBet(false);
+            }
+            setPanel1QueuedBet(null);
+          } else {
+            setPanel1ActiveBet(null);
+          }
+
+          // Panel 2 auto/queued placement
+          if (!isCapped && (panel2QueuedBet || panel2AutoBet)) {
+            const betToPlace = panel2QueuedBet || Number(panel2Amount);
+            const freshAfterP1 = storage.getCurrentUser();
+            if (freshAfterP1 && freshAfterP1.walletBalance >= betToPlace && betToPlace >= 10) {
+              modifyBalance(-betToPlace, 'Aviator Bet Panel 2');
+              setPanel2ActiveBet({ amount: betToPlace, cashedOut: false });
+            } else if (panel2AutoBet) {
+              setPanel2AutoBet(false);
+            }
+            setPanel2QueuedBet(null);
+          } else {
+            setPanel2ActiveBet(null);
+          }
+        } else if (live.gameState === 'CRASHED') {
+          // Play crash sound
+          const hasActiveLoss = (panel1ActiveBet && !panel1ActiveBet.cashedOut) || (panel2ActiveBet && !panel2ActiveBet.cashedOut);
+          if (hasActiveLoss) sounds.playLoss();
+          else sounds.playBomb();
+
+          if (panel1ActiveBet && !panel1ActiveBet.cashedOut) {
+            setPanel1ActiveBet((prev) => (prev ? { ...prev, cashedOut: false, lost: true } : null));
+          }
+          if (panel2ActiveBet && !panel2ActiveBet.cashedOut) {
+            setPanel2ActiveBet((prev) => (prev ? { ...prev, cashedOut: false, lost: true } : null));
+          }
         }
-        setPanel1QueuedBet(null);
       }
 
-      // Place Panel 2 Bet if queued or auto-bet
-      if (!isCapped && (panel2QueuedBet || panel2AutoBet)) {
-        const betToPlace = panel2QueuedBet || Number(panel2Amount);
-        if (freshUser && freshUser.walletBalance >= betToPlace) {
-          modifyBalance(-betToPlace, 'Aviator Bet Panel 2');
-          setPanel2ActiveBet({ amount: betToPlace, cashedOut: false });
+      // Update Sub-second state
+      if (live.gameState === 'WAITING') {
+        setCountdown(live.countdown);
+        setMultiplier(1.00);
+        currentMultiplierRef.current = 1.00;
+      } else if (live.gameState === 'FLYING') {
+        setMultiplier(live.multiplier);
+        currentMultiplierRef.current = live.multiplier;
+
+        // Auto Cashout checks
+        if (
+          panel1ActiveBet &&
+          !panel1ActiveBet.cashedOut &&
+          panel1AutoCashout &&
+          panel1AutoCashoutTarget &&
+          live.multiplier >= Number(panel1AutoCashoutTarget)
+        ) {
+          handleCashoutPanel(1, Number(panel1AutoCashoutTarget));
         }
-        setPanel2QueuedBet(null);
-      }
 
-      let count = 5;
-      setCountdown(5);
-
-      interval = setInterval(() => {
-        count -= 1;
-        setCountdown(count);
-        if (count <= 0) {
-          clearInterval(interval);
-          startFlight();
+        if (
+          panel2ActiveBet &&
+          !panel2ActiveBet.cashedOut &&
+          panel2AutoCashout &&
+          panel2AutoCashoutTarget &&
+          live.multiplier >= Number(panel2AutoCashoutTarget)
+        ) {
+          handleCashoutPanel(2, Number(panel2AutoCashoutTarget));
         }
-      }, 1000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [gameState]);
-
-  const startFlight = () => {
-    const isRealDepositor = checkIsRealDepositor();
-
-    let point;
-    if (!isRealDepositor) {
-      // RULE 2: PRE-DEPOSIT BONUS SAFE MODE!
-      // Must always go to a minimum of 1.50x! NEVER below 1.50x during this phase!
-      const rand = Math.random();
-      if (rand < 0.60) {
-        point = 1.50 + Math.random() * 1.50; // 1.50x to 3.00x
-      } else if (rand < 0.85) {
-        point = 3.00 + Math.random() * 4.50; // 3.00x to 7.50x
-      } else if (rand < 0.95) {
-        point = 7.50 + Math.random() * 15.0; // 7.50x to 22.50x
-      } else {
-        point = 22.50 + Math.random() * 60.0; // 22.5x to 82.5x+
+      } else if (live.gameState === 'CRASHED') {
+        setMultiplier(live.crashPoint);
+        currentMultiplierRef.current = live.crashPoint;
       }
-      // Absolute guarantee clamp
-      point = Math.max(1.50, Number(point.toFixed(2)));
-    } else {
-      // RULE 5: POST-DEPOSIT REAL MONEY MODE!
-      // 1.50x rule completely removed!
-      // Multiplier acts normally and random: can crash at 1.00x, 1.10x, 1.25x or anywhere else!
-      const rand = Math.random();
-      if (rand < 0.12) {
-        point = 1.00; // Can crash at 1.00x
-      } else if (rand < 0.40) {
-        point = Number((1.01 + Math.random() * 0.48).toFixed(2)); // 1.01x to 1.49x
-      } else if (rand < 0.75) {
-        point = Number((1.50 + Math.random() * 2.50).toFixed(2)); // 1.50x to 4.00x
-      } else if (rand < 0.92) {
-        point = Number((4.00 + Math.random() * 6.00).toFixed(2)); // 4.00x to 10.00x
-      } else {
-        point = Number((10.00 + Math.random() * 40.0).toFixed(2)); // 10x to 50x+
-      }
-    }
+    }, 50);
 
-    crashPointRef.current = point;
-    setCrashPoint(point);
-    startTimeRef.current = null; // Will initialize on first animation frame
-    setGameState('FLYING');
-  };
+    return () => clearInterval(syncInterval);
+  }, [panel1ActiveBet, panel2ActiveBet, panel1AutoCashout, panel2AutoCashout, panel1AutoCashoutTarget, panel2AutoCashoutTarget, panel1QueuedBet, panel2QueuedBet, panel1AutoBet, panel2AutoBet, panel1Amount, panel2Amount]);
 
-  // Canvas & Multiplier Animation Loop
+  // Canvas Drawing Animation Loop
   useEffect(() => {
-    if (gameState !== 'FLYING') return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const animate = (time) => {
-      if (!startTimeRef.current) {
-        startTimeRef.current = time;
-      }
-
-      const elapsed = Math.max(0, (time - startTimeRef.current) / 1000);
-      const mult = Number(Math.max(1.00, Math.pow(Math.E, 0.08 * elapsed * 2.5)).toFixed(2));
-      currentMultiplierRef.current = mult;
-      setMultiplier(mult);
-
-      const isRealDepositor = checkIsRealDepositor();
-
-      // Auto-Cashout Panel 1
-      if (
-        panel1ActiveBet &&
-        !panel1ActiveBet.cashedOut &&
-        panel1AutoCashout &&
-        panel1AutoCashoutTarget &&
-        mult >= Number(panel1AutoCashoutTarget)
-      ) {
-        handleCashoutPanel(1, Number(panel1AutoCashoutTarget));
-      }
-
-      // Auto-Cashout Panel 2
-      if (
-        panel2ActiveBet &&
-        !panel2ActiveBet.cashedOut &&
-        panel2AutoCashout &&
-        panel2AutoCashoutTarget &&
-        mult >= Number(panel2AutoCashoutTarget)
-      ) {
-        handleCashoutPanel(2, Number(panel2AutoCashoutTarget));
-      }
-
-      // STRICT SAFE MODE RULE 2 GUARD:
-      // If user has not completed real deposit >= 200, plane CANNOT crash below 1.50x under any circumstance!
-      if (!isRealDepositor && mult < 1.50) {
-        drawPlaneScene(ctx, canvas.width, canvas.height, mult, elapsed);
-        requestRef.current = requestAnimationFrame(animate);
-        return;
-      }
-
-      // Check Crash
-      const targetPoint = crashPointRef.current;
-      if (mult >= targetPoint) {
-        const finalCrash = (!isRealDepositor && targetPoint < 1.50) ? 1.50 : targetPoint;
-        handleCrash(finalCrash);
-        return;
-      }
-
-      drawPlaneScene(ctx, canvas.width, canvas.height, mult, elapsed);
+    const animate = () => {
+      const live = getLiveAviatorState();
+      drawPlaneScene(ctx, canvas.width, canvas.height, live.multiplier, live.elapsedFlight);
       requestRef.current = requestAnimationFrame(animate);
     };
 
     requestRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestRef.current);
-  }, [gameState, panel1ActiveBet, panel2ActiveBet, panel1AutoCashout, panel2AutoCashout, panel1AutoCashoutTarget, panel2AutoCashoutTarget]);
-
-  const handleCrash = (finalPoint) => {
-    sounds.playBomb();
-    setMultiplier(finalPoint);
-    setGameState('CRASHED');
-    setCrashHistory((prev) => [finalPoint, ...prev.slice(0, 9)]);
-
-    if (panel1ActiveBet && !panel1ActiveBet.cashedOut) {
-      setPanel1ActiveBet((prev) => ({ ...prev, cashedOut: false, lost: true }));
-    }
-    if (panel2ActiveBet && !panel2ActiveBet.cashedOut) {
-      setPanel2ActiveBet((prev) => ({ ...prev, cashedOut: false, lost: true }));
-    }
-
-    setTimeout(() => {
-      setGameState('WAITING');
-      setCountdown(5);
-      setPanel1ActiveBet(null);
-      setPanel2ActiveBet(null);
-    }, 3200);
-  };
+  }, []);
 
   // Cashout for Panel 1 or Panel 2
   const handleCashoutPanel = (panelNumber, explicitMult = null) => {
@@ -247,7 +184,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
 
     if (panelNumber === 1 && panel1ActiveBet && !panel1ActiveBet.cashedOut) {
       const winAmount = Number((panel1ActiveBet.amount * multToAward).toFixed(2));
-      sounds.playWin();
+      sounds.playCashout();
       modifyBalance(winAmount, `Aviator Cashout Panel 1 (${multToAward}x)`);
       setPanel1ActiveBet({ ...panel1ActiveBet, cashedOut: true, cashoutMult: multToAward, winAmount });
       checkWinningCap();
@@ -255,7 +192,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
 
     if (panelNumber === 2 && panel2ActiveBet && !panel2ActiveBet.cashedOut) {
       const winAmount = Number((panel2ActiveBet.amount * multToAward).toFixed(2));
-      sounds.playWin();
+      sounds.playCashout();
       modifyBalance(winAmount, `Aviator Cashout Panel 2 (${multToAward}x)`);
       setPanel2ActiveBet({ ...panel2ActiveBet, cashedOut: true, cashoutMult: multToAward, winAmount });
       checkWinningCap();
@@ -267,8 +204,18 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
     if (checkWinningCap()) return;
 
     const wager = Number(panel1Amount);
-    if (!user || user.walletBalance < wager) {
-      alert('Insufficient wallet balance!');
+    if (isNaN(wager) || wager < 10) {
+      alert('Minimum bet amount is ₹10.');
+      return;
+    }
+
+    const freshUser = storage.getCurrentUser();
+    const currentBalance = freshUser ? Number(freshUser.walletBalance || 0) : 0;
+    const panel2Queued = panel2QueuedBet ? Number(panel2QueuedBet) : 0;
+    const availableForPanel1 = Math.max(0, currentBalance - panel2Queued);
+
+    if (wager > availableForPanel1) {
+      alert(`Insufficient balance! Your total bets across both panels cannot exceed your wallet balance (₹${currentBalance.toFixed(2)}).`);
       return;
     }
     sounds.playClick();
@@ -286,8 +233,18 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
     if (checkWinningCap()) return;
 
     const wager = Number(panel2Amount);
-    if (!user || user.walletBalance < wager) {
-      alert('Insufficient wallet balance!');
+    if (isNaN(wager) || wager < 10) {
+      alert('Minimum bet amount is ₹10.');
+      return;
+    }
+
+    const freshUser = storage.getCurrentUser();
+    const currentBalance = freshUser ? Number(freshUser.walletBalance || 0) : 0;
+    const panel1Queued = panel1QueuedBet ? Number(panel1QueuedBet) : 0;
+    const availableForPanel2 = Math.max(0, currentBalance - panel1Queued);
+
+    if (wager > availableForPanel2) {
+      alert(`Insufficient balance! Your total bets across both panels cannot exceed your wallet balance (₹${currentBalance.toFixed(2)}).`);
       return;
     }
     sounds.playClick();
@@ -509,7 +466,10 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
         </div>
 
         {/* Flight Main Stage / Canvas with 2D Animated Plane */}
-        <div className="relative bg-[#0c101c] border border-slate-800 rounded-3xl h-64 sm:h-72 overflow-hidden shadow-2xl flex items-center justify-center">
+        <div className={`relative bg-[#0c101c] border rounded-3xl h-64 sm:h-72 overflow-hidden shadow-2xl flex items-center justify-center transition-all duration-300 ${
+          gameState === 'CRASHED' ? 'border-rose-600/80 shadow-rose-950/60' :
+          gameState === 'FLYING' ? 'border-rose-500/30 shadow-cyan-950/20' : 'border-slate-800'
+        }`}>
           <canvas
             ref={canvasRef}
             width={720}
@@ -517,32 +477,48 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
             className="absolute inset-0 w-full h-full object-cover"
           />
 
+          {/* Crashed red shockwave overlay */}
+          {gameState === 'CRASHED' && (
+            <div className="absolute inset-0 bg-red-950/30 animate-pulse pointer-events-none" />
+          )}
+
           {/* Center Multiplier Display */}
-          <div className="relative z-10 text-center select-none pointer-events-none">
+          <div className="relative z-10 text-center select-none pointer-events-none px-4">
             {gameState === 'WAITING' ? (
-              <div className="animate-fade-in">
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400 block mb-1">
+              <div className="animate-pop-in">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
                   NEXT FLIGHT IN
                 </span>
-                <span className="text-5xl sm:text-6xl font-black font-mono text-white">
-                  {countdown}s
-                </span>
-                <p className="text-[11px] text-cyan-400 font-bold mt-1">
-                  Dual betting open! Set Auto-Cashout or Bet below
+                <div className="relative inline-block">
+                  <span className="text-5xl sm:text-6xl font-black font-mono text-white tracking-wider">
+                    {countdown}s
+                  </span>
+                  <div className="w-16 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent mx-auto mt-1 animate-pulse" />
+                </div>
+                <p className="text-[11px] text-cyan-300 font-bold mt-2 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700/80 shadow-sm">
+                  ⚡ Dual betting open! Set Auto-Cashout or Bet below
                 </p>
               </div>
             ) : gameState === 'FLYING' ? (
-              <div>
-                <span className="text-6xl sm:text-7xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]">
+              <div className="transform transition-transform">
+                <span className={`text-6xl sm:text-7xl font-black font-mono tracking-tight transition-all duration-150 ${
+                  multiplier >= 10.0 
+                    ? 'text-amber-400 drop-shadow-[0_0_35px_rgba(245,158,11,0.9)] scale-110' 
+                    : multiplier >= 5.0
+                    ? 'text-purple-400 drop-shadow-[0_0_30px_rgba(168,85,247,0.8)]'
+                    : multiplier >= 2.0
+                    ? 'text-rose-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.7)]'
+                    : 'text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]'
+                }`}>
                   {multiplier.toFixed(2)}x
                 </span>
               </div>
             ) : (
-              <div className="animate-shake">
+              <div className="animate-bomb-shake">
                 <span className="text-xs font-black uppercase tracking-widest text-rose-400 block mb-1">
-                  FLEW AWAY AT
+                  💥 FLEW AWAY AT
                 </span>
-                <span className="text-5xl sm:text-6xl font-black font-mono text-rose-500">
+                <span className="text-5xl sm:text-6xl font-black font-mono text-rose-500 drop-shadow-[0_0_30px_rgba(239,68,68,0.8)]">
                   {multiplier.toFixed(2)}x
                 </span>
               </div>

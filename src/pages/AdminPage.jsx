@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, Users, ArrowDownLeft, ArrowUpRight, QrCode, Headphones, 
-  Trash2, Send, CheckCircle2, XCircle, LogOut, RefreshCw, Eye, Edit3, DollarSign, Activity
+  Trash2, Send, CheckCircle2, XCircle, LogOut, RefreshCw, Eye, Edit3, DollarSign, Activity,
+  Volume2, Play, Upload, RotateCcw, Music, Sparkles
 } from 'lucide-react';
 import { storage } from '../services/storage';
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
+import { soundStorage } from '../services/soundStorage';
 
 export default function AdminPage({ onExit }) {
   const { adminLoggedIn, loginAdmin, logoutAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState('deposits'); // 'overview', 'deposits', 'withdrawals', 'qr', 'promoters', 'support', 'users'
+  const [activeTab, setActiveTab] = useState('deposits'); // 'overview', 'deposits', 'withdrawals', 'qr', 'audio', 'promoters', 'support', 'users'
 
   // Admin login form states
   const [username, setUsername] = useState('');
@@ -27,10 +29,24 @@ export default function AdminPage({ onExit }) {
   const [adminReply, setAdminReply] = useState('');
   const [viewScreenshot, setViewScreenshot] = useState(null);
 
-  // Settings update form
   const [newUpiId, setNewUpiId] = useState('');
   const [newPayeeName, setNewPayeeName] = useState('');
   const [newQrImage, setNewQrImage] = useState(null);
+  const [audioFeedback, setAudioFeedback] = useState('');
+  // IndexedDB metadata for uploaded sounds: { key → { name, size, type } }
+  const [customSoundMeta, setCustomSoundMeta] = useState({});
+  // Per-key mode: 'silent' | 'default' | 'custom'
+  const [soundModes, setSoundModes] = useState(() => storage.getAdminSettings()?.soundModes || {});
+
+  const loadAudioMeta = async () => {
+    const all = await soundStorage.getAllSounds();
+    // Strip ArrayBuffer — keep only display metadata
+    const meta = {};
+    for (const [key, val] of Object.entries(all)) {
+      meta[key] = { name: val.name, size: val.size, type: val.type, updatedAt: val.updatedAt };
+    }
+    setCustomSoundMeta(meta);
+  };
 
   const loadData = () => {
     setDeposits(storage.getDeposits().reverse());
@@ -39,6 +55,7 @@ export default function AdminPage({ onExit }) {
     setPromoters(storage.getPromoters());
     const settings = storage.getAdminSettings();
     setAdminSettings(settings);
+    setSoundModes(settings?.soundModes || {});
     setNewUpiId(settings.upiId);
     setNewPayeeName(settings.payeeName);
     setSupportChats(storage.getSupportChats());
@@ -47,17 +64,20 @@ export default function AdminPage({ onExit }) {
   useEffect(() => {
     if (adminLoggedIn) {
       loadData();
+      loadAudioMeta();
       window.addEventListener('crvper_deposits_updated', loadData);
       window.addEventListener('crvper_withdrawals_updated', loadData);
       window.addEventListener('crvper_support_updated', loadData);
       window.addEventListener('crvper_promoter_updated', loadData);
       window.addEventListener('crvper_user_updated', loadData);
+      window.addEventListener('crvper_sound_updated', loadAudioMeta);
       return () => {
         window.removeEventListener('crvper_deposits_updated', loadData);
         window.removeEventListener('crvper_withdrawals_updated', loadData);
         window.removeEventListener('crvper_support_updated', loadData);
         window.removeEventListener('crvper_promoter_updated', loadData);
         window.removeEventListener('crvper_user_updated', loadData);
+        window.removeEventListener('crvper_sound_updated', loadAudioMeta);
       };
     }
   }, [adminLoggedIn]);
@@ -119,6 +139,93 @@ export default function AdminPage({ onExit }) {
       const reader = new FileReader();
       reader.onloadend = () => setNewQrImage(reader.result);
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Sound FX Handlers
+  const handleTestSound = (soundKey) => {
+    switch (soundKey) {
+      case 'deposit': sounds.playDeposit(); break;
+      case 'withdraw': sounds.playWithdraw(); break;
+      case 'login': sounds.playLogin(); break;
+      case 'register': sounds.playRegister(); break;
+      case 'win': sounds.playWin(); break;
+      case 'loss': sounds.playLoss(); break;
+      case 'cashout': sounds.playCashout(); break;
+      case 'click': sounds.playClick(); break;
+      default: break;
+    }
+    const mode = soundModes[soundKey] || 'default';
+    setAudioFeedback(`▶ Testing ${soundKey.toUpperCase()} — mode: ${mode.toUpperCase()}`);
+    setTimeout(() => setAudioFeedback(''), 2500);
+  };
+
+  // Set mode for a sound key: 'silent' | 'default' | 'custom'
+  const handleSetSoundMode = (soundKey, newMode) => {
+    const current = storage.getAdminSettings();
+    const updatedModes = { ...(current.soundModes || {}), [soundKey]: newMode };
+    storage.updateAdminSettings({ soundModes: updatedModes });
+    setSoundModes(updatedModes);
+    // Notify audio engine
+    window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
+    setAudioFeedback(`✓ ${soundKey.toUpperCase()} → ${newMode.toUpperCase()}`);
+    setTimeout(() => setAudioFeedback(''), 2500);
+  };
+
+  // Upload a custom audio file (≤5 MB) to IndexedDB
+  const handleUploadSound = async (soundKey, file) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setAudioFeedback(`❌ File too large (max 5 MB). "${file.name}" is ${(file.size / 1048576).toFixed(1)} MB`);
+      setTimeout(() => setAudioFeedback(''), 4000);
+      return;
+    }
+    try {
+      setAudioFeedback(`⏳ Uploading "${file.name}"…`);
+      await soundStorage.saveSound(soundKey, file);
+      // Auto-switch mode to 'custom' when a file is uploaded
+      const current = storage.getAdminSettings();
+      const updatedModes = { ...(current.soundModes || {}), [soundKey]: 'custom' };
+      storage.updateAdminSettings({ soundModes: updatedModes });
+      setSoundModes(updatedModes);
+      window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
+      await loadAudioMeta();
+      setAudioFeedback(`✓ "${file.name}" uploaded — ${soundKey.toUpperCase()} is now CUSTOM`);
+      setTimeout(() => setAudioFeedback(''), 3500);
+    } catch (err) {
+      console.error('[Admin] Upload failed:', err);
+      setAudioFeedback(`❌ Upload failed: ${err.message}`);
+      setTimeout(() => setAudioFeedback(''), 4000);
+    }
+  };
+
+  // Remove custom file for a key and revert to default
+  const handleResetSound = async (soundKey) => {
+    await soundStorage.deleteSound(soundKey);
+    const current = storage.getAdminSettings();
+    const updatedModes = { ...(current.soundModes || {}), [soundKey]: 'default' };
+    storage.updateAdminSettings({ soundModes: updatedModes });
+    setSoundModes(updatedModes);
+    window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
+    await loadAudioMeta();
+    setAudioFeedback(`✓ ${soundKey.toUpperCase()} reset to DEFAULT synthesizer`);
+    setTimeout(() => setAudioFeedback(''), 3000);
+  };
+
+  // Remove all custom files and reset all modes to default
+  const handleResetAllSounds = async () => {
+    if (confirm('Reset ALL custom sounds? This will delete all uploaded audio files and revert to built-in synthesizers.')) {
+      await soundStorage.clearAll();
+      const defaultModes = {
+        deposit: 'default', withdraw: 'default', login: 'default', register: 'default',
+        win: 'default', loss: 'default', cashout: 'default', click: 'default'
+      };
+      storage.updateAdminSettings({ soundModes: defaultModes });
+      setSoundModes(defaultModes);
+      window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
+      await loadAudioMeta();
+      setAudioFeedback('✓ All sounds reset to built-in synthesizers');
+      setTimeout(() => setAudioFeedback(''), 3000);
     }
   };
 
@@ -269,6 +376,7 @@ export default function AdminPage({ onExit }) {
           { id: 'deposits', label: `Deposits (${pendingDepositsCount})`, icon: ArrowDownLeft, alert: pendingDepositsCount > 0 },
           { id: 'withdrawals', label: `Withdrawals (${pendingWithdrawalsCount})`, icon: ArrowUpRight, alert: pendingWithdrawalsCount > 0 },
           { id: 'qr', label: 'Payment QR Setup', icon: QrCode },
+          { id: 'audio', label: 'Audio & FX Studio', icon: Volume2 },
           { id: 'promoters', label: 'Promoters (20%)', icon: Users },
           { id: 'support', label: `Live Support (${supportChats.length})`, icon: Headphones },
           { id: 'users', label: `Players (${users.length})`, icon: Users },
@@ -565,6 +673,168 @@ export default function AdminPage({ onExit }) {
             </form>
           </div>
         )}
+
+        {/* AUDIO & SOUND FX STUDIO TAB */}
+        {activeTab === 'audio' && (
+          <div className="space-y-4">
+            <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                <div>
+                  <h2 className="text-base font-black text-white flex items-center space-x-2">
+                    <Volume2 className="w-5 h-5 text-cyan-400" />
+                    <span>Dynamic Sound FX Studio</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Set each sound to <span className="text-slate-300 font-bold">Silent</span>, <span className="text-slate-300 font-bold">Default</span> synthesizer, or <span className="text-cyan-300 font-bold">Custom</span> (upload MP3/WAV/M4A ≤ 5 MB). Changes take effect instantly across all games.
+                  </p>
+                </div>
+                <button
+                  onClick={handleResetAllSounds}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-rose-500 text-rose-300 font-bold text-xs transition flex items-center space-x-1 shrink-0"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset All</span>
+                </button>
+              </div>
+
+              {audioFeedback && (
+                <div className="mt-3 p-3 rounded-xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold text-center flex items-center justify-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-cyan-400 animate-spin" />
+                  <span>{audioFeedback}</span>
+                </div>
+              )}
+
+              {/* Sound Control Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {[
+                  { key: 'deposit',  title: 'Deposit Button Tap',          desc: 'Triggers when player taps the Deposit button',              accent: 'emerald' },
+                  { key: 'withdraw', title: 'Withdraw Button Tap',          desc: 'Triggers when player submits a withdrawal request',         accent: 'rose' },
+                  { key: 'login',    title: 'User Login Sound',             desc: 'Plays when any player logs into their CRVPER account',      accent: 'blue' },
+                  { key: 'register', title: 'Registration Fanfare',         desc: 'Plays when a new player creates an account',               accent: 'purple' },
+                  { key: 'win',      title: 'Game Win Sound',               desc: 'Triumphant victory sound across all 6 games',               accent: 'amber' },
+                  { key: 'loss',     title: 'Game Loss Sound',              desc: 'Crash/thud when player loses a wager or hits a bomb',      accent: 'red' },
+                  { key: 'cashout',  title: 'Jackpot Cashout',              desc: 'Coin shower when player cashes out in Aviator or Mines',   accent: 'cyan' },
+                  { key: 'click',    title: 'UI Tap & Chip Sounds',         desc: 'Subtle feedback for buttons, bet chips, and controls',     accent: 'slate' },
+                ].map((item) => {
+                  const mode = soundModes[item.key] || 'default';
+                  const meta = customSoundMeta[item.key];
+                  const accentMap = {
+                    emerald: 'border-emerald-500/40 text-emerald-400',
+                    rose:    'border-rose-500/40 text-rose-400',
+                    blue:    'border-blue-500/40 text-blue-400',
+                    purple:  'border-purple-500/40 text-purple-400',
+                    amber:   'border-amber-500/40 text-amber-400',
+                    red:     'border-red-500/40 text-red-400',
+                    cyan:    'border-cyan-500/40 text-cyan-400',
+                    slate:   'border-slate-600 text-slate-300',
+                  };
+                  const accent = accentMap[item.accent] || accentMap.slate;
+
+                  return (
+                    <div
+                      key={item.key}
+                      className={`bg-[#0c1220] border ${accent} rounded-2xl p-4 flex flex-col gap-3 shadow-lg`}
+                    >
+                      {/* Title + mode badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-sm font-black text-white">{item.title}</span>
+                          <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{item.desc}</p>
+                        </div>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          mode === 'silent'  ? 'bg-slate-900 text-slate-500 border border-slate-700' :
+                          mode === 'custom'  ? 'bg-purple-950 text-purple-300 border border-purple-500/50' :
+                                              'bg-cyan-950/60 text-cyan-300 border border-cyan-700/50'
+                        }`}>
+                          {mode === 'silent' ? '🔇 Silent' : mode === 'custom' ? '🎵 Custom' : '🔊 Default'}
+                        </span>
+                      </div>
+
+                      {/* Custom file info */}
+                      {mode === 'custom' && meta && (
+                        <div className="text-[11px] bg-purple-950/40 border border-purple-800/40 rounded-lg px-2.5 py-1.5 text-purple-300 flex items-center gap-1.5">
+                          <Music className="w-3 h-3 shrink-0" />
+                          <span className="truncate font-medium">{meta.name}</span>
+                          <span className="text-purple-500 shrink-0">({(meta.size / 1048576).toFixed(2)} MB)</span>
+                        </div>
+                      )}
+                      {mode === 'custom' && !meta && (
+                        <div className="text-[11px] bg-amber-950/40 border border-amber-700/40 rounded-lg px-2.5 py-1.5 text-amber-400">
+                          ⚠ No file uploaded yet — upload a file below
+                        </div>
+                      )}
+
+                      {/* 3-Mode selector pills */}
+                      <div className="flex items-center gap-1.5">
+                        {['silent', 'default', 'custom'].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => handleSetSoundMode(item.key, m)}
+                            className={`flex-1 py-1 rounded-lg text-[11px] font-black uppercase transition border ${
+                              mode === m
+                                ? m === 'silent'  ? 'bg-slate-700 border-slate-500 text-white' :
+                                  m === 'custom'  ? 'bg-purple-700 border-purple-400 text-white' :
+                                                    'bg-cyan-700 border-cyan-400 text-white'
+                                : 'bg-slate-900 border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-300'
+                            }`}
+                          >
+                            {m === 'silent' ? '🔇' : m === 'custom' ? '🎵' : '🔊'} {m}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Bottom row: Test + (Upload when custom mode) + Reset */}
+                      <div className="pt-1 border-t border-slate-800/60 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleTestSound(item.key)}
+                          className="px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold text-xs transition flex items-center space-x-1.5 active:scale-95"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Test</span>
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          {/* Upload — only meaningful in custom mode */}
+                          {mode === 'custom' && (
+                            <label className="px-3 py-1.5 rounded-xl bg-purple-900/50 hover:bg-purple-800/60 border border-purple-600/50 text-purple-200 font-bold text-xs transition flex items-center space-x-1.5 cursor-pointer active:scale-95">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>{meta ? 'Change File' : 'Upload Audio'}</span>
+                              <input
+                                type="file"
+                                accept="audio/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files[0];
+                                  if (file) handleUploadSound(item.key, file);
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          )}
+
+                          {/* Reset — only if there's a custom file or non-default mode */}
+                          {(meta || mode !== 'default') && (
+                            <button
+                              type="button"
+                              onClick={() => handleResetSound(item.key)}
+                              className="p-1.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-400 hover:bg-rose-900 transition"
+                              title="Remove custom file & revert to Default"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* PROMOTERS TAB */}
         {activeTab === 'promoters' && (

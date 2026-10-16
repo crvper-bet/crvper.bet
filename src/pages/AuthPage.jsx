@@ -19,7 +19,7 @@ export default function AuthPage({ onAdminClick, onPromoterClick, onComplete }) 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     sounds.playClick();
@@ -49,11 +49,12 @@ export default function AuthPage({ onAdminClick, onPromoterClick, onComplete }) 
     setLoading(true);
     try {
       if (isRegister) {
-        register(cleanPhone, password, inviteCode);
+        await register(cleanPhone, password, inviteCode);
+        sounds.playRegister();
       } else {
-        login(cleanPhone, password);
+        await login(cleanPhone, password);
+        sounds.playLogin();
       }
-      sounds.playWin();
       if (onComplete) onComplete();
     } catch (err) {
       setError(err.message || 'Authentication failed');

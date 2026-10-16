@@ -153,7 +153,10 @@ export default function NeonTowerGame({ onBack }) {
         </div>
 
         {/* 9-Row Vertical Tower Stage */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-4 shadow-xl space-y-1.5 select-none">
+        <div className={`bg-[#0f172a] border rounded-3xl p-4 shadow-2xl space-y-1.5 select-none transition-all duration-300 ${
+          gameOver && !lastWin ? 'border-rose-500/60 shadow-rose-950/40 animate-bomb-shake' :
+          lastWin ? 'border-emerald-400/80 shadow-emerald-500/30' : 'border-slate-800'
+        }`}>
           {Array.from({ length: 9 }).map((_, rIdx) => {
             const rowIndex = 8 - rIdx; // Render row 8 at top, row 0 at bottom
             const rowMult = config.multipliers[rowIndex];
@@ -164,45 +167,60 @@ export default function NeonTowerGame({ onBack }) {
             return (
               <div
                 key={rowIndex}
-                className={`flex items-center space-x-2 p-1.5 rounded-2xl transition duration-300 ${
+                className={`relative flex items-center space-x-2 p-1.5 rounded-2xl transition-all duration-300 ${
                   isActiveRow
-                    ? 'bg-emerald-950/40 border border-emerald-500/60 shadow-lg shadow-emerald-500/20'
+                    ? 'bg-gradient-to-r from-emerald-950/60 via-teal-900/30 to-emerald-950/60 border-2 border-emerald-400 shadow-lg shadow-emerald-500/30 scale-[1.02] z-10'
                     : isCompletedRow
-                    ? 'bg-[#131b2e]/60 opacity-80'
-                    : 'bg-[#0b101c]/40 opacity-40'
+                    ? 'bg-[#131b2e]/70 border border-emerald-500/30 opacity-90'
+                    : 'bg-[#0b101c]/40 border border-slate-900/80 opacity-40'
                 }`}
               >
+                {/* Active Row Indicator Arrow */}
+                {isActiveRow && (
+                  <div className="absolute -left-2 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                )}
+
                 {/* Row Multiplier Badge */}
-                <span className={`w-14 text-center font-mono font-bold text-xs py-1 rounded-lg ${
+                <span className={`w-14 text-center font-mono font-black text-xs py-1.5 rounded-xl transition-all ${
                   isActiveRow
-                    ? 'bg-emerald-500 text-black font-black'
+                    ? 'bg-gradient-to-r from-emerald-400 to-teal-300 text-slate-950 shadow-md shadow-emerald-500/40 scale-105'
                     : isCompletedRow
-                    ? 'text-emerald-400 bg-emerald-950/60'
-                    : 'text-slate-500'
+                    ? 'text-emerald-400 bg-emerald-950/80 border border-emerald-500/40'
+                    : 'text-slate-500 bg-slate-900/50'
                 }`}>
                   {rowMult}x
                 </span>
 
                 {/* Tiles in Row */}
-                <div className="flex-1 grid grid-cols-4 gap-2" style={{ gridTemplateColumns: `repeat(${config.tilesPerRow}, minmax(0, 1fr))` }}>
+                <div className="flex-1 grid gap-2" style={{ gridTemplateColumns: `repeat(${config.tilesPerRow}, minmax(0, 1fr))` }}>
                   {rowTiles.map((tile, tIdx) => (
                     <button
                       key={tIdx}
                       disabled={!isActiveRow}
                       onClick={() => handleTileClick(rowIndex, tIdx)}
-                      className={`h-9 rounded-xl font-bold transition transform active:scale-95 flex items-center justify-center ${
+                      className={`h-10 rounded-xl font-bold transition-all transform active:scale-90 flex items-center justify-center text-lg select-none ${
                         tile.revealed
                           ? tile.isHazard
-                            ? 'bg-rose-600 text-white shadow-md'
-                            : 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30'
+                            ? 'bg-gradient-to-br from-rose-600 to-red-800 text-white shadow-lg shadow-rose-600/50 border border-rose-400 animate-bomb-shake'
+                            : 'bg-gradient-to-br from-emerald-400 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/50 border border-emerald-300 animate-pop-in'
                           : isActiveRow
-                          ? 'bg-[#1e2d4d] hover:bg-[#273a63] border border-emerald-400/50 cursor-pointer animate-pulse'
-                          : 'bg-[#131b2e] border border-slate-800 cursor-not-allowed'
+                          ? 'bg-[#1e2d4d] hover:bg-[#273a63] hover:scale-105 border-2 border-emerald-400/60 shadow-md cursor-pointer animate-pulse active:bg-emerald-500'
+                          : isCompletedRow
+                          ? 'bg-[#10192e] border border-slate-800 text-slate-600 cursor-not-allowed'
+                          : 'bg-[#0d1424] border border-slate-900 cursor-not-allowed'
                       }`}
                     >
                       {tile.revealed ? (
-                        tile.isHazard ? <Skull className="w-5 h-5 text-white" /> : '💎'
-                      ) : null}
+                        tile.isHazard ? (
+                          <Skull className="w-5 h-5 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                        ) : (
+                          <span className="text-xl filter drop-shadow-[0_0_8px_rgba(16,185,129,0.9)] animate-pop-in">💎</span>
+                        )
+                      ) : (
+                        isActiveRow && (
+                          <span className="text-[10px] text-emerald-400/60 font-black tracking-widest font-mono">?</span>
+                        )
+                      )}
                     </button>
                   ))}
                 </div>

@@ -31,31 +31,15 @@ export default function MaxLimitModal({ isOpen, onClose, onGoToWithdraw, onGoToD
           You reached your winning limit. Please withdraw your funds.
         </p>
 
-        {!hasDeposited && (
-          <div className="bg-rose-950/40 border border-rose-500/30 rounded-2xl p-3 my-4 text-left">
-            <div className="flex items-center space-x-2 text-xs text-rose-300 font-bold">
-              <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>Withdrawal Notice:</span>
-            </div>
-            <p className="text-[11px] text-slate-300 mt-1 pl-6">
-              Don't forget: withdrawing requires a 1-time real deposit of at least <strong className="text-amber-400">₹100</strong> to verify your account.
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-2 mt-4">
+        <div className="space-y-2 mt-6">
           <button
             onClick={() => {
               onClose();
-              if (hasDeposited) {
-                onGoToWithdraw();
-              } else {
-                onGoToDeposit();
-              }
+              if (onGoToWithdraw) onGoToWithdraw();
             }}
             className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-extrabold rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-amber-500/25 transition transform active:scale-95"
           >
-            <span>{hasDeposited ? 'Withdraw ₹1,00,000 Now' : 'Deposit ₹100 to Unlock ₹1,00,000'}</span>
+            <span>Withdraw Funds Now</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 

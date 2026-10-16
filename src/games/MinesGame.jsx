@@ -313,7 +313,10 @@ export default function MinesGame({ onBack }) {
             </div>
 
             {/* 4x4 Tiles Grid */}
-            <div className="grid grid-cols-4 gap-2.5 sm:gap-3 p-2 bg-[#090d18] rounded-2xl border border-slate-800/80 aspect-square max-w-[360px] mx-auto w-full">
+            <div className={`grid grid-cols-4 gap-2.5 sm:gap-3 p-2.5 bg-[#090d18] rounded-2xl border aspect-square max-w-[360px] mx-auto w-full transition-all duration-300 ${
+              gameOver && !lastWin ? 'border-rose-500/60 animate-bomb-shake shadow-rose-950/50 shadow-2xl' : 
+              lastWin ? 'border-emerald-400/80 shadow-emerald-500/20 shadow-2xl' : 'border-slate-800/80 shadow-inner'
+            }`}>
               {Array.from({ length: 16 }).map((_, idx) => {
                 const isTileRevealed = revealed[idx];
                 const item = grid[idx];
@@ -324,43 +327,54 @@ export default function MinesGame({ onBack }) {
                     key={idx}
                     onClick={() => handleTileClick(idx)}
                     disabled={!isPlaying || isTileRevealed}
-                    className={`rounded-xl transition-all duration-300 flex items-center justify-center font-bold text-2xl select-none transform active:scale-90 ${
+                    className={`relative overflow-hidden rounded-2xl transition-all duration-300 flex items-center justify-center font-bold text-2xl select-none transform active:scale-90 ${
                       isTileRevealed
                         ? item === 'bomb' || (gameOver && isBomb)
-                          ? 'bg-rose-950/80 border-2 border-rose-500 text-rose-400 shadow-lg shadow-rose-600/30'
-                          : 'bg-emerald-950/80 border-2 border-emerald-400 text-emerald-300 shadow-lg shadow-emerald-500/30'
+                          ? 'bg-gradient-to-br from-rose-950 to-red-900 border-2 border-rose-500 text-rose-400 shadow-xl shadow-rose-600/40'
+                          : 'bg-gradient-to-br from-emerald-950 via-teal-900 to-emerald-900 border-2 border-emerald-400 text-emerald-300 shadow-xl shadow-emerald-500/40 animate-pop-in'
                         : isPlaying
-                        ? 'bg-[#18233c] hover:bg-[#202f50] border border-slate-700/80 hover:border-cyan-400/50 shadow-md cursor-pointer'
-                        : 'bg-[#131b2e] border border-slate-800/80 opacity-70 cursor-not-allowed'
+                        ? 'bg-[#18233c] hover:bg-[#202f50] hover:scale-[1.03] border border-slate-700/80 hover:border-cyan-400 shadow-md cursor-pointer active:brightness-125'
+                        : 'bg-[#131b2e] border border-slate-800/80 opacity-60 cursor-not-allowed'
                     }`}
                   >
                     {isTileRevealed ? (
                       item === 'bomb' || (gameOver && isBomb) ? (
-                        <Bomb className="w-8 h-8 text-rose-500 animate-bounce" />
+                        <div className="flex flex-col items-center justify-center animate-bomb-shake">
+                          <Bomb className="w-8 h-8 text-rose-400 drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]" />
+                        </div>
                       ) : (
-                        <span className="animate-scale">💎</span>
+                        <div className="flex items-center justify-center animate-pop-in">
+                          <span className="text-3xl filter drop-shadow-[0_0_12px_rgba(52,211,153,0.9)] transform hover:rotate-12 transition-transform">💎</span>
+                        </div>
                       )
-                    ) : null}
+                    ) : (
+                      isPlaying && (
+                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-cyan-500/5 to-transparent opacity-0 hover:opacity-100 transition-opacity pointer-events-none" />
+                      )
+                    )}
                   </button>
                 );
               })}
             </div>
 
             {/* Status Footer */}
-            <div className="mt-4 text-center">
+            <div className="mt-4 text-center min-h-[38px] flex items-center justify-center">
               {lastWin && (
-                <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-950 border border-emerald-500 text-emerald-400 font-mono font-black text-xs animate-bounce">
-                  🎉 Cashed Out: +₹{lastWin.amount} ({lastWin.multiplier}x)!
+                <div className="px-5 py-2 rounded-2xl bg-gradient-to-r from-emerald-950 via-teal-950 to-emerald-950 border-2 border-emerald-400 text-emerald-300 font-mono font-black text-sm animate-win-celebrate shadow-xl shadow-emerald-500/30 flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-emerald-300 animate-spin" />
+                  <span>Cashed Out: +₹{lastWin.amount} ({lastWin.multiplier}x)!</span>
                 </div>
               )}
               {gameOver && !lastWin && (
-                <div className="inline-block px-4 py-1.5 rounded-full bg-rose-950 border border-rose-500 text-rose-400 font-mono font-black text-xs">
-                  💥 Bomb hit! Round ended.
+                <div className="px-4 py-1.5 rounded-full bg-rose-950/90 border border-rose-500 text-rose-300 font-mono font-black text-xs animate-bomb-shake flex items-center space-x-1.5">
+                  <Bomb className="w-4 h-4 text-rose-400" />
+                  <span>💥 Bomb exploded! Round ended.</span>
                 </div>
               )}
               {!gameOver && isPlaying && (
-                <div className="text-xs text-slate-400 font-medium">
-                  {revealedCount} Gems uncovered • Pick a tile or Cashout
+                <div className="text-xs text-slate-300 font-medium px-3 py-1 bg-slate-900/60 rounded-full border border-slate-800 flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span>{revealedCount} Gems uncovered • Pick next or Cash Out!</span>
                 </div>
               )}
             </div>

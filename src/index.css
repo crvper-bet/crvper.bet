@@ -44,18 +44,118 @@ body {
   box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.4);
 }
 
+.glow-gold {
+  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.5);
+}
+
 .glass-panel {
   background: rgba(17, 24, 39, 0.75);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Animations */
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.02); }
-}
+/* ═════════════════════════════════════════════════════════════════════════════
+   COOL & EYE-CATCHING GAME ANIMATIONS (Mobile-Friendly & Hardware-Accelerated)
+   ═════════════════════════════════════════════════════════════════════════════ */
 
+/* 1. Neon Pulse Glow */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.85; transform: scale(1); filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.4)); }
+  50% { opacity: 1; transform: scale(1.02); filter: drop-shadow(0 0 20px rgba(0, 229, 255, 0.8)); }
+}
 .animate-pulse-glow {
   animation: pulseGlow 2s infinite ease-in-out;
+}
+
+/* 2. Pop / Bounce In (for gems, dice results, cards) */
+@keyframes popIn {
+  0% { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+  60% { transform: scale(1.18) rotate(3deg); opacity: 1; }
+  80% { transform: scale(0.95) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.animate-pop-in {
+  animation: popIn 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 3. Screen / Tile Shake on Bomb or Loss */
+@keyframes bombShake {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  15% { transform: translate3d(-6px, -4px, 0) scale(1.05); }
+  30% { transform: translate3d(6px, 4px, 0) scale(1.03); }
+  45% { transform: translate3d(-5px, 3px, 0); }
+  60% { transform: translate3d(5px, -3px, 0); }
+  75% { transform: translate3d(-2px, 1px, 0); }
+  90% { transform: translate3d(2px, -1px, 0); }
+}
+.animate-bomb-shake {
+  animation: bombShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* 4. Triumphant Win Celebration Pulse */
+@keyframes winCelebrate {
+  0% { transform: scale(0.8); opacity: 0; filter: brightness(1.5); }
+  40% { transform: scale(1.12); opacity: 1; filter: brightness(1.8) drop-shadow(0 0 25px rgba(16, 185, 129, 0.8)); }
+  70% { transform: scale(0.98); filter: brightness(1.2); }
+  100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.6)); }
+}
+.animate-win-celebrate {
+  animation: winCelebrate 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+}
+
+/* 5. Shimmer / Light Sweep effect for winning chips & banners */
+@keyframes sweepShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: sweepShimmer 1.8s infinite;
+}
+
+/* 6. Radar Ping / Ripple Wave */
+@keyframes rippleWave {
+  0% { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.animate-ripple {
+  animation: rippleWave 1.2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+/* 7. Floating Jet / Gem Idle Bob */
+@keyframes floatBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.animate-float {
+  animation: floatBob 2s ease-in-out infinite;
+}
+
+/* 8. Neon Border Cycle */
+@keyframes neonBorderPulse {
+  0%, 100% { border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+  50% { border-color: rgba(168, 85, 247, 0.8); box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
+}
+.animate-neon-border {
+  animation: neonBorderPulse 3s infinite ease-in-out;
+}
+
+/* 9. Number Ticker Roll (Smooth Digit Flip) */
+@keyframes rollDigit {
+  0% { transform: translateY(-30%); opacity: 0.3; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.animate-roll-digit {
+  animation: rollDigit 0.15s ease-out forwards;
+}
+
+/* 10. Coin / Cashout Rain Burst */
+@keyframes coinBurst {
+  0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 1; }
+  50% { transform: translateY(-20px) scale(1.2) rotate(180deg); opacity: 1; }
+  100% { transform: translateY(40px) scale(0.8) rotate(360deg); opacity: 0; }
+}
+.animate-coin-burst {
+  animation: coinBurst 0.8s ease-out forwards;
 }

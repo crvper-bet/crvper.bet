@@ -4,12 +4,12 @@ import { storage } from '../services/storage';
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
 
-const QUICK_AMOUNTS = [200, 500, 1000, 2000, 5000, 10000];
+const QUICK_AMOUNTS = [100, 200, 500, 1000, 2000, 5000];
 
 export default function DepositPage({ onBack }) {
   const { user } = useAuth();
   const [step, setStep] = useState(1); // 1: Select Amount, 2: Scan QR & Upload Proof
-  const [amount, setAmount] = useState('200');
+  const [amount, setAmount] = useState('100');
   const [adminSettings, setAdminSettings] = useState(() => storage.getAdminSettings());
   const [copied, setCopied] = useState(false);
   const [utr, setUtr] = useState('');
@@ -49,11 +49,11 @@ export default function DepositPage({ onBack }) {
     }
   };
 
-  const handleSubmitProof = (e) => {
+  const handleSubmitProof = async (e) => {
     e.preventDefault();
     if (!user) return;
-    if (Number(amount) < 200) {
-      alert('Minimum deposit amount is ₹200.');
+    if (Number(amount) < 100) {
+      alert('Minimum deposit amount is ₹100.');
       return;
     }
     if (!previewUrl) {
@@ -64,19 +64,22 @@ export default function DepositPage({ onBack }) {
     setSubmitting(true);
     sounds.playClick();
 
-    setTimeout(() => {
-      storage.createDepositRequest({
-        user_id: user.id,
+    try {
+      await storage.createDepositRequest({
+        userId: user.id,
         userPhone: user.phone,
         amount: Number(amount),
         utr: utr.trim() || 'UPI-REF-' + Math.floor(100000000000 + Math.random() * 900000000000),
-        screenshotUrl: previewUrl || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=500&auto=format&fit=crop&q=60',
-        promoterCode: user.referredBy
+        screenshotUrl: previewUrl || null,
+        promoterCode: user.referredBy || null
       });
       setSubmitting(false);
       setSubmittedSuccess(true);
       sounds.playWin();
-    }, 600);
+    } catch (err) {
+      setSubmitting(false);
+      alert('Submission failed: ' + (err.message || 'Please try again.'));
+    }
   };
 
   return (
@@ -133,18 +136,18 @@ export default function DepositPage({ onBack }) {
           <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
             <div>
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                Deposit Amount (Min ₹200)
+                Deposit Amount (Min ₹100)
               </label>
               <div className="relative flex items-center bg-[#131b2e] border border-slate-700 rounded-2xl overflow-hidden focus-within:border-cyan-500 transition">
                 <span className="pl-4 pr-2 text-xl font-black text-cyan-400 font-mono">₹</span>
                 <input
                   type="number"
-                  min="200"
+                  min="100"
                   step="10"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full bg-transparent py-3.5 pr-4 text-xl font-black text-white font-mono focus:outline-none"
-                  placeholder="200"
+                  placeholder="100"
                 />
               </div>
             </div>
@@ -179,14 +182,14 @@ export default function DepositPage({ onBack }) {
             <div className="bg-cyan-950/30 border border-cyan-800/40 rounded-xl p-3 flex items-start space-x-2.5">
               <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
               <p className="text-[11px] text-cyan-200/90 leading-snug">
-                Completing a ₹200 real deposit unlocks permanent instant withdrawals and full platform gaming!
+                Completing a ₹100 real deposit unlocks permanent instant withdrawals and full platform gaming!
               </p>
             </div>
 
             <button
               onClick={() => {
-                if (Number(amount) < 200) {
-                  alert('Minimum deposit amount is ₹200.');
+                if (Number(amount) < 100) {
+                  alert('Minimum deposit amount is ₹100.');
                   return;
                 }
                 sounds.playClick();
