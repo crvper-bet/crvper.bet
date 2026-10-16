@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Clock, History, AlertCircle, ChevronUp, Check, X, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
@@ -32,28 +32,32 @@ export default function WinGoGame({ onBack }) {
 
   const [winningAnnouncement, setWinningAnnouncement] = useState(null);
 
-  // High-Precision Real-Time Clock Sync Loop
-  useEffect(() => {
-    let lastCheckedRound = Math.floor(Date.now() / 60000);
+  // Persistent refs so betting does not teardown or restart the clock sync loop
+  const currentBetsRef = useRef(currentBets);
+  currentBetsRef.current = currentBets;
+  const lastCheckedRoundRef = useRef(initial.roundNumber);
 
+  // High-Precision Real-Time Worldwide Clock Sync Loop
+  useEffect(() => {
     const syncInterval = setInterval(() => {
       const live = getLiveWinGoState();
       setTimeLeft(live.secondsLeft);
       setIsLocked(live.isLocked);
+      setRoundId(live.roundId);
+      setRoundNumber(live.roundNumber);
 
-      if (live.roundNumber !== lastCheckedRound) {
+      if (live.roundNumber !== lastCheckedRoundRef.current) {
         // Round Transitioned! Evaluate previous round result
-        const completedRound = lastCheckedRound;
-        lastCheckedRound = live.roundNumber;
+        const completedRound = lastCheckedRoundRef.current;
+        lastCheckedRoundRef.current = live.roundNumber;
 
         const result = getWinGoOutcomeForRound(completedRound);
         setHistory(getWinGoHistory(14));
-        setRoundId(live.roundId);
-        setRoundNumber(live.roundNumber);
 
         // Evaluate user's bets for the completed round
+        const activeBets = currentBetsRef.current;
         let totalWin = 0;
-        currentBets.forEach((bet) => {
+        activeBets.forEach((bet) => {
           if (bet.type === 'number' && bet.value === result.num) {
             totalWin += bet.amount * 10;
           } else if (bet.type === 'color' && bet.value === result.color) {
@@ -69,7 +73,7 @@ export default function WinGoGame({ onBack }) {
           sounds.playWin();
           modifyBalance(totalWin, `Win Go Round Won (${result.num} ${result.color})`);
           setWinningAnnouncement(`🎉 YOU WON ₹${totalWin}! (Result: ${result.num} ${result.color} ${result.size})`);
-        } else if (currentBets.length > 0) {
+        } else if (activeBets.length > 0) {
           sounds.playLoss();
           setWinningAnnouncement(`Round Result: ${result.num} ${result.color} ${result.size}`);
         }
@@ -77,10 +81,10 @@ export default function WinGoGame({ onBack }) {
         setTimeout(() => setWinningAnnouncement(null), 5000);
         setCurrentBets([]);
       }
-    }, 250);
+    }, 100);
 
     return () => clearInterval(syncInterval);
-  }, [currentBets]);
+  }, []);
 
   const handleOpenBetSheet = (type, value) => {
     if (isLocked) {
@@ -141,8 +145,12 @@ export default function WinGoGame({ onBack }) {
             <div>
               <h1 className="text-xl font-black text-white flex items-center space-x-2">
                 <span>WIN GO</span>
+                <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold flex items-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse" />
+                  LIVE
+                </span>
                 <span className="text-[10px] bg-purple-950 text-purple-400 border border-purple-500/40 px-2 py-0.5 rounded-full font-bold">
-                  60s Fast Turn
+                  60s
                 </span>
               </h1>
               <p className="text-xs text-slate-400 font-mono">{roundId}</p>

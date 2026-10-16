@@ -216,19 +216,21 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
   const handleCashoutPanel = (panelNumber, explicitMult = null) => {
     const multToAward = explicitMult || currentMultiplierRef.current;
 
-    if (panelNumber === 1 && panel1ActiveBet && !panel1ActiveBet.cashedOut) {
-      const winAmount = Number((panel1ActiveBet.amount * multToAward).toFixed(2));
+    const p1 = panel1ActiveBetRef.current;
+    if (panelNumber === 1 && p1 && !p1.cashedOut) {
+      const winAmount = Number((p1.amount * multToAward).toFixed(2));
       sounds.playCashout();
       modifyBalance(winAmount, `Aviator Cashout Panel 1 (${multToAward}x)`);
-      setPanel1ActiveBet({ ...panel1ActiveBet, cashedOut: true, cashoutMult: multToAward, winAmount });
+      setPanel1ActiveBet({ ...p1, cashedOut: true, cashoutMult: multToAward, winAmount });
       checkWinningCap();
     }
 
-    if (panelNumber === 2 && panel2ActiveBet && !panel2ActiveBet.cashedOut) {
-      const winAmount = Number((panel2ActiveBet.amount * multToAward).toFixed(2));
+    const p2 = panel2ActiveBetRef.current;
+    if (panelNumber === 2 && p2 && !p2.cashedOut) {
+      const winAmount = Number((p2.amount * multToAward).toFixed(2));
       sounds.playCashout();
       modifyBalance(winAmount, `Aviator Cashout Panel 2 (${multToAward}x)`);
-      setPanel2ActiveBet({ ...panel2ActiveBet, cashedOut: true, cashoutMult: multToAward, winAmount });
+      setPanel2ActiveBet({ ...p2, cashedOut: true, cashoutMult: multToAward, winAmount });
       checkWinningCap();
     }
   };
@@ -448,8 +450,12 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
             <div>
               <h1 className="text-xl font-black text-white flex items-center space-x-2">
                 <span>AVIATOR</span>
-                <span className="text-[10px] bg-rose-950 text-rose-400 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold">
-                  MULTIPLIER CRASH
+                <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold flex items-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse" />
+                  LIVE
+                </span>
+                <span className="text-[10px] bg-slate-900 text-slate-400 border border-slate-700/60 px-2 py-0.5 rounded-full font-mono font-bold">
+                  {currentRoundId}
                 </span>
               </h1>
               <p className="text-xs text-slate-400">Cash out before the plane flies away</p>

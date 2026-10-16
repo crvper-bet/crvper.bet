@@ -8,7 +8,123 @@
 //    multiplier, crash point, colors, numbers, and historical outcomes.
 // 2. Timeline runs continuously in the background even after users exit the game.
 // 3. Guaranteed monotonic and smooth — no time-skips or sudden jump-crashes.
+// 4. Automatically calibrates client hardware clock offsets against server/UTC.
 // ═══════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 0. HIGH-PRECISION WORLDWIDE CLOCK SYNCHRONIZATION (NTP ALGORITHM)
+// ─────────────────────────────────────────────────────────────────────────────
+let serverTimeOffset = 0;
+let hasSynced = false;
+let isSyncInProgress = false;
+
+export async function syncClockWithServer() {
+  if (isSyncInProgress) return;
+  isSyncInProgress = true;
+
+  try {
+    let offset = null;
+
+    // Method 1: Local dev/production server timestamp endpoint
+    try {
+      const t0 = Date.now();
+      const res = await fetch(`/api/server-time?_t=${t0}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const t1 = Date.now();
+        const rtt = Math.max(0, t1 - t0);
+        const serverTime = data.serverTime;
+        offset = (serverTime + Math.round(rtt / 2)) - t1;
+      }
+    } catch {
+      // Endpoint unavailable (e.g. static CDN deploy)
+    }
+
+    // Method 2: HTTP HEAD request to origin reading the standard HTTP 'Date' header
+    if (offset === null && typeof window !== 'undefined' && window.location?.origin) {
+      try {
+        const t0 = Date.now();
+        const res = await fetch(window.location.origin, {
+          method: 'HEAD',
+          cache: 'no-store'
+        });
+        const dateStr = res.headers.get('date');
+        if (dateStr) {
+          const serverTime = new Date(dateStr).getTime();
+          const t1 = Date.now();
+          const rtt = Math.max(0, t1 - t0);
+          offset = (serverTime + Math.round(rtt / 2)) - t1;
+        }
+      } catch {}
+    }
+
+    // Method 3: Fallback to reliable public atomic UTC time API
+    if (offset === null) {
+      try {
+        const t0 = Date.now();
+        const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', {
+          cache: 'no-store'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const serverTime = data.unixtime * 1000;
+          const t1 = Date.now();
+          const rtt = Math.max(0, t1 - t0);
+          offset = (serverTime + Math.round(rtt / 2)) - t1;
+        }
+      } catch {}
+    }
+
+    if (offset !== null && Number.isFinite(offset)) {
+      serverTimeOffset = offset;
+      hasSynced = true;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('crvper-time-synced', {
+            detail: { offset: serverTimeOffset, serverTime: Date.now() + serverTimeOffset }
+          })
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('[CRVPER Sync] Clock calibration notice:', err);
+  } finally {
+    isSyncInProgress = false;
+  }
+}
+
+// Global Synced Timestamp: returns the exact global millisecond
+export function getSyncedNow() {
+  return Date.now() + serverTimeOffset;
+}
+
+export function isTimeSynchronized() {
+  return hasSynced;
+}
+
+export function getServerTimeOffset() {
+  return serverTimeOffset;
+}
+
+// Auto-activate synchronization in browser environment
+if (typeof window !== 'undefined') {
+  syncClockWithServer();
+  // Quick re-sample after 1.5s to filter any initial network jitter
+  setTimeout(syncClockWithServer, 1500);
+  // Periodic background calibration every 20 seconds
+  setInterval(syncClockWithServer, 20000);
+
+  // Instant re-sync when user returns to tab or wakes up phone screen
+  window.addEventListener('focus', () => syncClockWithServer());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      syncClockWithServer();
+    }
+  });
+}
 
 // Seeded pseudorandom generator (Mulberry32) — 100% deterministic
 function mulberry32(a) {
@@ -86,7 +202,7 @@ function ensureCheckpoints(targetMs) {
 }
 
 // Exactly resolves the live flight state for any timestamp
-export function getLiveAviatorState(nowMs = Date.now()) {
+export function getLiveAviatorState(nowMs = getSyncedNow()) {
   ensureCheckpoints(nowMs);
   const offset = nowMs - ANCHOR_EPOCH;
 
@@ -169,7 +285,7 @@ export function getLiveAviatorState(nowMs = Date.now()) {
 }
 
 // Generate continuous past Aviator history across all devices
-export function getAviatorHistory(count = 10, nowMs = Date.now()) {
+export function getAviatorHistory(count = 10, nowMs = getSyncedNow()) {
   const current = getLiveAviatorState(nowMs);
   const history = [];
   const startR = current.gameState === 'CRASHED' ? current.roundNumber - 1 : current.roundNumber - 2;
@@ -203,7 +319,7 @@ export function getWinGoOutcomeForRound(roundNumber) {
   };
 }
 
-export function getLiveWinGoState(nowMs = Date.now()) {
+export function getLiveWinGoState(nowMs = getSyncedNow()) {
   const roundNumber = Math.floor(nowMs / 60000);
   const msInRound = nowMs % 60000;
   const secondsLeft = Math.max(1, 60 - Math.floor(msInRound / 1000));
@@ -219,7 +335,7 @@ export function getLiveWinGoState(nowMs = Date.now()) {
   };
 }
 
-export function getWinGoHistory(count = 12, nowMs = Date.now()) {
+export function getWinGoHistory(count = 12, nowMs = getSyncedNow()) {
   const currentRound = Math.floor(nowMs / 60000);
   const list = [];
   for (let i = 1; i <= count; i++) {
