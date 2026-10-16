@@ -54,7 +54,33 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
     return false;
   };
 
-  // ── High-Precision Global Engine Sync Loop ──
+  // Persistent live refs so sync interval never resets on user bet changes
+  const panel1ActiveBetRef = useRef(panel1ActiveBet);
+  panel1ActiveBetRef.current = panel1ActiveBet;
+  const panel2ActiveBetRef = useRef(panel2ActiveBet);
+  panel2ActiveBetRef.current = panel2ActiveBet;
+  const panel1AutoCashoutRef = useRef(panel1AutoCashout);
+  panel1AutoCashoutRef.current = panel1AutoCashout;
+  const panel2AutoCashoutRef = useRef(panel2AutoCashout);
+  panel2AutoCashoutRef.current = panel2AutoCashout;
+  const panel1AutoCashoutTargetRef = useRef(panel1AutoCashoutTarget);
+  panel1AutoCashoutTargetRef.current = panel1AutoCashoutTarget;
+  const panel2AutoCashoutTargetRef = useRef(panel2AutoCashoutTarget);
+  panel2AutoCashoutTargetRef.current = panel2AutoCashoutTarget;
+  const panel1QueuedBetRef = useRef(panel1QueuedBet);
+  panel1QueuedBetRef.current = panel1QueuedBet;
+  const panel2QueuedBetRef = useRef(panel2QueuedBet);
+  panel2QueuedBetRef.current = panel2QueuedBet;
+  const panel1AutoBetRef = useRef(panel1AutoBet);
+  panel1AutoBetRef.current = panel1AutoBet;
+  const panel2AutoBetRef = useRef(panel2AutoBet);
+  panel2AutoBetRef.current = panel2AutoBet;
+  const panel1AmountRef = useRef(panel1Amount);
+  panel1AmountRef.current = panel1Amount;
+  const panel2AmountRef = useRef(panel2Amount);
+  panel2AmountRef.current = panel2Amount;
+
+  // ── High-Precision Global Engine Sync Loop (Persistent, never resets on bet) ──
   useEffect(() => {
     let lastRoundId = initial.roundId;
     let lastState = initial.gameState;
@@ -82,12 +108,14 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
           const isCapped = Boolean(freshUser && Number(freshUser.walletBalance || 0) >= 100000);
 
           // Panel 1 auto/queued placement
-          if (!isCapped && (panel1QueuedBet || panel1AutoBet)) {
-            const betToPlace = panel1QueuedBet || Number(panel1Amount);
+          const q1 = panel1QueuedBetRef.current;
+          const a1 = panel1AutoBetRef.current;
+          if (!isCapped && (q1 || a1)) {
+            const betToPlace = q1 || Number(panel1AmountRef.current);
             if (freshUser && freshUser.walletBalance >= betToPlace && betToPlace >= 10) {
               modifyBalance(-betToPlace, 'Aviator Bet Panel 1');
               setPanel1ActiveBet({ amount: betToPlace, cashedOut: false });
-            } else if (panel1AutoBet) {
+            } else if (a1) {
               setPanel1AutoBet(false);
             }
             setPanel1QueuedBet(null);
@@ -96,13 +124,15 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
           }
 
           // Panel 2 auto/queued placement
-          if (!isCapped && (panel2QueuedBet || panel2AutoBet)) {
-            const betToPlace = panel2QueuedBet || Number(panel2Amount);
+          const q2 = panel2QueuedBetRef.current;
+          const a2 = panel2AutoBetRef.current;
+          if (!isCapped && (q2 || a2)) {
+            const betToPlace = q2 || Number(panel2AmountRef.current);
             const freshAfterP1 = storage.getCurrentUser();
             if (freshAfterP1 && freshAfterP1.walletBalance >= betToPlace && betToPlace >= 10) {
               modifyBalance(-betToPlace, 'Aviator Bet Panel 2');
               setPanel2ActiveBet({ amount: betToPlace, cashedOut: false });
-            } else if (panel2AutoBet) {
+            } else if (a2) {
               setPanel2AutoBet(false);
             }
             setPanel2QueuedBet(null);
@@ -111,14 +141,16 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
           }
         } else if (live.gameState === 'CRASHED') {
           // Play crash sound
-          const hasActiveLoss = (panel1ActiveBet && !panel1ActiveBet.cashedOut) || (panel2ActiveBet && !panel2ActiveBet.cashedOut);
+          const p1 = panel1ActiveBetRef.current;
+          const p2 = panel2ActiveBetRef.current;
+          const hasActiveLoss = (p1 && !p1.cashedOut) || (p2 && !p2.cashedOut);
           if (hasActiveLoss) sounds.playLoss();
           else sounds.playBomb();
 
-          if (panel1ActiveBet && !panel1ActiveBet.cashedOut) {
+          if (p1 && !p1.cashedOut) {
             setPanel1ActiveBet((prev) => (prev ? { ...prev, cashedOut: false, lost: true } : null));
           }
-          if (panel2ActiveBet && !panel2ActiveBet.cashedOut) {
+          if (p2 && !p2.cashedOut) {
             setPanel2ActiveBet((prev) => (prev ? { ...prev, cashedOut: false, lost: true } : null));
           }
         }
@@ -134,24 +166,26 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
         currentMultiplierRef.current = live.multiplier;
 
         // Auto Cashout checks
+        const p1 = panel1ActiveBetRef.current;
         if (
-          panel1ActiveBet &&
-          !panel1ActiveBet.cashedOut &&
-          panel1AutoCashout &&
-          panel1AutoCashoutTarget &&
-          live.multiplier >= Number(panel1AutoCashoutTarget)
+          p1 &&
+          !p1.cashedOut &&
+          panel1AutoCashoutRef.current &&
+          panel1AutoCashoutTargetRef.current &&
+          live.multiplier >= Number(panel1AutoCashoutTargetRef.current)
         ) {
-          handleCashoutPanel(1, Number(panel1AutoCashoutTarget));
+          handleCashoutPanel(1, Number(panel1AutoCashoutTargetRef.current));
         }
 
+        const p2 = panel2ActiveBetRef.current;
         if (
-          panel2ActiveBet &&
-          !panel2ActiveBet.cashedOut &&
-          panel2AutoCashout &&
-          panel2AutoCashoutTarget &&
-          live.multiplier >= Number(panel2AutoCashoutTarget)
+          p2 &&
+          !p2.cashedOut &&
+          panel2AutoCashoutRef.current &&
+          panel2AutoCashoutTargetRef.current &&
+          live.multiplier >= Number(panel2AutoCashoutTargetRef.current)
         ) {
-          handleCashoutPanel(2, Number(panel2AutoCashoutTarget));
+          handleCashoutPanel(2, Number(panel2AutoCashoutTargetRef.current));
         }
       } else if (live.gameState === 'CRASHED') {
         setMultiplier(live.crashPoint);
@@ -160,7 +194,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
     }, 50);
 
     return () => clearInterval(syncInterval);
-  }, [panel1ActiveBet, panel2ActiveBet, panel1AutoCashout, panel2AutoCashout, panel1AutoCashoutTarget, panel2AutoCashoutTarget, panel1QueuedBet, panel2QueuedBet, panel1AutoBet, panel2AutoBet, panel1Amount, panel2Amount]);
+  }, []);
 
   // Canvas Drawing Animation Loop
   useEffect(() => {
