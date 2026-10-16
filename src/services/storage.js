@@ -58,6 +58,14 @@ const INITIAL_PROMOTERS = [
 
 const isSupabaseReady = () => !!supabase;
 
+function broadcastRealtime(event, payload) {
+  try {
+    import('./realtimeSync.js').then(({ realtimeSync }) => {
+      realtimeSync.broadcast(event, payload);
+    }).catch(() => {});
+  } catch {}
+}
+
 // Map Supabase DB row (snake_case) → app user object (camelCase)
 function dbUserToApp(row) {
   if (!row) return null;
@@ -267,31 +275,41 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.ADMIN_SETTINGS, JSON.stringify(updated));
 
     if (isSupabaseReady()) {
-      // Read the current sound data from soundStorage local cache to preserve it
-      let soundData = {};
+      // Read the current row directly from Supabase to preserve existing soundData and modes
+      const { data: existing } = await supabase
+        .from('admin_settings')
+        .select('*')
+        .eq('id', 1)
+        .single();
+
+      let currentQr = updated.qrImageUrl || existing?.qr_image_url || '';
       let soundModes = updated.soundModes || {};
+      let soundData = {};
+
       try {
-        const sc = JSON.parse(localStorage.getItem('crvper_sound_config_v3') || '{}');
-        soundData = sc.soundData || {};
-        // Merge: newSettings soundModes override, but preserve existing if not changed
-        soundModes = { ...(sc.soundModes || {}), ...soundModes };
+        const parsed = JSON.parse(existing?.qr_image_url || '{}');
+        if (parsed && typeof parsed === 'object') {
+          if (!newSettings.qrImageUrl && parsed.qr) currentQr = parsed.qr;
+          soundModes = { ...(parsed.soundModes || {}), ...soundModes };
+          soundData = parsed.soundData || {};
+        }
       } catch {}
 
-      // Pack everything into the qr_image_url JSON envelope
-      const envelope = this._buildQrEnvelope(updated.qrImageUrl, soundModes, soundData);
+      const envelope = this._buildQrEnvelope(currentQr, soundModes, soundData);
 
       await supabase.from('admin_settings').upsert({
         id: 1,
-        upi_id: updated.upiId,
-        payee_name: updated.payeeName,
+        upi_id: updated.upiId || existing?.upi_id || 'crvper@ibl',
+        payee_name: updated.payeeName || existing?.payee_name || 'CRVPER.BET PVT LTD',
         qr_image_url: envelope,
-        min_deposit: updated.minDeposit,
-        min_withdraw: updated.minWithdraw,
-        signup_bonus: updated.signupBonus,
+        min_deposit: Number(updated.minDeposit ?? existing?.min_deposit ?? 100),
+        min_withdraw: Number(updated.minWithdraw ?? existing?.min_withdraw ?? 100),
+        signup_bonus: Number(updated.signupBonus ?? existing?.signup_bonus ?? 150),
         updated_at: new Date().toISOString()
       });
     }
 
+    broadcastRealtime('settings_updated', updated);
     window.dispatchEvent(new Event('crvper_settings_updated'));
     return updated;
   },
@@ -305,6 +323,46 @@ export const storage = {
 
   saveUsers(users) {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+  },
+
+  async getUsersAsync() {
+    if (isSupabaseReady()) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        const mapped = data.map(dbUserToApp);
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(mapped));
+        return mapped;
+      }
+    }
+    return this.getUsers();
+  },
+
+  async refreshCurrentUserFromSupabase() {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser || !isSupabaseReady()) return currentUser;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+      if (!error && data) {
+        const freshUser = dbUserToApp(data);
+        const users = this.getUsers();
+        const idx = users.findIndex(u => u.id === freshUser.id);
+        if (idx !== -1) users[idx] = freshUser; else users.push(freshUser);
+        this.saveUsers(users);
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(freshUser));
+        window.dispatchEvent(new Event('crvper_user_updated'));
+        return freshUser;
+      }
+    } catch (e) {
+      console.warn('[Storage] refreshCurrentUserFromSupabase error:', e);
+    }
+    return currentUser;
   },
 
   getCurrentUser() {
@@ -594,6 +652,7 @@ export const storage = {
     });
 
     window.dispatchEvent(new Event('crvper_deposit_submitted'));
+    broadcastRealtime('deposit_created', { depositId: newReq.id, userId, amount: newReq.amount });
     return newReq;
   },
 
@@ -623,15 +682,19 @@ export const storage = {
     const uIdx = users.findIndex(u => u.id === dep.userId);
     if (uIdx !== -1) {
       users[uIdx].walletBalance = Number((users[uIdx].walletBalance + dep.amount).toFixed(2));
-      users[uIdx].hasDeposited = true;
-      users[uIdx].totalDeposited = (users[uIdx].totalDeposited || 0) + dep.amount;
+      const totalDep = Number(((users[uIdx].totalDeposited || 0) + dep.amount).toFixed(2));
+      users[uIdx].totalDeposited = totalDep;
+      // Compulsory deposit rule: Depositing minimum ₹100 unlocks withdrawals
+      if (totalDep >= 100 || dep.amount >= 100) {
+        users[uIdx].hasDeposited = true;
+      }
       this.saveUsers(users);
 
       // Supabase user update
       if (isSupabaseReady()) {
         await supabase.from('users').update({
           wallet_balance: users[uIdx].walletBalance,
-          has_deposited: true,
+          has_deposited: users[uIdx].hasDeposited,
           total_deposited: users[uIdx].totalDeposited
         }).eq('id', dep.userId);
       }
@@ -682,6 +745,12 @@ export const storage = {
       status: 'COMPLETED'
     });
 
+    broadcastRealtime('deposit_updated', {
+      depositId: dep.id,
+      userId: dep.userId,
+      status: 'APPROVED',
+      amount: dep.amount
+    });
     window.dispatchEvent(new Event('crvper_deposits_updated'));
   },
 
@@ -713,6 +782,12 @@ export const storage = {
       status: 'REJECTED'
     });
 
+    broadcastRealtime('deposit_updated', {
+      depositId: dep.id,
+      userId: dep.userId,
+      status: 'REJECTED',
+      reason
+    });
     window.dispatchEvent(new Event('crvper_deposits_updated'));
   },
 
@@ -742,7 +817,11 @@ export const storage = {
     const user = this.getCurrentUser();
     if (!user) throw new Error('You must be logged in.');
 
-    if (!user.hasDeposited) throw new Error('COMPULSORY_DEPOSIT_REQUIRED');
+    // Compulsory rule: must have deposited a minimum of ₹100 to unlock withdrawals
+    const isUnlocked = Boolean(user.hasDeposited || Number(user.totalDeposited || 0) >= 100);
+    if (!isUnlocked) throw new Error('COMPULSORY_DEPOSIT_REQUIRED');
+
+    if (amount < 100) throw new Error('Minimum withdrawal amount is ₹100.');
     if (user.walletBalance < amount) throw new Error('Insufficient wallet balance!');
 
     await this.updateWalletBalance(userId, -amount, 'Withdrawal Hold');
@@ -786,6 +865,7 @@ export const storage = {
     });
 
     window.dispatchEvent(new Event('crvper_withdrawals_updated'));
+    broadcastRealtime('withdrawal_created', { withdrawalId: newReq.id, userId, amount: newReq.amount });
     return newReq;
   },
 
@@ -827,6 +907,11 @@ export const storage = {
       status: 'COMPLETED'
     });
 
+    broadcastRealtime('withdrawal_updated', {
+      withdrawalId,
+      userId: wth.userId,
+      status: 'COMPLETED'
+    });
     window.dispatchEvent(new Event('crvper_withdrawals_updated'));
   },
 
@@ -861,6 +946,12 @@ export const storage = {
       status: 'COMPLETED'
     });
 
+    broadcastRealtime('withdrawal_updated', {
+      withdrawalId,
+      userId: wth.userId,
+      status: 'REJECTED',
+      reason
+    });
     window.dispatchEvent(new Event('crvper_withdrawals_updated'));
   },
 
@@ -873,6 +964,21 @@ export const storage = {
       return INITIAL_PROMOTERS;
     }
     return JSON.parse(data);
+  },
+
+  async getPromotersAsync() {
+    if (isSupabaseReady()) {
+      const { data, error } = await supabase
+        .from('promoters')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        const mapped = data.map(dbPromoterToApp);
+        localStorage.setItem(STORAGE_KEYS.PROMOTERS, JSON.stringify(mapped));
+        return mapped;
+      }
+    }
+    return this.getPromoters();
   },
 
   savePromoters(promoters) {

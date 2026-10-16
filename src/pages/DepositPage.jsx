@@ -216,7 +216,7 @@ export default function DepositPage({ onBack }) {
 
             <button
               onClick={() => {
-                const min = adminSettings.minDeposit || 100;
+                const min = 100;
                 if (Number(amount) < min) {
                   alert(`Minimum deposit amount is ₹${min}.`);
                   return;

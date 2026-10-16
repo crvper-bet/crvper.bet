@@ -1,19 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// CRVPER.BET — Dynamic Sound System v4 (Cross-Device Real-Time)
+// CRVPER.BET — Dynamic Sound System v5 (Universal & Sub-Second Real-Time)
 // ─────────────────────────────────────────────────────────────────────────
-// Each sound key has ONE of three modes (set by Admin in real-time):
-//   "silent"  → no sound at all
-//   "default" → built-in synthesizer tone
-//   "custom"  → decoded AudioBuffer from Supabase-synced base64 data URI
-//
-// Audio files live in Supabase (packed in admin_settings.qr_image_url JSON).
-// On startup, the engine fetches the latest config from Supabase and decodes
-// all custom audio. It polls every 30 seconds for admin changes — ensuring
-// all user devices play the latest admin-configured sounds in real-time.
-//
-// Events:
-//   crvper_sound_updated    → re-decodes changed key from remote config
-//   crvper_settings_updated → re-reads soundModes from remote config
+// • Cross-Device Real-Time: Any sound changed by admin syncs in sub-second time.
+// • AudioContext Auto-Unlock on mobile touch/click.
+// • Dual Playback Pipeline: Web Audio API AudioBuffer + HTML5 media fallback.
+// • Synthesizer Safety Net: If custom media fails or is absent, built-in tone plays.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { soundStorage } from './soundStorage';
@@ -25,20 +16,35 @@ class SoundEngine {
   constructor() {
     this.ctx = null;
     this.muted = false;
-    // Decoded AudioBuffers for custom sounds  { key → AudioBuffer }
     this.customBuffers = {};
-    // Raw base64 data URLs for HTML5 media fallback (handles video/mp4, webm, etc.)
     this.customDataUrls = {};
+    this.isUnlocked = false;
 
     try {
       this.muted = localStorage.getItem('crvper_sound_muted') === 'true';
     } catch {}
 
     if (typeof window !== 'undefined') {
-      // Initial load: sync from Supabase then decode all custom sounds
+      // 1. Mobile & Browser Autoplay Unlock on first interaction
+      const unlockAudio = () => {
+        this.init();
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        this.isUnlocked = true;
+        ['click', 'touchstart', 'touchend', 'keydown'].forEach(evt => {
+          window.removeEventListener(evt, unlockAudio);
+        });
+      };
+
+      ['click', 'touchstart', 'touchend', 'keydown'].forEach(evt => {
+        window.addEventListener(evt, unlockAudio, { passive: true });
+      });
+
+      // 2. Initial load from Supabase cloud
       this._initFromRemote();
 
-      // Admin uploaded / deleted a specific sound file
+      // 3. Admin uploaded / updated / deleted sound
       window.addEventListener('crvper_sound_updated', async (e) => {
         const { key, deleted, all, dataUrl } = e.detail || {};
         if (all && deleted) {
@@ -55,7 +61,7 @@ class SoundEngine {
         }
       });
 
-      // Admin changed a sound mode — re-check which keys need decoding
+      // 4. Admin changed sound modes
       window.addEventListener('crvper_settings_updated', () => {
         SOUND_KEYS.forEach(k => {
           if (this.getSoundMode(k) === 'custom' && !this.customBuffers[k]) {
@@ -64,10 +70,7 @@ class SoundEngine {
         });
       });
 
-      // Poll Supabase every 30 seconds for admin sound config changes
-      setInterval(() => soundStorage.syncFromRemote(), 30000);
-
-      // Re-sync when user comes back to the tab / wakes the phone
+      // 5. Periodic polling & focus re-sync
       window.addEventListener('focus', () => soundStorage.syncFromRemote());
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') soundStorage.syncFromRemote();
@@ -75,7 +78,7 @@ class SoundEngine {
     }
   }
 
-  // ─── Boot: sync from Supabase then pre-decode all custom sounds ───────────
+  // ─── Initialize from Cloud Storage ──────────────────────────────────────────
   async _initFromRemote() {
     try {
       await soundStorage.syncFromRemote();
@@ -83,13 +86,11 @@ class SoundEngine {
     await this._loadAllCustomSounds();
   }
 
-  // ─── Read current mode for a key (live from storage) ─────────────────────
+  // ─── Sound Mode ─────────────────────────────────────────────────────────────
   getSoundMode(key) {
     try {
-      // First check the new soundStorage local config (highest priority)
       const modes = soundStorage.getSoundModes();
       if (modes[key]) return modes[key];
-      // Fall back to legacy adminSettings
       const settings = storage.getAdminSettings();
       return (settings?.soundModes?.[key]) || 'default';
     } catch {
@@ -97,7 +98,7 @@ class SoundEngine {
     }
   }
 
-  // ─── AudioContext ─────────────────────────────────────────────────────────
+  // ─── AudioContext Initialization ────────────────────────────────────────────
   init() {
     if (!this.ctx && typeof window !== 'undefined') {
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -115,31 +116,29 @@ class SoundEngine {
 
   isMuted() { return this.muted; }
 
-  // ─── IndexedDB / Storage helpers ─────────────────────────────────────────
+  // ─── Pre-load & Decode Custom Sounds ────────────────────────────────────────
   async _loadAllCustomSounds() {
     try {
-      const all = await soundStorage.getAllSounds();
-      for (const [key, meta] of Object.entries(all)) {
-        if (meta?.dataUrl) this.customDataUrls[key] = meta.dataUrl;
-        if (meta?.buffer) {
-          await this._decodeAndCache(key, meta.buffer);
-        } else if (meta?.dataUrl) {
-          await this._decodeFromDataUrl(key, meta.dataUrl);
+      for (const key of SOUND_KEYS) {
+        if (this.getSoundMode(key) === 'custom') {
+          await this._reloadSound(key);
         }
       }
     } catch (err) {
-      console.warn('[Audio] Pre-load failed:', err);
+      console.warn('[Audio] Pre-load error:', err);
     }
   }
 
   async _reloadSound(key) {
     try {
       const meta = await soundStorage.getSound(key);
-      if (meta?.dataUrl) this.customDataUrls[key] = meta.dataUrl;
-      if (meta?.buffer) {
-        await this._decodeAndCache(key, meta.buffer);
-      } else if (meta?.dataUrl) {
-        await this._decodeFromDataUrl(key, meta.dataUrl);
+      if (meta?.dataUrl) {
+        this.customDataUrls[key] = meta.dataUrl;
+        if (meta.buffer) {
+          await this._decodeAndCache(key, meta.buffer);
+        } else {
+          await this._decodeFromDataUrl(key, meta.dataUrl);
+        }
       } else {
         delete this.customBuffers[key];
         delete this.customDataUrls[key];
@@ -167,16 +166,15 @@ class SoundEngine {
     try {
       this.init();
       if (!this.ctx) return;
-      // slice() required — decodeAudioData detaches the buffer
       const decoded = await this.ctx.decodeAudioData(arrayBuffer.slice(0));
       this.customBuffers[key] = decoded;
     } catch (err) {
-      console.warn(`[Audio] Decode failed for "${key}":`, err);
+      // AudioContext could not decode (e.g. video container). Keep dataUrl for HTML5 fallback
       delete this.customBuffers[key];
     }
   }
 
-  // ─── Core play dispatcher ─────────────────────────────────────────────────
+  // ─── Play Custom Sound or Fallback to Synthesizer ───────────────────────────
   async playCustomOrSynthesize(soundKey, synthFallback) {
     if (this.muted) return;
 
@@ -190,17 +188,16 @@ class SoundEngine {
       await this.ctx.resume().catch(() => {});
     }
 
-    // CUSTOM → play decoded AudioBuffer or HTML5 audio fallback
+    // CUSTOM → Try AudioBuffer then HTML5 Audio/Video, then synth fallback
     if (mode === 'custom') {
       let buffer = this.customBuffers[soundKey];
 
-      // Buffer not decoded yet → try to load and decode now on-demand
       if (!buffer) {
         await this._reloadSound(soundKey);
         buffer = this.customBuffers[soundKey];
       }
 
-      if (buffer) {
+      if (buffer && this.ctx) {
         try {
           const source = this.ctx.createBufferSource();
           source.buffer = buffer;
@@ -208,11 +205,11 @@ class SoundEngine {
           source.start(0);
           return;
         } catch (err) {
-          console.warn(`[Audio] Custom buffer playback failed for "${soundKey}":`, err);
+          console.warn(`[Audio] Buffer playback error for "${soundKey}":`, err);
         }
       }
 
-      // If buffer unavailable or decode failed (e.g. video/mp4 or webm), play via HTML5 media
+      // Fallback: HTML5 Media element
       let dataUrl = this.customDataUrls[soundKey];
       if (!dataUrl) {
         await this._reloadSound(soundKey);
@@ -226,13 +223,16 @@ class SoundEngine {
           await media.play();
           return;
         } catch (err) {
-          console.warn(`[Audio] HTML5 media playback failed for "${soundKey}":`, err);
+          // If HTML5 media element also fails, fall through to synthFallback
+          console.warn(`[Audio] Media element playback failed for "${soundKey}", using synthesizer:`, err);
         }
       }
     }
 
-    // DEFAULT → synthesizer
-    if (typeof synthFallback === 'function') synthFallback();
+    // DEFAULT (or fallback when custom file failed) → Synthesizer
+    if (typeof synthFallback === 'function') {
+      try { synthFallback(); } catch {}
+    }
   }
 
   // ─── 1. DEPOSIT ───────────────────────────────────────────────────────────
@@ -380,7 +380,7 @@ class SoundEngine {
     });
   }
 
-  // ─── Mines diamond discovery ──────────────────────────────────────────────
+  // ─── Game specific sound effects ──────────────────────────────────────────
   playDiamond(step = 1) {
     if (this.muted) return;
     try {
@@ -400,7 +400,6 @@ class SoundEngine {
 
   playBomb() { this.playLoss(); }
 
-  // ─── Plinko peg ───────────────────────────────────────────────────────────
   playPeg() {
     if (this.muted) return;
     try {

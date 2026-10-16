@@ -63,9 +63,9 @@ export default function WalletCard({ onDepositClick, onWithdrawClick, onWalletCl
               )}
             </div>
 
-            {user && !user.hasDeposited && (
-              <span className="text-[10px] text-amber-400/90 font-medium">
-                ★ ₹150 Pre-deposit bonus active
+            {user && !(user.hasDeposited || Number(user.totalDeposited || 0) >= 100) && (
+              <span className="text-[10px] text-amber-400 font-bold flex items-center space-x-1">
+                <span>🔒 Deposit ₹100 to unlock withdrawals</span>
               </span>
             )}
           </div>

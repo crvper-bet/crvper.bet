@@ -140,12 +140,14 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
             setPanel2ActiveBet(null);
           }
         } else if (live.gameState === 'CRASHED') {
-          // Play crash sound
+          // Play crash sound ONLY if the player placed a bet and did not cash out
           const p1 = panel1ActiveBetRef.current;
           const p2 = panel2ActiveBetRef.current;
-          const hasActiveLoss = (p1 && !p1.cashedOut) || (p2 && !p2.cashedOut);
-          if (hasActiveLoss) sounds.playLoss();
-          else sounds.playBomb();
+          const hasActiveLoss = Boolean((p1 && !p1.cashedOut) || (p2 && !p2.cashedOut));
+          if (hasActiveLoss) {
+            sounds.playLoss();
+          }
+          // Note: Spectators (no active bet) hear neither win nor lose sound!
 
           if (p1 && !p1.cashedOut) {
             setPanel1ActiveBet((prev) => (prev ? { ...prev, cashedOut: false, lost: true } : null));
@@ -219,6 +221,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
     const p1 = panel1ActiveBetRef.current;
     if (panelNumber === 1 && p1 && !p1.cashedOut) {
       const winAmount = Number((p1.amount * multToAward).toFixed(2));
+      sounds.playWin();
       sounds.playCashout();
       modifyBalance(winAmount, `Aviator Cashout Panel 1 (${multToAward}x)`);
       setPanel1ActiveBet({ ...p1, cashedOut: true, cashoutMult: multToAward, winAmount });
@@ -228,6 +231,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
     const p2 = panel2ActiveBetRef.current;
     if (panelNumber === 2 && p2 && !p2.cashedOut) {
       const winAmount = Number((p2.amount * multToAward).toFixed(2));
+      sounds.playWin();
       sounds.playCashout();
       modifyBalance(winAmount, `Aviator Cashout Panel 2 (${multToAward}x)`);
       setPanel2ActiveBet({ ...p2, cashedOut: true, cashoutMult: multToAward, winAmount });

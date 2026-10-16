@@ -53,17 +53,27 @@ export default function AdminPage({ onExit }) {
     }
   };
 
-  const loadData = () => {
-    setDeposits(storage.getDeposits().reverse());
-    setWithdrawals(storage.getWithdrawals().reverse());
-    setUsers(storage.getUsers().reverse());
-    setPromoters(storage.getPromoters());
-    const settings = storage.getAdminSettings();
-    setAdminSettings(settings);
-    setSoundModes(settings?.soundModes || {});
-    setNewUpiId(settings.upiId);
-    setNewPayeeName(settings.payeeName);
-    setSupportChats(storage.getSupportChats());
+  const loadData = async () => {
+    try {
+      const [deps, withs, usrs, proms, settings] = await Promise.all([
+        storage.getDepositsAsync(),
+        storage.getWithdrawalsAsync(),
+        storage.getUsersAsync(),
+        storage.getPromotersAsync(),
+        storage.getAdminSettingsAsync()
+      ]);
+      setDeposits([...deps].reverse());
+      setWithdrawals([...withs].reverse());
+      setUsers([...usrs].reverse());
+      setPromoters(proms);
+      setAdminSettings(settings);
+      setSoundModes(settings?.soundModes || {});
+      setNewUpiId(settings.upiId);
+      setNewPayeeName(settings.payeeName);
+      setSupportChats(storage.getSupportChats());
+    } catch (e) {
+      console.warn('[AdminPage] loadData error:', e);
+    }
   };
 
   useEffect(() => {
@@ -72,7 +82,9 @@ export default function AdminPage({ onExit }) {
       // Sync from Supabase first so admin sees the latest cloud config
       soundStorage.syncFromRemote().then(() => loadAudioMeta());
       window.addEventListener('crvper_deposits_updated', loadData);
+      window.addEventListener('crvper_deposits_changed', loadData);
       window.addEventListener('crvper_withdrawals_updated', loadData);
+      window.addEventListener('crvper_withdrawals_changed', loadData);
       window.addEventListener('crvper_support_updated', loadData);
       window.addEventListener('crvper_promoter_updated', loadData);
       window.addEventListener('crvper_user_updated', loadData);
@@ -80,7 +92,9 @@ export default function AdminPage({ onExit }) {
       window.addEventListener('crvper_settings_updated', loadAudioMeta);
       return () => {
         window.removeEventListener('crvper_deposits_updated', loadData);
+        window.removeEventListener('crvper_deposits_changed', loadData);
         window.removeEventListener('crvper_withdrawals_updated', loadData);
+        window.removeEventListener('crvper_withdrawals_changed', loadData);
         window.removeEventListener('crvper_support_updated', loadData);
         window.removeEventListener('crvper_promoter_updated', loadData);
         window.removeEventListener('crvper_user_updated', loadData);
@@ -101,33 +115,37 @@ export default function AdminPage({ onExit }) {
     }
   };
 
-  const handleApproveDeposit = (id) => {
+  const handleApproveDeposit = async (id) => {
     if (confirm('Approve this deposit? User wallet will be credited and promoter will receive 20% commission.')) {
-      storage.approveDeposit(id);
+      await storage.approveDeposit(id);
       sounds.playWin();
+      await loadData();
     }
   };
 
-  const handleRejectDeposit = (id) => {
+  const handleRejectDeposit = async (id) => {
     const reason = prompt('Reason for rejection:', 'Invalid UTR reference or payment screenshot');
     if (reason) {
-      storage.rejectDeposit(id, reason);
+      await storage.rejectDeposit(id, reason);
       sounds.playClick();
+      await loadData();
     }
   };
 
-  const handleApproveWithdrawal = (id) => {
+  const handleApproveWithdrawal = async (id) => {
     if (confirm('Mark this withdrawal as Completed / Sent?')) {
-      storage.approveWithdrawal(id);
+      await storage.approveWithdrawal(id);
       sounds.playWin();
+      await loadData();
     }
   };
 
-  const handleRejectWithdrawal = (id) => {
+  const handleRejectWithdrawal = async (id) => {
     const reason = prompt('Reason for rejection (funds will be refunded to user):', 'Incorrect UPI details');
     if (reason) {
-      storage.rejectWithdrawal(id, reason);
+      await storage.rejectWithdrawal(id, reason);
       sounds.playClick();
+      await loadData();
     }
   };
 

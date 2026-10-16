@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ArrowLeft, ArrowDownLeft, ArrowUpRight, Eye, EyeOff, ShieldCheck, 
+  ArrowLeft, ArrowDownLeft, ArrowUpRight, Eye, EyeOff, ShieldCheck, ShieldAlert,
   Sparkles, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, 
   CreditCard, ChevronRight, History 
 } from 'lucide-react';
@@ -151,7 +151,8 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
               <button
                 onClick={() => {
                   sounds.playWithdraw();
-                  if (!user.hasDeposited) {
+                  const isUnlocked = Boolean(user && (user.hasDeposited || Number(user.totalDeposited || 0) >= 100));
+                  if (!isUnlocked) {
                     onTriggerCompulsoryModal();
                   } else {
                     onGoToWithdraw();
@@ -165,6 +166,26 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
             </div>
           </div>
         </div>
+
+        {/* Deposit ₹100 Unlock Banner if not unlocked */}
+        {user && !(user.hasDeposited || Number(user.totalDeposited || 0) >= 100) && (
+          <div 
+            onClick={() => {
+              sounds.playDeposit();
+              onGoToDeposit();
+            }}
+            className="p-3.5 bg-gradient-to-r from-amber-950/70 via-yellow-950/50 to-amber-950/70 border-2 border-amber-500/60 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-400 transition shadow-lg shadow-amber-500/10 text-xs text-amber-300"
+          >
+            <div className="flex items-center space-x-2.5">
+              <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 animate-bounce" />
+              <div>
+                <span className="font-black text-white block">Withdrawals Locked</span>
+                <span className="text-[11px] text-amber-300/90">Deposit minimum ₹100 to verify account & unlock withdrawals</span>
+              </div>
+            </div>
+            <span className="font-black text-amber-400 underline text-xs shrink-0">Deposit ₹100 →</span>
+          </div>
+        )}
 
         {/* Quick Deposit Top-Up Carousel / Chips */}
         <div className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-4">

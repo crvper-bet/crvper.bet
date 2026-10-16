@@ -37,6 +37,8 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
     }
   };
 
+  const isUnlocked = Boolean(user && (user.hasDeposited || Number(user.totalDeposited || 0) >= 100));
+
   const handleWithdrawRequest = (e) => {
     e.preventDefault();
     setError('');
@@ -44,15 +46,19 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
 
     if (!user) return;
 
-    // Check MANDATORY RULE: Must have completed at least 1 deposit >= 100
-    if (!user.hasDeposited) {
-      onTriggerCompulsoryModal();
+    // Check MANDATORY RULE: Must have completed at least 1 deposit >= 100 to unlock withdrawals
+    if (!isUnlocked) {
+      if (onTriggerCompulsoryModal) {
+        onTriggerCompulsoryModal();
+      } else if (onGoToDeposit) {
+        onGoToDeposit();
+      }
       return;
     }
 
     const numAmount = Number(amount);
-    if (!numAmount || numAmount <= 0) {
-      setError('Please enter a valid withdrawal amount.');
+    if (!numAmount || numAmount < 100) {
+      setError('Minimum withdrawal amount is ₹100.');
       return;
     }
 
@@ -81,7 +87,8 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
       sounds.playWin();
     } catch (err) {
       if (err.message === 'COMPULSORY_DEPOSIT_REQUIRED') {
-        onTriggerCompulsoryModal();
+        if (onTriggerCompulsoryModal) onTriggerCompulsoryModal();
+        else if (onGoToDeposit) onGoToDeposit();
       } else {
         setError(err.message || 'Withdrawal failed');
       }
@@ -112,8 +119,8 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
           </div>
         </div>
 
-        {/* ── DEPOSIT REQUIRED BANNER ── shown when user has never deposited ── */}
-        {user && !user.hasDeposited && (
+        {/* ── DEPOSIT REQUIRED BANNER ── shown when user has not deposited minimum ₹100 ── */}
+        {!isUnlocked && (
           <div className="mb-5 relative overflow-hidden rounded-3xl border-2 border-amber-400/70 shadow-2xl shadow-amber-500/30">
             {/* Animated glow background */}
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/25 via-yellow-500/15 to-orange-600/20 animate-pulse" />
@@ -137,7 +144,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
 
               {/* Body text */}
               <p className="text-sm text-slate-200 leading-relaxed mb-4">
-                You need to make a <span className="text-amber-300 font-black">one-time deposit of ₹100</span> to verify your account and unlock instant withdrawals. Your wallet balance is safe!
+                To be able to withdraw funds, you need to make a <span className="text-amber-300 font-black">minimum deposit of ₹100</span> to verify your account. Your wallet balance is 100% safe!
               </p>
 
               {/* CTA Button — navigates directly to Deposit page */}
@@ -157,8 +164,8 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
               </button>
 
               {/* Small note */}
-              <p className="text-center text-[10px] text-amber-600/80 mt-2 font-semibold">
-                One-time only • Instant credit to wallet • 100% secure
+              <p className="text-center text-[10px] text-amber-500/80 mt-2 font-semibold">
+                Minimum ₹100 deposit • Instant account verification • 100% secure
               </p>
             </div>
           </div>
@@ -285,13 +292,27 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-rose-600/25 flex items-center justify-center space-x-2"
-            >
-              <span>{submitting ? 'Processing...' : 'Request Withdraw'}</span>
-            </button>
+            {!isUnlocked ? (
+              <button
+                type="button"
+                onClick={() => {
+                  sounds.playDeposit();
+                  if (onGoToDeposit) onGoToDeposit();
+                  else if (onTriggerCompulsoryModal) onTriggerCompulsoryModal();
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-amber-500/30 flex items-center justify-center space-x-2"
+              >
+                <span>🔒 Deposit ₹100 to Unlock Withdrawals →</span>
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-3.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-rose-600/25 flex items-center justify-center space-x-2"
+              >
+                <span>{submitting ? 'Processing...' : 'Request Withdraw'}</span>
+              </button>
+            )}
           </form>
         )}
 

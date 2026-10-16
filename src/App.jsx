@@ -30,9 +30,15 @@ import AviatorGame from './games/AviatorGame';
 import NeonTowerGame from './games/NeonTowerGame';
 import QuantumDiceGame from './games/QuantumDiceGame';
 import PlinkoGame from './games/PlinkoGame';
+import { realtimeSync } from './services/realtimeSync';
 
 export default function App() {
   const { user, showCompulsoryModal, setShowCompulsoryModal } = useAuth();
+
+  // Initialize global real-time cross-device sync
+  React.useEffect(() => {
+    realtimeSync.init();
+  }, []);
 
   // Navigation state
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'auth' | 'deposit' | 'withdraw' | 'admin' | 'promoter' | 'activity' | 'account'
@@ -289,7 +295,7 @@ export default function App() {
         onClose={() => setShowMaxLimitModal(false)}
         onGoToWithdraw={() => setCurrentView('withdraw')}
         onGoToDeposit={() => setCurrentView('deposit')}
-        hasDeposited={user?.hasDeposited}
+        hasDeposited={Boolean(user && (user.hasDeposited || Number(user.totalDeposited || 0) >= 100))}
       />
 
       {/* Customer Support Floating Chat Modal */}
