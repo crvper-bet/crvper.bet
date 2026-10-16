@@ -131,14 +131,18 @@ export default function AdminPage({ onExit }) {
     }
   };
 
-  const handleSaveSettings = (e) => {
+  const handleSaveSettings = async (e) => {
     e.preventDefault();
-    storage.updateAdminSettings({
-      upiId: newUpiId,
-      payeeName: newPayeeName,
-      ...(newQrImage ? { qrImageUrl: newQrImage } : {})
-    });
-    alert('Admin UPI Payment details successfully updated! Players will now see this new QR.');
+    try {
+      await storage.updateAdminSettings({
+        upiId: newUpiId,
+        payeeName: newPayeeName,
+        ...(newQrImage ? { qrImageUrl: newQrImage } : {})
+      });
+      alert('Admin UPI Payment details successfully updated! Players will now see this new QR.');
+    } catch (err) {
+      alert('Failed to save settings: ' + (err.message || 'Error occurred'));
+    }
   };
 
   const handleQrUpload = (e) => {
@@ -823,10 +827,10 @@ export default function AdminPage({ onExit }) {
                           {mode === 'custom' && (
                             <label className="px-3 py-1.5 rounded-xl bg-purple-900/50 hover:bg-purple-800/60 border border-purple-600/50 text-purple-200 font-bold text-xs transition flex items-center space-x-1.5 cursor-pointer active:scale-95">
                               <Upload className="w-3.5 h-3.5" />
-                              <span>{meta ? 'Change File' : 'Upload Audio'}</span>
+                              <span>{meta ? 'Change File' : 'Upload Audio/Video'}</span>
                               <input
                                 type="file"
-                                accept="audio/*"
+                                accept="audio/*,video/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.mp4,.webm,.mov"
                                 className="hidden"
                                 onChange={(e) => {
                                   const file = e.target.files[0];

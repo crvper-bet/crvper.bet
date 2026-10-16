@@ -18,17 +18,45 @@ export default function DepositPage({ onBack }) {
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
   const [depositHistory, setDepositHistory] = useState([]);
 
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
   useEffect(() => {
-    const load = () => {
-      setAdminSettings(storage.getAdminSettings());
+    let isMounted = true;
+
+    // Dynamically fetch latest UPI QR & payment details from Supabase admin_settings
+    const fetchLiveSettings = async () => {
+      try {
+        setLoadingSettings(true);
+        const live = await storage.getAdminSettingsAsync();
+        if (isMounted && live) {
+          setAdminSettings(live);
+        }
+      } catch (err) {
+        console.warn('[DepositPage] Failed to fetch live Supabase admin settings:', err);
+      } finally {
+        if (isMounted) setLoadingSettings(false);
+      }
+    };
+
+    const loadUserDeposits = () => {
       if (user) {
         const allDeps = storage.getDeposits().filter(d => d.userId === user.id);
         setDepositHistory(allDeps.reverse());
       }
     };
-    load();
-    window.addEventListener('crvper_deposits_updated', load);
-    return () => window.removeEventListener('crvper_deposits_updated', load);
+
+    // Immediate dynamic fetch on load
+    fetchLiveSettings();
+    loadUserDeposits();
+
+    window.addEventListener('crvper_deposits_updated', loadUserDeposits);
+    window.addEventListener('crvper_settings_updated', fetchLiveSettings);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('crvper_deposits_updated', loadUserDeposits);
+      window.removeEventListener('crvper_settings_updated', fetchLiveSettings);
+    };
   }, [user]);
 
   const handleCopyUPI = () => {
@@ -188,11 +216,16 @@ export default function DepositPage({ onBack }) {
 
             <button
               onClick={() => {
-                if (Number(amount) < 100) {
-                  alert('Minimum deposit amount is ₹100.');
+                const min = adminSettings.minDeposit || 100;
+                if (Number(amount) < min) {
+                  alert(`Minimum deposit amount is ₹${min}.`);
                   return;
                 }
                 sounds.playClick();
+                // Ensure fresh live data on transition to Step 2
+                storage.getAdminSettingsAsync().then((fresh) => {
+                  if (fresh) setAdminSettings(fresh);
+                });
                 setStep(2);
               }}
               className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2"
@@ -204,38 +237,62 @@ export default function DepositPage({ onBack }) {
           /* Step 2: Show Admin-Uploaded Official UPI QR Code */
           <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4 animate-fade-in">
             <div className="text-center">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
-                Scan & Pay via any UPI App
-              </span>
-              <h3 className="text-2xl font-black font-mono text-white mt-0.5">
+              <div className="inline-flex items-center space-x-1.5 bg-cyan-950/70 border border-cyan-500/30 px-3 py-1 rounded-full text-[11px] font-bold text-cyan-300 mb-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>OFFICIAL VERIFIED UPI QR</span>
+              </div>
+              <h3 className="text-2xl font-black font-mono text-white mt-1">
                 ₹{amount}
               </h3>
             </div>
 
             {/* Full UPI QR Image */}
-            <div className="bg-white p-5 rounded-2xl max-w-[280px] mx-auto shadow-2xl flex flex-col items-center justify-center">
-              <img
-                src={adminSettings.qrImageUrl}
-                alt="UPI QR Code"
-                className="w-56 h-56 sm:w-64 sm:h-64 object-contain rounded-lg"
-              />
+            <div className="bg-white p-5 rounded-2xl max-w-[280px] mx-auto shadow-2xl flex flex-col items-center justify-center min-h-[240px]">
+              {loadingSettings && !adminSettings.qrImageUrl ? (
+                <div className="flex flex-col items-center justify-center p-8 space-y-2 text-slate-400">
+                  <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs font-bold text-slate-600">Loading Live QR…</span>
+                </div>
+              ) : (
+                <img
+                  src={adminSettings.qrImageUrl}
+                  alt="UPI QR Code"
+                  className="w-56 h-56 sm:w-64 sm:h-64 object-contain rounded-lg"
+                />
+              )}
             </div>
 
-            {/* UPI ID */}
-            <div className="bg-[#131b2e] border border-slate-700/80 rounded-2xl p-3 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">UPI ID</span>
-                <span className="text-xs font-bold text-cyan-400 font-mono select-all">
-                  {adminSettings.upiId}
+            {/* Payee Name & Official UPI ID */}
+            <div className="bg-[#131b2e] border border-slate-700/80 rounded-2xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Payee Name</span>
+                  <span className="text-xs font-bold text-white select-all">
+                    {adminSettings.payeeName || 'CRVPER ENTERTAINMENT PVT LTD'}
+                  </span>
+                </div>
+                <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-bold flex items-center">
+                  <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-400" />
+                  Live Verified
                 </span>
               </div>
-              <button
-                onClick={handleCopyUPI}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center space-x-1.5 transition"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
-              </button>
+
+              <div className="border-t border-slate-800/80 pt-2 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">UPI ID</span>
+                  <span className="text-xs font-bold text-cyan-400 font-mono select-all">
+                    {adminSettings.upiId}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyUPI}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center space-x-1.5 transition active:scale-95"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Upload Screenshot & Enter UTR form */}

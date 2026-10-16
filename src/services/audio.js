@@ -27,6 +27,8 @@ class SoundEngine {
     this.muted = false;
     // Decoded AudioBuffers for custom sounds  { key → AudioBuffer }
     this.customBuffers = {};
+    // Raw base64 data URLs for HTML5 media fallback (handles video/mp4, webm, etc.)
+    this.customDataUrls = {};
 
     try {
       this.muted = localStorage.getItem('crvper_sound_muted') === 'true';
@@ -41,10 +43,12 @@ class SoundEngine {
         const { key, deleted, all, dataUrl } = e.detail || {};
         if (all && deleted) {
           this.customBuffers = {};
+          this.customDataUrls = {};
         } else if (key && deleted) {
           delete this.customBuffers[key];
+          delete this.customDataUrls[key];
         } else if (key && dataUrl) {
-          // Directly decode from the data URI provided in the event
+          this.customDataUrls[key] = dataUrl;
           await this._decodeFromDataUrl(key, dataUrl);
         } else if (key) {
           await this._reloadSound(key);
@@ -116,6 +120,7 @@ class SoundEngine {
     try {
       const all = await soundStorage.getAllSounds();
       for (const [key, meta] of Object.entries(all)) {
+        if (meta?.dataUrl) this.customDataUrls[key] = meta.dataUrl;
         if (meta?.buffer) {
           await this._decodeAndCache(key, meta.buffer);
         } else if (meta?.dataUrl) {
@@ -130,12 +135,14 @@ class SoundEngine {
   async _reloadSound(key) {
     try {
       const meta = await soundStorage.getSound(key);
+      if (meta?.dataUrl) this.customDataUrls[key] = meta.dataUrl;
       if (meta?.buffer) {
         await this._decodeAndCache(key, meta.buffer);
       } else if (meta?.dataUrl) {
         await this._decodeFromDataUrl(key, meta.dataUrl);
       } else {
         delete this.customBuffers[key];
+        delete this.customDataUrls[key];
       }
     } catch {}
   }
@@ -143,6 +150,7 @@ class SoundEngine {
   async _decodeFromDataUrl(key, dataUrl) {
     try {
       if (!dataUrl || !dataUrl.startsWith('data:')) return;
+      this.customDataUrls[key] = dataUrl;
       const base64 = dataUrl.split(',')[1];
       if (!base64) return;
       const binary = atob(base64);
@@ -182,7 +190,7 @@ class SoundEngine {
       await this.ctx.resume().catch(() => {});
     }
 
-    // CUSTOM → play decoded AudioBuffer
+    // CUSTOM → play decoded AudioBuffer or HTML5 audio fallback
     if (mode === 'custom') {
       let buffer = this.customBuffers[soundKey];
 
@@ -200,10 +208,27 @@ class SoundEngine {
           source.start(0);
           return;
         } catch (err) {
-          console.warn(`[Audio] Custom playback failed for "${soundKey}":`, err);
+          console.warn(`[Audio] Custom buffer playback failed for "${soundKey}":`, err);
         }
       }
-      // Fall through to synthesizer if custom file unavailable
+
+      // If buffer unavailable or decode failed (e.g. video/mp4 or webm), play via HTML5 media
+      let dataUrl = this.customDataUrls[soundKey];
+      if (!dataUrl) {
+        await this._reloadSound(soundKey);
+        dataUrl = this.customDataUrls[soundKey];
+      }
+
+      if (dataUrl) {
+        try {
+          const media = new Audio(dataUrl);
+          media.volume = 1.0;
+          await media.play();
+          return;
+        } catch (err) {
+          console.warn(`[Audio] HTML5 media playback failed for "${soundKey}":`, err);
+        }
+      }
     }
 
     // DEFAULT → synthesizer
