@@ -83,6 +83,22 @@ class RealtimeSyncService {
         window.dispatchEvent(new CustomEvent('crvper_withdrawals_changed', { detail: event.payload }));
       });
 
+      this.channel.on('broadcast', { event: 'support_message' }, async (event) => {
+        const payload = event.payload || {};
+        try {
+          await storage.getSupportChatsAsync();
+        } catch {}
+        window.dispatchEvent(new CustomEvent('crvper_support_updated', { detail: payload }));
+      });
+
+      this.channel.on('broadcast', { event: 'support_chat_deleted' }, async (event) => {
+        const payload = event.payload || {};
+        try {
+          await storage.getSupportChatsAsync();
+        } catch {}
+        window.dispatchEvent(new CustomEvent('crvper_support_updated', { detail: payload }));
+      });
+
       // ── Postgres Changes (Safety Net for direct DB updates) ──
       this.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'admin_settings' }, async () => {
         try {
@@ -109,6 +125,13 @@ class RealtimeSyncService {
         if (currentUser && change.new && String(currentUser.id) === String(change.new.user_id)) {
           await storage.refreshCurrentUserFromSupabase();
         }
+      });
+
+      this.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'support_chats' }, async () => {
+        try {
+          await storage.getSupportChatsAsync();
+        } catch {}
+        window.dispatchEvent(new Event('crvper_support_updated'));
       });
 
       this.channel.subscribe((status) => {

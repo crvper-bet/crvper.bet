@@ -55,12 +55,13 @@ export default function AdminPage({ onExit }) {
 
   const loadData = async () => {
     try {
-      const [deps, withs, usrs, proms, settings] = await Promise.all([
+      const [deps, withs, usrs, proms, settings, chats] = await Promise.all([
         storage.getDepositsAsync(),
         storage.getWithdrawalsAsync(),
         storage.getUsersAsync(),
         storage.getPromotersAsync(),
-        storage.getAdminSettingsAsync()
+        storage.getAdminSettingsAsync(),
+        storage.getSupportChatsAsync()
       ]);
       setDeposits([...deps].reverse());
       setWithdrawals([...withs].reverse());
@@ -70,7 +71,14 @@ export default function AdminPage({ onExit }) {
       setSoundModes(settings?.soundModes || {});
       setNewUpiId(settings.upiId);
       setNewPayeeName(settings.payeeName);
-      setSupportChats(storage.getSupportChats());
+      setSupportChats(chats || []);
+
+      // If a chat is currently open, keep it updated with fresh messages
+      setSelectedChatUser(prev => {
+        if (!prev) return null;
+        const fresh = (chats || []).find(c => c.userId === prev.userId);
+        return fresh || prev;
+      });
     } catch (e) {
       console.warn('[AdminPage] loadData error:', e);
     }
@@ -274,19 +282,24 @@ export default function AdminPage({ onExit }) {
     }
   };
 
-  const handleSendAdminReply = (e) => {
+  const handleSendAdminReply = async (e) => {
     e.preventDefault();
     if (!adminReply.trim() || !selectedChatUser) return;
-    storage.sendSupportMessage(selectedChatUser.userId, selectedChatUser.userPhone, adminReply.trim(), 'admin');
+    const replyText = adminReply.trim();
     setAdminReply('');
-    setSupportChats(storage.getSupportChats());
+    await storage.sendSupportMessage(selectedChatUser.userId, selectedChatUser.userPhone, replyText, 'admin');
+    const freshChats = await storage.getSupportChatsAsync();
+    setSupportChats(freshChats || []);
+    const updated = (freshChats || []).find(c => c.userId === selectedChatUser.userId);
+    if (updated) setSelectedChatUser(updated);
   };
 
-  const handleDeleteChat = (userId) => {
+  const handleDeleteChat = async (userId) => {
     if (confirm('Delete this conversation after customer satisfaction?')) {
-      storage.deleteChat(userId);
+      await storage.deleteChat(userId);
       setSelectedChatUser(null);
-      setSupportChats(storage.getSupportChats());
+      const freshChats = await storage.getSupportChatsAsync();
+      setSupportChats(freshChats || []);
     }
   };
 

@@ -1101,29 +1101,73 @@ export const storage = {
     return chat;
   },
 
+  async getUserChatAsync(userId) {
+    if (isSupabaseReady() && userId) {
+      try {
+        const { data, error } = await supabase
+          .from('support_chats')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (!error && data) {
+          const chat = {
+            id: data.id,
+            userId: data.user_id,
+            userPhone: data.user_phone,
+            messages: data.messages || [],
+            status: data.status,
+            updatedAt: data.updated_at
+          };
+          const chats = this.getSupportChats();
+          const idx = chats.findIndex(c => c.userId === userId);
+          if (idx !== -1) chats[idx] = chat; else chats.push(chat);
+          localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(chats));
+          return chat;
+        }
+      } catch (e) {
+        console.warn('[Storage] getUserChatAsync error:', e);
+      }
+    }
+    return this.getUserChat(userId);
+  },
+
   async getSupportChatsAsync() {
     if (isSupabaseReady()) {
-      const { data, error } = await supabase
-        .from('support_chats')
-        .select('*')
-        .order('updated_at', { ascending: false });
-      if (!error && data) {
-        const mapped = data.map(row => ({
-          id: row.id,
-          userId: row.user_id,
-          userPhone: row.user_phone,
-          messages: row.messages || [],
-          status: row.status,
-          updatedAt: row.updated_at
-        }));
-        localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(mapped));
-        return mapped;
+      try {
+        const { data, error } = await supabase
+          .from('support_chats')
+          .select('*')
+          .order('updated_at', { ascending: false });
+        if (!error && data) {
+          const mapped = data.map(row => ({
+            id: row.id,
+            userId: row.user_id,
+            userPhone: row.user_phone,
+            messages: row.messages || [],
+            status: row.status,
+            updatedAt: row.updated_at
+          }));
+          localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(mapped));
+          return mapped;
+        }
+      } catch (e) {
+        console.warn('[Storage] getSupportChatsAsync error:', e);
       }
     }
     return this.getSupportChats();
   },
 
   async sendSupportMessage(userId, userPhone, text, sender = 'user') {
+    // Foreign key safety: Ensure user exists in Supabase before saving chat
+    const currentUser = this.getCurrentUser();
+    if (currentUser && currentUser.id === userId) {
+      await ensureUserInSupabase(currentUser);
+    } else if (userId) {
+      const users = this.getUsers();
+      const targetUser = users.find(u => u.id === userId);
+      if (targetUser) await ensureUserInSupabase(targetUser);
+    }
+
     const chats = this.getSupportChats();
     let chat = chats.find(c => c.userId === userId);
     const msg = {
@@ -1133,44 +1177,80 @@ export const storage = {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
+    let allMessages = [];
     if (!chat) {
+      allMessages = [
+        {
+          id: 'm1',
+          sender: 'admin',
+          text: 'Hello! Welcome to CRVPER 24/7 VIP Customer Support. How can we assist your gaming experience today?',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        },
+        msg
+      ];
       chat = {
         userId,
         userPhone,
-        messages: [msg],
+        messages: allMessages,
         status: 'OPEN',
         updatedAt: new Date().toISOString()
       };
       chats.push(chat);
-
-      if (isSupabaseReady()) {
-        await supabase.from('support_chats').upsert({
-          user_id: userId,
-          user_phone: userPhone,
-          messages: [msg],
-          status: 'OPEN',
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
-      }
     } else {
       chat.userPhone = userPhone || chat.userPhone;
       chat.messages.push(msg);
+      allMessages = chat.messages;
       chat.status = 'OPEN';
       chat.updatedAt = new Date().toISOString();
-
-      if (isSupabaseReady()) {
-        await supabase.from('support_chats').upsert({
-          user_id: userId,
-          user_phone: chat.userPhone,
-          messages: chat.messages,
-          status: 'OPEN',
-          updated_at: chat.updatedAt
-        }, { onConflict: 'user_id' });
-      }
     }
 
     localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(chats));
-    window.dispatchEvent(new Event('crvper_support_updated'));
+
+    // Save to Supabase without invalid onConflict specification
+    if (isSupabaseReady()) {
+      try {
+        const { data: existing } = await supabase
+          .from('support_chats')
+          .select('id, messages')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase
+            .from('support_chats')
+            .update({
+              messages: allMessages,
+              user_phone: userPhone || chat.userPhone,
+              status: 'OPEN',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('support_chats')
+            .insert({
+              user_id: userId,
+              user_phone: userPhone || chat.userPhone,
+              messages: allMessages,
+              status: 'OPEN',
+              updated_at: new Date().toISOString()
+            });
+        }
+      } catch (err) {
+        console.warn('[Storage] sendSupportMessage error:', err);
+      }
+    }
+
+    broadcastRealtime('support_message', {
+      userId,
+      userPhone: userPhone || chat.userPhone,
+      message: msg,
+      sender
+    });
+
+    window.dispatchEvent(new CustomEvent('crvper_support_updated', {
+      detail: { userId, message: msg, sender }
+    }));
     return chat;
   },
 
@@ -1180,9 +1260,16 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(chats));
 
     if (isSupabaseReady()) {
-      await supabase.from('support_chats').delete().eq('user_id', userId);
+      try {
+        await supabase.from('support_chats').delete().eq('user_id', userId);
+      } catch (e) {
+        console.warn('[Storage] deleteChat error:', e);
+      }
     }
 
-    window.dispatchEvent(new Event('crvper_support_updated'));
+    broadcastRealtime('support_chat_deleted', { userId });
+    window.dispatchEvent(new CustomEvent('crvper_support_updated', {
+      detail: { userId, deleted: true }
+    }));
   }
 };

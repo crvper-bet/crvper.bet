@@ -12,14 +12,21 @@ export default function CustomerSupportModal({ isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen || !user) return;
 
-    const loadChat = () => {
-      const chat = storage.getUserChat(user.id);
-      setMessages(chat.messages || []);
+    const loadChat = async () => {
+      const chat = await storage.getUserChatAsync(user.id);
+      setMessages(chat?.messages || []);
     };
 
     loadChat();
-    window.addEventListener('crvper_support_updated', loadChat);
-    return () => window.removeEventListener('crvper_support_updated', loadChat);
+
+    const handleSupportUpdated = async (e) => {
+      if (e.detail?.userId && String(e.detail.userId) !== String(user.id)) return;
+      const chat = await storage.getUserChatAsync(user.id);
+      setMessages(chat?.messages || []);
+    };
+
+    window.addEventListener('crvper_support_updated', handleSupportUpdated);
+    return () => window.removeEventListener('crvper_support_updated', handleSupportUpdated);
   }, [isOpen, user]);
 
   useEffect(() => {
@@ -28,14 +35,15 @@ export default function CustomerSupportModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || !user) return;
 
-    storage.sendSupportMessage(user.id, user.phone, input.trim(), 'user');
+    const textToSend = input.trim();
     setInput('');
-    const updated = storage.getUserChat(user.id);
-    setMessages(updated.messages || []);
+    await storage.sendSupportMessage(user.id, user.phone, textToSend, 'user');
+    const updated = await storage.getUserChatAsync(user.id);
+    setMessages(updated?.messages || []);
   };
 
   return (
