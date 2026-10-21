@@ -48,14 +48,14 @@ export default function ActivityView() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-black text-white flex items-center space-x-2">
-            <History className="w-5 h-5 text-cyan-400" />
+            <History className="w-5 h-5 text-emerald-400" />
             <span>Activity & Orders</span>
           </h2>
           <p className="text-xs text-slate-400">Track all deposits, withdrawals, and game history</p>
         </div>
         <button
           onClick={handleRefresh}
-          className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition"
+          className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition"
           title="Refresh activity"
         >
           <RefreshCw className="w-4 h-4" />
@@ -63,7 +63,7 @@ export default function ActivityView() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="grid grid-cols-3 gap-2 bg-[#0f172a] border border-slate-800 p-1.5 rounded-2xl mb-4">
+      <div className="grid grid-cols-3 gap-2 bg-[#0f1826] border border-slate-800 p-1.5 rounded-2xl mb-4">
         {[
           { id: 'all', label: 'All History' },
           { id: 'deposits', label: `Deposits (${deposits.length})` },
@@ -77,7 +77,7 @@ export default function ActivityView() {
             }}
             className={`py-2 rounded-xl text-xs font-bold transition ${
               filterTab === tab.id
-                ? 'bg-cyan-500 text-black font-black shadow-md'
+                ? 'bg-emerald-500 text-black font-black shadow-md'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -90,7 +90,7 @@ export default function ActivityView() {
       {filterTab === 'deposits' && (
         <div className="space-y-2.5">
           {deposits.length === 0 ? (
-            <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-8 text-center text-slate-500 text-xs">
+            <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-8 text-center text-slate-500 text-xs">
               No deposit requests found.
             </div>
           ) : (
@@ -100,7 +100,7 @@ export default function ActivityView() {
               return (
                 <div
                   key={dep.id}
-                  className="bg-[#0f172a] border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-md"
+                  className="bg-[#0f1826] border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-md"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -158,7 +158,7 @@ export default function ActivityView() {
       {filterTab === 'withdrawals' && (
         <div className="space-y-2.5">
           {withdrawals.length === 0 ? (
-            <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-8 text-center text-slate-500 text-xs">
+            <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-8 text-center text-slate-500 text-xs">
               No withdrawal requests found.
             </div>
           ) : (
@@ -168,7 +168,7 @@ export default function ActivityView() {
               return (
                 <div
                   key={wth.id}
-                  className="bg-[#0f172a] border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-md"
+                  className="bg-[#0f1826] border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-md"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center">
@@ -226,7 +226,7 @@ export default function ActivityView() {
       {filterTab === 'all' && (
         <div className="space-y-2">
           {transactions.length === 0 ? (
-            <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-8 text-center text-slate-500 text-xs">
+            <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-8 text-center text-slate-500 text-xs">
               No transactions yet. Start playing or make a deposit!
             </div>
           ) : (
@@ -235,7 +235,7 @@ export default function ActivityView() {
               return (
                 <div
                   key={tx.id}
-                  className="bg-[#0f172a] border border-slate-800/80 rounded-2xl p-3.5 flex items-center justify-between"
+                  className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-3.5 flex items-center justify-between"
                 >
                   <div className="flex items-center space-x-3">
                     <div

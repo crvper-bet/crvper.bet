@@ -99,7 +99,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
   const withdrawableAmount = eligibility.withdrawableBalance;
 
   return (
-    <div className="min-h-screen bg-[#070b14] p-4 pb-24 selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-[#090e17] p-4 pb-24 selection:bg-emerald-500 selection:text-black">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center space-x-3 mb-5">
@@ -108,13 +108,13 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
               sounds.playClick();
               onBack();
             }}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+            className="p-2.5 rounded-2xl bg-[#0f1826] hover:bg-slate-800 border border-slate-800 text-slate-300 transition"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
             <h1 className="text-xl font-black text-white tracking-wide">Withdraw Funds</h1>
-            <p className="text-xs text-slate-400">Direct to your Bank Account or UPI</p>
+            <p className="text-xs text-slate-400">Direct Official UPI Instant Transfer</p>
           </div>
         </div>
 
@@ -149,7 +149,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
                   if (onGoToDeposit) onGoToDeposit();
                   else if (onTriggerCompulsoryModal) onTriggerCompulsoryModal();
                 }}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black font-black text-xs flex items-center justify-center space-x-2 shadow-xl shadow-amber-500/30 transition active:scale-95"
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black font-black text-xs flex items-center justify-center space-x-2 shadow-xl shadow-amber-500/30 transition active:scale-95"
               >
                 <span>💰 Deposit ₹100 Now</span>
                 <span className="text-sm">→</span>
@@ -160,11 +160,11 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
 
         {/* ── 2. WAGERING REQUIREMENT NOTICE ── */}
         {isUnlocked && !isWageringDone && (
-          <div className="mb-4 relative overflow-hidden rounded-3xl border-2 border-cyan-500/70 shadow-2xl shadow-cyan-500/20 bg-[#0d1627] p-5">
+          <div className="mb-4 relative overflow-hidden rounded-3xl border-2 border-blue-500/60 shadow-2xl shadow-blue-500/20 bg-[#0d1627] p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-black uppercase text-cyan-400 tracking-wider">Promotional Wagering</span>
+                <Clock className="w-4 h-4 text-blue-400" />
+                <span className="text-xs font-black uppercase text-blue-400 tracking-wider">Promotional Wagering</span>
               </div>
               <span className="text-xs font-mono font-bold text-slate-300">
                 ₹{eligibility.wageringWagered.toFixed(2)} / ₹{eligibility.wageringRequired.toFixed(2)}
@@ -178,7 +178,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
             {/* Progress bar */}
             <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500"
+                className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 transition-all duration-500"
                 style={{
                   width: `${Math.min(100, eligibility.wageringRequired > 0 ? (eligibility.wageringWagered / eligibility.wageringRequired) * 100 : 100)}%`
                 }}
@@ -188,10 +188,10 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
         )}
 
         {/* ── 3. FOUR-BALANCE VAULT BREAKDOWN ── */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-4 mb-4 shadow-xl space-y-3">
+        <div className="bg-[#0f1826] border border-slate-800/90 rounded-3xl p-5 mb-4 shadow-2xl space-y-3">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
-              <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">
+              <span className="text-[10px] uppercase font-black text-emerald-400 tracking-wider block">
                 Withdrawable Funds
               </span>
               <div className="text-2xl font-black font-mono text-white mt-0.5">
@@ -201,7 +201,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
             <button
               onClick={() => setAmount(String(Math.floor(withdrawableAmount)))}
               disabled={withdrawableAmount <= 0}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-cyan-400 border border-slate-700 transition disabled:opacity-40"
+              className="px-3.5 py-1.5 rounded-xl bg-[#142135] hover:bg-[#1a2b45] text-xs font-bold text-emerald-300 border border-slate-700 transition disabled:opacity-40"
             >
               Max Withdrawable
             </button>
@@ -209,15 +209,15 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
 
           {/* Sub-balances breakdown */}
           <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800/80">
+            <div className="p-2 rounded-xl bg-[#131f33] border border-slate-800/80">
               <span className="text-[9px] uppercase font-bold text-slate-400 block">Deposits</span>
-              <span className="text-xs font-mono font-black text-slate-200">₹{eligibility.depositBalance.toFixed(2)}</span>
+              <span className="text-xs font-mono font-black text-emerald-300">₹{eligibility.depositBalance.toFixed(2)}</span>
             </div>
-            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800/80">
-              <span className="text-[9px] uppercase font-bold text-purple-400 block">Promo Bonus</span>
+            <div className="p-2 rounded-xl bg-[#131f33] border border-slate-800/80">
+              <span className="text-[9px] uppercase font-bold text-purple-400 block">Bonus</span>
               <span className="text-xs font-mono font-black text-purple-300">₹{eligibility.bonusBalance.toFixed(2)}</span>
             </div>
-            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800/80">
+            <div className="p-2 rounded-xl bg-[#131f33] border border-slate-800/80">
               <span className="text-[9px] uppercase font-bold text-cyan-400 block">Winnings</span>
               <span className="text-xs font-mono font-black text-cyan-300">₹{eligibility.winningsBalance.toFixed(2)}</span>
             </div>
@@ -225,20 +225,20 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
         </div>
 
         {success ? (
-          <div className="bg-[#0f172a] border border-emerald-500/40 rounded-3xl p-6 text-center shadow-2xl animate-fade-in">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto mb-4">
+          <div className="bg-[#0f1826] border border-emerald-500/40 rounded-3xl p-6 text-center shadow-2xl animate-fade-in">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <h2 className="text-xl font-black text-white">Withdrawal Requested!</h2>
             <p className="text-xs text-slate-300 mt-2 leading-relaxed">
               Your request for <span className="text-emerald-400 font-bold font-mono">₹{amount}</span> has been received and is being processed by the finance desk.
             </p>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 my-4 text-xs text-slate-400 text-left">
-              <div className="flex items-center space-x-2 text-cyan-400 font-semibold mb-1">
+            <div className="bg-[#142033] border border-slate-800 rounded-2xl p-3.5 my-4 text-xs text-slate-300 text-left">
+              <div className="flex items-center space-x-2 text-emerald-400 font-bold mb-1">
                 <Clock className="w-4 h-4" />
-                <span>Status: Pending Admin Approval</span>
+                <span>Status: Pending Admin Confirmation</span>
               </div>
-              <p className="text-[11px]">
+              <p className="text-[11px] text-slate-400">
                 You can track the live progress in your withdrawal history below.
               </p>
             </div>
@@ -247,27 +247,27 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
                 setSuccess(false);
                 setAmount('');
               }}
-              className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-black rounded-xl text-sm transition"
+              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 text-slate-950 font-black rounded-2xl text-sm transition shadow-lg shadow-emerald-500/25"
             >
               Make Another Request
             </button>
           </div>
         ) : (
-          <form onSubmit={handleWithdrawRequest} className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+          <form onSubmit={handleWithdrawRequest} className="bg-[#0f1826] border border-slate-800/90 rounded-3xl p-5 shadow-2xl space-y-4">
             {error && (
-              <div className="p-3 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs flex items-center space-x-2 font-medium">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+              <div className="p-3 rounded-2xl bg-rose-950/70 border border-rose-500/50 text-rose-300 text-xs flex items-center space-x-2 font-bold">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
                 <span>{error}</span>
               </div>
             )}
 
             {/* Amount Input */}
             <div>
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider block mb-2">
                 Withdraw Amount (₹)
               </label>
-              <div className="relative flex items-center bg-[#131b2e] border border-slate-700 rounded-2xl overflow-hidden focus-within:border-cyan-500 transition">
-                <span className="pl-4 pr-2 text-xl font-black text-rose-400 font-mono">₹</span>
+              <div className="relative flex items-center bg-[#131f33] border border-slate-700/80 rounded-2xl overflow-hidden focus-within:border-emerald-500 transition">
+                <span className="pl-4 pr-2 text-xl font-black text-emerald-400 font-mono">₹</span>
                 <input
                   type="number"
                   min="1"
@@ -291,7 +291,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
                 value={upiId}
                 onChange={(e) => setUpiId(e.target.value)}
                 placeholder="e.g. yourname@oksbi / 9876543210@paytm"
-                className="w-full bg-[#131b2e] border border-slate-700 rounded-2xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#131f33] border border-slate-700/80 rounded-2xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -300,7 +300,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
                 Or Upload Your Personal UPI QR Code
               </label>
-              <div className="relative border-2 border-dashed border-slate-700 hover:border-cyan-500 rounded-2xl p-4 text-center cursor-pointer transition bg-[#131b2e]">
+              <div className="relative border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-2xl p-4 text-center cursor-pointer transition bg-[#131f33]">
                 <input
                   type="file"
                   accept="image/*"
@@ -318,7 +318,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
                   </div>
                 ) : (
                   <div className="flex flex-col items-center space-y-1 text-slate-400">
-                    <QrCode className="w-6 h-6 text-cyan-400" />
+                    <QrCode className="w-6 h-6 text-emerald-400" />
                     <span className="text-xs font-semibold text-slate-300">Upload your UPI QR image</span>
                     <span className="text-[10px] text-slate-500">Fast payout scanning</span>
                   </div>
@@ -342,7 +342,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-rose-600/25 flex items-center justify-center space-x-2"
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 hover:from-emerald-400 text-slate-950 font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2"
               >
                 <span>{submitting ? 'Processing...' : 'Request Withdraw'}</span>
               </button>
@@ -352,7 +352,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
 
         {/* Withdrawal Transaction History */}
         {withdrawals.length > 0 && (
-          <div className="mt-6 bg-[#0f172a] border border-slate-800 rounded-2xl p-4 shadow-xl">
+          <div className="mt-6 bg-[#0f1826] border border-slate-800/90 rounded-2xl p-4 shadow-xl">
             <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">
               Withdrawal History & Status
             </h4>
@@ -360,23 +360,23 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
               {withdrawals.map((w) => (
                 <div
                   key={w.id}
-                  className="flex items-center justify-between p-2.5 bg-[#131b2e] rounded-xl text-xs"
+                  className="flex items-center justify-between p-2.5 bg-[#131f33] rounded-xl text-xs"
                 >
                   <div>
                     <span className="font-mono font-bold text-white block">₹{w.amount}</span>
-                    <span className="text-[10px] text-slate-400">Target: {w.upiId}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">Target: {w.upiId}</span>
                   </div>
                   <div>
                     <span
                       className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                        w.status === 'COMPLETED'
+                        (w.status === 'COMPLETED' || w.status === 'CONFIRMED')
                           ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
                           : w.status === 'REJECTED'
                           ? 'bg-rose-950 text-rose-400 border border-rose-500/40'
                           : 'bg-amber-950 text-amber-400 border border-amber-500/40'
                       }`}
                     >
-                      {w.status}
+                      {(w.status === 'COMPLETED' || w.status === 'CONFIRMED') ? 'CONFIRMED' : w.status}
                     </span>
                   </div>
                 </div>

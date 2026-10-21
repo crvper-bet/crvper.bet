@@ -56,9 +56,9 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
   const pendingWithdrawSum = pendingWithdrawals.reduce((sum, w) => sum + Number(w.amount), 0);
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 pb-28 selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-[#090e17] text-slate-100 pb-28 selection:bg-emerald-500 selection:text-black">
       {/* Top Header */}
-      <div className="sticky top-0 z-30 bg-[#0c1220]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-3.5">
+      <div className="sticky top-0 z-30 bg-[#090e17]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-3.5">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <button
             onClick={() => {
@@ -89,10 +89,10 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
       <div className="max-w-md mx-auto p-4 space-y-4">
 
         {/* Master Glowing Wallet Card */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0c1322] via-[#09101d] to-[#110e24] border-2 border-cyan-500/30 rounded-3xl p-6 shadow-2xl">
-          {/* Cyberpunk Glow Orbs */}
-          <div className="absolute -top-16 -right-16 w-44 h-44 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#0f1826] via-[#090e17] to-[#111826] border-2 border-emerald-500/30 rounded-3xl p-6 shadow-2xl">
+          {/* Ambient Glow Orbs */}
+          <div className="absolute -top-16 -right-16 w-44 h-44 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10">
             <div className="flex items-center justify-between">
@@ -113,8 +113,8 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
             </div>
 
             <div className="mt-2 flex items-baseline space-x-1">
-              <span className="text-2xl font-black text-cyan-400 font-mono">₹</span>
-              <span className="text-4xl sm:text-5xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_20px_rgba(0,229,255,0.3)]">
+              <span className="text-2xl font-black text-emerald-400 font-mono">₹</span>
+              <span className="text-4xl sm:text-5xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]">
                 {hideBalance ? '••••••' : balance.toFixed(2)}
               </span>
               <span className="text-xs font-bold text-slate-400 ml-1">INR</span>
@@ -122,25 +122,25 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
 
             {/* 4-Balance Vault Breakdown */}
             <div className="mt-4 pt-3.5 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div className="bg-[#121a2d]/80 rounded-xl p-2.5 border border-slate-800">
+              <div className="bg-[#131f33]/80 rounded-xl p-2.5 border border-slate-800">
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">Deposited</span>
                 <span className="text-sm font-black font-mono text-emerald-300 mt-0.5 block">
                   ₹{eligibility.depositBalance.toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#121a2d]/80 rounded-xl p-2.5 border border-slate-800">
+              <div className="bg-[#131f33]/80 rounded-xl p-2.5 border border-slate-800">
                 <span className="text-[10px] text-purple-400 uppercase font-bold block">Promo Bonus</span>
                 <span className="text-sm font-black font-mono text-purple-300 mt-0.5 block">
                   ₹{eligibility.bonusBalance.toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#121a2d]/80 rounded-xl p-2.5 border border-slate-800">
-                <span className="text-[10px] text-cyan-400 uppercase font-bold block">Winnings</span>
-                <span className="text-sm font-black font-mono text-cyan-300 mt-0.5 block">
+              <div className="bg-[#131f33]/80 rounded-xl p-2.5 border border-slate-800">
+                <span className="text-[10px] text-teal-400 uppercase font-bold block">Winnings</span>
+                <span className="text-sm font-black font-mono text-teal-300 mt-0.5 block">
                   ₹{eligibility.winningsBalance.toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#121a2d]/80 rounded-xl p-2.5 border border-slate-800">
+              <div className="bg-[#131f33]/80 rounded-xl p-2.5 border border-slate-800">
                 <span className="text-[10px] text-amber-400 uppercase font-bold block">Withdrawable</span>
                 <span className="text-sm font-black font-mono text-white mt-0.5 block">
                   ₹{eligibility.withdrawableBalance.toFixed(2)}
@@ -177,9 +177,9 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
 
         {/* Promotional Wagering Requirement Tracker */}
         {!eligibility.hasMetWagering && (
-          <div className="bg-[#0f172a] border border-cyan-500/40 rounded-2xl p-4 shadow-lg">
+          <div className="bg-[#0f1826] border border-emerald-500/40 rounded-2xl p-4 shadow-lg">
             <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-              <span className="text-cyan-400 flex items-center space-x-1.5">
+              <span className="text-emerald-400 flex items-center space-x-1.5">
                 <Clock className="w-3.5 h-3.5" />
                 <span>Promotional Wagering Condition</span>
               </span>
@@ -192,7 +192,7 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
             </p>
             <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500"
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
                 style={{
                   width: `${Math.min(100, eligibility.wageringRequired > 0 ? (eligibility.wageringWagered / eligibility.wageringRequired) * 100 : 100)}%`
                 }}
@@ -222,13 +222,13 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
         )}
 
         {/* Quick Deposit Top-Up Carousel / Chips */}
-        <div className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-4">
+        <div className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-xs font-black text-white flex items-center space-x-1.5">
-              <CreditCard className="w-4 h-4 text-cyan-400" />
+              <CreditCard className="w-4 h-4 text-emerald-400" />
               <span>Instant UPI Top-Up</span>
             </span>
-            <span className="text-[10px] text-cyan-400 font-bold uppercase">Min ₹100</span>
+            <span className="text-[10px] text-emerald-400 font-bold uppercase">Min ₹100</span>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -239,9 +239,9 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
                   sounds.playDeposit();
                   onGoToDeposit();
                 }}
-                className="py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500 hover:bg-cyan-950/20 text-white font-mono font-bold text-xs transition flex items-center justify-center space-x-1"
+                className="py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500 hover:bg-emerald-950/20 text-white font-mono font-bold text-xs transition flex items-center justify-center space-x-1"
               >
-                <span className="text-cyan-400 font-black">+</span>
+                <span className="text-emerald-400 font-black">+</span>
                 <span>₹{amt}</span>
               </button>
             ))}
@@ -258,10 +258,10 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
             {pendingDeposits.map((dep) => (
               <div 
                 key={dep.id}
-                className="bg-cyan-950/30 border border-cyan-500/40 rounded-2xl p-3 flex items-center justify-between"
+                className="bg-emerald-950/20 border border-emerald-500/40 rounded-2xl p-3 flex items-center justify-between"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
                     <Clock className="w-4 h-4 animate-spin" />
                   </div>
                   <div>
@@ -317,7 +317,7 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
             <div className="flex space-x-1 bg-slate-900 p-0.5 rounded-xl border border-slate-800 text-[10px] font-bold">
               <button
                 onClick={() => setActiveTab('all')}
-                className={`px-2 py-1 rounded-lg transition ${activeTab === 'all' ? 'bg-cyan-500 text-black font-extrabold' : 'text-slate-400 hover:text-white'}`}
+                className={`px-2 py-1 rounded-lg transition ${activeTab === 'all' ? 'bg-emerald-500 text-black font-extrabold' : 'text-slate-400 hover:text-white'}`}
               >
                 All
               </button>
@@ -340,14 +340,14 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
           <div className="space-y-2">
             {activeTab === 'all' && (
               transactions.length === 0 ? (
-                <div className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-6 text-center text-xs text-slate-500">
+                <div className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-6 text-center text-xs text-slate-500">
                   No transaction history yet.
                 </div>
               ) : (
                 transactions.slice(0, 15).map((tx) => {
                   const isPositive = tx.type === 'BONUS' || tx.type === 'DEPOSIT' || tx.type === 'GAME_WIN' || tx.type === 'REFUND';
                   return (
-                    <div key={tx.id} className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between">
+                    <div key={tx.id} className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
                           isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
@@ -383,12 +383,12 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
 
             {activeTab === 'deposits' && (
               deposits.length === 0 ? (
-                <div className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-6 text-center text-xs text-slate-500">
+                <div className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-6 text-center text-xs text-slate-500">
                   No deposit history found.
                 </div>
               ) : (
                 deposits.map((dep) => (
-                  <div key={dep.id} className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between">
+                  <div key={dep.id} className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between">
                     <div>
                       <span className="text-xs font-black text-white block font-mono">₹{dep.amount}</span>
                       <span className="text-[10px] text-slate-500 font-mono">UTR: {dep.utr || 'N/A'}</span>
@@ -407,12 +407,12 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
 
             {activeTab === 'withdrawals' && (
               withdrawals.length === 0 ? (
-                <div className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-6 text-center text-xs text-slate-500">
+                <div className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-6 text-center text-xs text-slate-500">
                   No withdrawal history found.
                 </div>
               ) : (
                 withdrawals.map((wth) => (
-                  <div key={wth.id} className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between">
+                  <div key={wth.id} className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between">
                     <div>
                       <span className="text-xs font-black text-white block font-mono">₹{wth.amount}</span>
                       <span className="text-[10px] text-slate-500 font-mono">{wth.upiId || 'UPI QR'}</span>

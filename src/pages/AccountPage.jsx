@@ -124,9 +124,9 @@ export default function AccountPage({
   const memberDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '2026';
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 pb-28 selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-[#090e17] text-slate-100 pb-28 selection:bg-emerald-500 selection:text-black">
       {/* Top Header */}
-      <div className="sticky top-0 z-30 bg-[#0c1220]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-3.5">
+      <div className="sticky top-0 z-30 bg-[#090e17]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-3.5">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <button
             onClick={() => {
@@ -139,14 +139,14 @@ export default function AccountPage({
           </button>
           <div className="text-center">
             <h1 className="text-base font-black text-white tracking-wide">MY ACCOUNT</h1>
-            <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">VIP Player Profile</p>
+            <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">VIP Player Profile</p>
           </div>
           <button
             onClick={handleToggleSound}
             className={`p-2 rounded-xl border transition ${
               isMuted 
                 ? 'bg-rose-950/60 border-rose-500/40 text-rose-300' 
-                : 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300'
+                : 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
             }`}
             title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
           >
@@ -158,20 +158,20 @@ export default function AccountPage({
       <div className="max-w-md mx-auto p-4 space-y-4">
         
         {/* User Identity Hero Card */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0e172a] via-[#0c1424] to-[#121124] border border-slate-800 rounded-3xl p-5 shadow-2xl">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#0f1826] via-[#090e17] to-[#111826] border border-slate-800 rounded-3xl p-5 shadow-2xl">
           {/* Ambient Glow */}
-          <div className="absolute top-0 right-0 w-44 h-44 bg-cyan-500/10 blur-3xl pointer-events-none rounded-full" />
-          <div className="absolute bottom-0 left-0 w-36 h-36 bg-purple-500/10 blur-3xl pointer-events-none rounded-full" />
+          <div className="absolute top-0 right-0 w-44 h-44 bg-emerald-500/10 blur-3xl pointer-events-none rounded-full" />
+          <div className="absolute bottom-0 left-0 w-36 h-36 bg-teal-500/10 blur-3xl pointer-events-none rounded-full" />
 
           <div className="relative z-10 flex items-start justify-between">
             <div className="flex items-center space-x-3.5">
               <div className="relative">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 to-purple-600 p-0.5 shadow-lg shadow-cyan-500/20">
-                  <div className="w-full h-full bg-[#090d16] rounded-2xl flex items-center justify-center text-2xl font-black text-white">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20">
+                  <div className="w-full h-full bg-[#090e17] rounded-2xl flex items-center justify-center text-2xl font-black text-white">
                     {user.phone ? user.phone.slice(-2) : 'CR'}
                   </div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-[#090d16]" title="Active Online" />
+                <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-[#090e17]" title="Active Online" />
               </div>
 
               <div>
@@ -204,11 +204,11 @@ export default function AccountPage({
           <div className="mt-4 pt-3.5 border-t border-slate-800/80">
             <div className="flex justify-between text-[11px] mb-1.5 font-bold">
               <span className="text-slate-400">VIP Level Progress</span>
-              <span className="text-cyan-400 font-mono">{progressPct}% • {nextTier}</span>
+              <span className="text-emerald-400 font-mono">{progressPct}% • {nextTier}</span>
             </div>
             <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800">
               <div 
-                className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-700 rounded-full"
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-700 rounded-full"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
@@ -252,7 +252,7 @@ export default function AccountPage({
 
         {/* Financial Lifetime Performance Matrix */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-3.5">
+          <div className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-3.5">
             <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
               Total Deposited
             </span>
@@ -262,7 +262,7 @@ export default function AccountPage({
             <span className="text-[10px] text-slate-500 mt-0.5 block">Verified Payments</span>
           </div>
 
-          <div className="bg-[#0c1220] border border-slate-800/80 rounded-2xl p-3.5">
+          <div className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-3.5">
             <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
               Total Withdrawn
             </span>
@@ -274,11 +274,11 @@ export default function AccountPage({
         </div>
 
         {/* Invite Friends Referral Card */}
-        <div className="bg-gradient-to-r from-purple-950/40 via-[#0e1424] to-indigo-950/40 border border-purple-500/30 rounded-2xl p-4 relative overflow-hidden">
+        <div className="bg-gradient-to-r from-emerald-950/40 via-[#0f1826] to-teal-950/40 border border-emerald-500/30 rounded-2xl p-4 relative overflow-hidden">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-black text-purple-300 flex items-center space-x-1.5">
-                <Gift className="w-4 h-4 text-purple-400" />
+              <span className="text-xs font-black text-emerald-300 flex items-center space-x-1.5">
+                <Gift className="w-4 h-4 text-emerald-400" />
                 <span>Invite Friends & Earn Rewards</span>
               </span>
               <p className="text-[11px] text-slate-300 leading-snug">
@@ -288,12 +288,12 @@ export default function AccountPage({
           </div>
 
           <div className="mt-3 flex items-center space-x-2">
-            <div className="flex-1 bg-black/50 border border-purple-500/30 rounded-xl px-3 py-2 font-mono font-black text-xs text-white">
+            <div className="flex-1 bg-black/50 border border-emerald-500/30 rounded-xl px-3 py-2 font-mono font-black text-xs text-white">
               {user.id.slice(-6).toUpperCase()}
             </div>
             <button
               onClick={handleCopyRef}
-              className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center space-x-1"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs transition flex items-center space-x-1 shadow-md shadow-emerald-500/20"
             >
               {copiedRef ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedRef ? 'Copied!' : 'Copy Code'}</span>
@@ -313,10 +313,10 @@ export default function AccountPage({
               sounds.playClick();
               onGoToWallet();
             }}
-            className="w-full bg-[#0c1220] hover:bg-[#11192d] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
                 <Wallet className="w-5 h-5" />
               </div>
               <div className="text-left">
@@ -324,7 +324,7 @@ export default function AccountPage({
                 <span className="text-[10px] text-slate-400">Balance breakdown, quick deposit & history</span>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 transition" />
+            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition" />
           </button>
 
           {/* Transaction History */}
@@ -333,10 +333,10 @@ export default function AccountPage({
               sounds.playClick();
               onGoToActivity();
             }}
-            className="w-full bg-[#0c1220] hover:bg-[#11192d] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:scale-105 transition">
                 <Award className="w-5 h-5" />
               </div>
               <div className="text-left">
@@ -344,7 +344,7 @@ export default function AccountPage({
                 <span className="text-[10px] text-slate-400">Wins, losses, multiplier records</span>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition" />
+            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-teal-400 transition" />
           </button>
 
           {/* Promoter Hub */}
@@ -353,7 +353,7 @@ export default function AccountPage({
               sounds.playClick();
               onGoToPromoter();
             }}
-            className="w-full bg-[#0c1220] hover:bg-[#11192d] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 transition">
@@ -375,7 +375,7 @@ export default function AccountPage({
           </span>
 
           {/* Sound Toggle */}
-          <div className="bg-[#0c1220] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between">
+          <div className="bg-[#0f1826] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                 {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
@@ -388,7 +388,7 @@ export default function AccountPage({
             <button
               onClick={handleToggleSound}
               className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
-                !isMuted ? 'bg-cyan-500' : 'bg-slate-800'
+                !isMuted ? 'bg-emerald-500' : 'bg-slate-800'
               }`}
             >
               <div
@@ -405,7 +405,7 @@ export default function AccountPage({
               sounds.playClick();
               setShowPasswordModal(true);
             }}
-            className="w-full bg-[#0c1220] hover:bg-[#11192d] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition">
@@ -425,10 +425,10 @@ export default function AccountPage({
               sounds.playClick();
               onOpenSupport();
             }}
-            className="w-full bg-[#0c1220] hover:bg-[#11192d] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:scale-105 transition">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
                 <Headphones className="w-5 h-5" />
               </div>
               <div className="text-left">
@@ -436,7 +436,7 @@ export default function AccountPage({
                 <span className="text-[10px] text-emerald-400 font-bold">● Active Online Support Desk</span>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-teal-400 transition" />
+            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition" />
           </button>
 
           {/* Logout Action */}
@@ -459,7 +459,7 @@ export default function AccountPage({
       {/* Password Change Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-sm bg-[#0f172a] border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+          <div className="w-full max-w-sm bg-[#0f1826] border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
             <h3 className="text-lg font-black text-white mb-1">Change Password</h3>
             <p className="text-xs text-slate-400 mb-4">Set a new secure password for your CRVPER account.</p>
 
@@ -483,7 +483,7 @@ export default function AccountPage({
                   type="password"
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
-                  className="w-full bg-[#131b2e] border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#131f33] border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
@@ -494,7 +494,7 @@ export default function AccountPage({
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-[#131b2e] border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#131f33] border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
@@ -505,7 +505,7 @@ export default function AccountPage({
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-[#131b2e] border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#131f33] border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
@@ -520,7 +520,7 @@ export default function AccountPage({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs transition"
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition"
                 >
                   Update
                 </button>

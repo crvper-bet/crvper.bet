@@ -207,17 +207,24 @@ export default function App() {
   // ROUTE 7: ACTIVITY TAB
   if (currentView === 'activity') {
     return (
-      <div className="min-h-screen bg-[#070b14]">
+      <div className="min-h-screen bg-[#090e17]">
         <Navbar
           onOpenSupport={() => setSupportModalOpen(true)}
           onOpenProfile={() => setProfileModalOpen(true)}
           onOpenPromoter={() => setCurrentView('promoter')}
           onOpenAdmin={() => setCurrentView('admin')}
+          onGoToDeposit={() => setCurrentView('deposit')}
+          onGoToWallet={() => setCurrentView('wallet')}
         />
         <ActivityView />
         <BottomNav
           activeTab={currentView}
-          onChangeTab={(tab) => setCurrentView(tab)}
+          onChangeTab={(tab) => {
+            if (tab === 'deposit') { requireAuth(() => setCurrentView('deposit')); return; }
+            if (tab === 'wallet') { requireAuth(() => setCurrentView('wallet')); return; }
+            if (tab === 'account') { requireAuth(() => setCurrentView('account')); return; }
+            setCurrentView(tab);
+          }}
           onOpenSupport={() => setSupportModalOpen(true)}
         />
       </div>
@@ -226,7 +233,7 @@ export default function App() {
 
   // ROUTE 8: MAIN HOME DASHBOARD
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-[#090e17] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-black">
       {/* Top Navbar */}
       <Navbar
         onOpenSupport={() => setSupportModalOpen(true)}
@@ -236,6 +243,8 @@ export default function App() {
         }}
         onOpenPromoter={() => setCurrentView('promoter')}
         onOpenAdmin={() => setCurrentView('admin')}
+        onGoToDeposit={() => requireAuth(() => setCurrentView('deposit'))}
+        onGoToWallet={() => requireAuth(() => setCurrentView('wallet'))}
       />
 
       {/* Main Content Area */}
@@ -277,7 +286,7 @@ export default function App() {
         <div className="max-w-4xl mx-auto px-4 mt-8 mb-6 flex items-center justify-center space-x-6 text-xs text-slate-500">
           <button
             onClick={() => setCurrentView('admin')}
-            className="hover:text-cyan-400 transition"
+            className="hover:text-emerald-400 transition"
           >
             Admin Control Center (crvvper)
           </button>
@@ -295,13 +304,10 @@ export default function App() {
       <BottomNav
         activeTab={currentView}
         onChangeTab={(tab) => {
-          if (tab === 'wallet') {
-            requireAuth(() => setCurrentView('wallet'));
-          } else if (tab === 'account') {
-            requireAuth(() => setCurrentView('account'));
-          } else {
-            setCurrentView(tab);
-          }
+          if (tab === 'deposit') { requireAuth(() => setCurrentView('deposit')); return; }
+          if (tab === 'wallet') { requireAuth(() => setCurrentView('wallet')); return; }
+          if (tab === 'account') { requireAuth(() => setCurrentView('account')); return; }
+          setCurrentView(tab);
         }}
         onOpenSupport={() => setSupportModalOpen(true)}
       />

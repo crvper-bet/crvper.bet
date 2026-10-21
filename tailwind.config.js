@@ -8,19 +8,20 @@ export default {
     extend: {
       colors: {
         crvper: {
-          bg: '#070b14',
-          card: '#0f172a',
-          surface: '#151f33',
-          border: '#1e293b',
-          accent: '#00d2ff',
-          neon: '#00f0ff',
-          green: '#10b981',
+          bg: '#090e17',
+          card: '#0f1826',
+          surface: '#142135',
+          border: '#1b2c45',
+          accent: '#00e701',
+          neon: '#10b981',
+          green: '#00e701',
+          emerald: '#10b981',
           red: '#ef4444',
           gold: '#f59e0b',
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       animation: {
