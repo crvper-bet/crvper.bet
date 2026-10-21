@@ -3,11 +3,23 @@ import { ArrowLeft, Play, ShieldCheck, Sparkles, AlertTriangle } from 'lucide-re
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
 
-// Plinko Multiplier Bins: Center bins are 0.4x - 1.2x, outer bins >= 2.0x (97% land in center 0.4x - 1.2x)
+// Plinko Multiplier Bins & Row Geometries based on Risk Level:
+// Low: 8 rows, 9 bins (conservative spread, compact pyramid)
+// Medium: 10 rows, 11 bins (balanced spread)
+// High: 12 rows, 13 bins (widest spread with 1000x jackpot potential)
 const RISK_CONFIG = {
-  low: [12, 4, 2, 1.2, 0.7, 0.4, 0.7, 1.2, 2, 4, 12],
-  medium: [50, 15, 2.5, 1.1, 0.6, 0.4, 0.6, 1.1, 2.5, 15, 50],
-  high: [1000, 100, 2.8, 1.0, 0.5, 0.4, 0.5, 1.0, 2.8, 100, 1000]
+  low: {
+    rows: 8,
+    multipliers: [12, 4, 1.8, 1.1, 0.5, 1.1, 1.8, 4, 12]
+  },
+  medium: {
+    rows: 10,
+    multipliers: [50, 15, 2.5, 1.1, 0.6, 0.4, 0.6, 1.1, 2.5, 15, 50]
+  },
+  high: {
+    rows: 12,
+    multipliers: [1000, 100, 10, 2.8, 1.0, 0.5, 0.4, 0.5, 1.0, 2.8, 10, 100, 1000]
+  }
 };
 
 export default function PlinkoGame({ onBack }) {
@@ -22,9 +34,10 @@ export default function PlinkoGame({ onBack }) {
   const ballsRef = useRef([]);
   const animFrameRef = useRef(null);
 
-  const multipliers = RISK_CONFIG[risk];
+  const currentConfig = RISK_CONFIG[risk];
+  const multipliers = currentConfig.multipliers;
   const numBins = multipliers.length;
-  const numRows = 10;
+  const numRows = currentConfig.rows;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -218,46 +231,46 @@ export default function PlinkoGame({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] p-4 pb-24 selection:bg-cyan-500 selection:text-black">
-      <div className="max-w-md mx-auto space-y-4">
+    <div className="min-h-screen bg-[#090e17] p-3 sm:p-4 pb-24 selection:bg-emerald-500 selection:text-black">
+      <div className="max-w-md mx-auto space-y-3 sm:space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-between bg-[#0f1826] border border-slate-800 rounded-2xl p-3">
+          <div className="flex items-center space-x-2.5">
             <button
               onClick={() => {
                 sounds.playClick();
                 onBack();
               }}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-xl font-black text-white flex items-center space-x-2">
+              <h1 className="text-base sm:text-lg font-black text-white flex items-center space-x-2">
                 <span>CIRCUIT PLINKO</span>
-                <span className="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-500/40 px-2 py-0.5 rounded-full font-bold">
-                  High Difficulty
+                <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+                  {risk.toUpperCase()} ({numRows} Rows)
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">Gravitational drop into multiplier bins</p>
+              <p className="text-[11px] text-slate-400">Gravitational drop into multiplier bins</p>
             </div>
           </div>
 
           <div className="text-right">
-            <span className="text-[10px] text-slate-400 block font-bold">Wallet</span>
-            <span className="text-sm font-black font-mono text-cyan-400">
+            <span className="text-[10px] text-slate-400 block font-bold uppercase">Balance</span>
+            <span className="text-xs sm:text-sm font-black font-mono text-emerald-400">
               ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
             </span>
           </div>
         </div>
 
         {/* Physics Canvas Pegboard */}
-        <div className={`bg-[#0c101c] border rounded-3xl p-3 shadow-2xl relative overflow-hidden flex flex-col items-center transition-all duration-300 ${
+        <div className={`bg-[#0f1826] border rounded-3xl p-3 shadow-2xl relative overflow-hidden flex flex-col items-center transition-all duration-300 ${
           lastWin && lastWin.multiplier >= 2 ? 'border-purple-500/80 shadow-purple-900/40' :
           lastWin && lastWin.multiplier >= 1 ? 'border-emerald-500/80 shadow-emerald-900/40' : 'border-slate-800'
         }`}>
-          {/* Subtle neon grid background */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-transparent to-transparent pointer-events-none" />
+          {/* Subtle radial glow */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/20 via-transparent to-transparent pointer-events-none" />
 
           <canvas
             ref={canvasRef}
@@ -274,24 +287,24 @@ export default function PlinkoGame({ onBack }) {
                 ? 'bg-emerald-950/95 border-emerald-400 text-emerald-300 animate-pop-in shadow-emerald-600/30'
                 : 'bg-rose-950/90 border-rose-500/50 text-rose-300'
             }`}>
-              {lastWin.multiplier >= 1 && <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-spin" />}
+              {lastWin.multiplier >= 1 && <Sparkles className="w-3.5 h-3.5 text-emerald-300 animate-spin" />}
               <span>Landed: {lastWin.multiplier}x (+₹{lastWin.amount})</span>
             </div>
           )}
         </div>
 
         {/* Controls Panel */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+        <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5">
           {/* Risk Level Selector */}
           <div>
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-              Risk Level & Max Multiplier
+              Risk Level & Board Rows
             </span>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'low', label: 'Low (12x)' },
-                { id: 'medium', label: 'Med (50x)' },
-                { id: 'high', label: 'High (1000x)' },
+                { id: 'low', label: 'Low (8 Rows • 12x)' },
+                { id: 'medium', label: 'Med (10 Rows • 50x)' },
+                { id: 'high', label: 'High (12 Rows • 1000x)' },
               ].map((r) => (
                 <button
                   key={r.id}
@@ -299,10 +312,10 @@ export default function PlinkoGame({ onBack }) {
                     sounds.playClick();
                     setRisk(r.id);
                   }}
-                  className={`py-2 rounded-xl text-xs font-bold transition ${
+                  className={`py-2 px-1 rounded-xl text-[11px] font-bold transition text-center ${
                     risk === r.id
-                      ? 'bg-cyan-500 text-black font-black shadow-md'
-                      : 'bg-[#131b2e] text-slate-400 hover:bg-slate-800'
+                      ? 'bg-emerald-500 text-slate-950 font-black shadow-md'
+                      : 'bg-[#131f33] text-slate-400 hover:bg-slate-800'
                   }`}
                 >
                   {r.label}
@@ -317,7 +330,7 @@ export default function PlinkoGame({ onBack }) {
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Multi-Drop Balls (Swarm)
               </span>
-              <span className="text-xs font-mono font-bold text-cyan-400">
+              <span className="text-xs font-mono font-bold text-emerald-400">
                 {ballCount} {ballCount === 1 ? 'Ball' : 'Balls'}
               </span>
             </div>
@@ -332,7 +345,7 @@ export default function PlinkoGame({ onBack }) {
                   className={`py-1.5 rounded-xl text-xs font-mono font-bold transition ${
                     ballCount === cnt
                       ? 'bg-purple-600 text-white font-black'
-                      : 'bg-[#131b2e] text-slate-400 hover:bg-slate-800'
+                      : 'bg-[#131f33] text-slate-400 hover:bg-slate-800'
                   }`}
                 >
                   {cnt}×
@@ -351,14 +364,14 @@ export default function PlinkoGame({ onBack }) {
               min="10"
               value={betAmount}
               onChange={(e) => setBetAmount(e.target.value)}
-              className="w-full bg-[#131b2e] border border-slate-700 rounded-2xl px-4 py-3 text-base font-black text-white font-mono focus:outline-none focus:border-cyan-500"
+              className="w-full bg-[#131f33] border border-slate-700 rounded-2xl px-4 py-2.5 text-base font-black text-white font-mono focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           {/* Drop Button */}
           <button
             onClick={handleDropBalls}
-            className="w-full py-4 bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 font-black rounded-2xl text-base tracking-wide transition transform active:scale-95 shadow-xl shadow-cyan-500/25 flex items-center justify-center space-x-2"
+            className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black rounded-2xl text-base tracking-wide transition transform active:scale-95 shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-2"
           >
             <Play className="w-5 h-5 fill-current" />
             <span>DROP BALLS (₹{Number(betAmount) * ballCount})</span>

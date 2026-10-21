@@ -91,46 +91,46 @@ export default function QuantumDiceGame({ onBack }) {
   const handleDouble = () => setBetAmount((p) => String(Math.min(user ? user.walletBalance : 10000, Number(p) * 2)));
 
   return (
-    <div className="min-h-screen bg-[#070b14] p-4 pb-24 selection:bg-blue-500 selection:text-white">
-      <div className="max-w-md mx-auto space-y-4">
+    <div className="min-h-screen bg-[#090e17] p-3 sm:p-4 pb-24 selection:bg-emerald-500 selection:text-black">
+      <div className="max-w-md mx-auto space-y-3 sm:space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-between bg-[#0f1826] border border-slate-800 rounded-2xl p-3">
+          <div className="flex items-center space-x-2.5">
             <button
               onClick={() => {
                 sounds.playClick();
                 onBack();
               }}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-xl font-black text-white flex items-center space-x-2">
+              <h1 className="text-base sm:text-lg font-black text-white flex items-center space-x-2">
                 <span>QUANTUM DICE</span>
-                <span className="text-[10px] bg-blue-950 text-blue-400 border border-blue-500/40 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
                   100-Point
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">Zero-latency rapid odds betting</p>
+              <p className="text-[11px] text-slate-400">Zero-latency rapid odds betting</p>
             </div>
           </div>
 
           <div className="text-right">
-            <span className="text-[10px] text-slate-400 block font-bold">Wallet</span>
-            <span className="text-sm font-black font-mono text-cyan-400">
+            <span className="text-[10px] text-slate-400 block font-bold uppercase">Balance</span>
+            <span className="text-xs sm:text-sm font-black font-mono text-emerald-400">
               ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
             </span>
           </div>
         </div>
 
         {/* History Strip */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-2xl px-3 py-2 flex items-center space-x-2 overflow-x-auto select-none">
+        <div className="bg-[#0f1826] border border-slate-800 rounded-2xl px-3 py-2 flex items-center space-x-2 overflow-x-auto select-none no-scrollbar">
           <div className="flex items-center space-x-2">
             {history.map((h, i) => (
               <span
                 key={i}
-                className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-black ${
+                className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-black shrink-0 ${
                   h.won
                     ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
                     : 'bg-rose-950 text-rose-400 border border-rose-500/30'
@@ -143,7 +143,7 @@ export default function QuantumDiceGame({ onBack }) {
         </div>
 
         {/* The Massive Digital Target Number Display */}
-        <div className={`bg-[#0f172a] border rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden transition-all duration-300 ${
+        <div className={`bg-[#0f1826] border rounded-3xl p-5 sm:p-6 shadow-2xl text-center relative overflow-hidden transition-all duration-300 ${
           lastOutcome?.won ? 'border-emerald-500/70 shadow-emerald-500/20' :
           lastOutcome?.won === false ? 'border-rose-500/60 shadow-rose-500/20' : 'border-slate-800'
         }`}>
@@ -151,7 +151,7 @@ export default function QuantumDiceGame({ onBack }) {
           <div className={`absolute inset-0 opacity-15 pointer-events-none transition-all duration-500 ${
             lastOutcome?.won ? 'bg-gradient-to-b from-emerald-500 via-transparent to-emerald-950' :
             lastOutcome?.won === false ? 'bg-gradient-to-b from-rose-600 via-transparent to-red-950' :
-            rolling ? 'bg-gradient-to-b from-cyan-500 via-blue-500/10 to-transparent animate-pulse' : 'bg-transparent'
+            rolling ? 'bg-gradient-to-b from-emerald-500 via-teal-500/10 to-transparent animate-pulse' : 'bg-transparent'
           }`} />
 
           {/* Cyber scanline sweep when rolling */}
@@ -161,28 +161,28 @@ export default function QuantumDiceGame({ onBack }) {
 
           <div className="relative z-10">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">
-              {rolling ? '🎲 Decrypting Quantum Seed...' : 'Roll Outcome'}
+              {rolling ? '🎲 Rolling Quantum Dice...' : 'Roll Outcome'}
             </span>
             <div className={`text-6xl sm:text-7xl font-black font-mono tracking-tight transition duration-200 ${
-              rolling ? 'text-cyan-300 animate-pulse scale-105' :
+              rolling ? 'text-emerald-300 animate-pulse scale-105' :
               lastOutcome?.won ? 'text-emerald-400 drop-shadow-[0_0_30px_rgba(16,185,129,0.8)] animate-win-celebrate' :
               lastOutcome?.won === false ? 'text-rose-500 drop-shadow-[0_0_25px_rgba(239,68,68,0.7)] animate-bomb-shake' : 'text-white'
             }`}>
               {displayNumber}
             </div>
 
-            {/* Win/Loss pill overlay */}
+            {/* Win/Loss Target Comparison pill overlay */}
             {lastOutcome && !rolling && (
-              <div className="mt-2 flex justify-center">
+              <div className="mt-2.5 flex justify-center">
                 {lastOutcome.won ? (
-                  <span className="px-3 py-1 rounded-full text-xs font-black font-mono bg-emerald-950/90 border border-emerald-400 text-emerald-300 animate-pop-in shadow-lg shadow-emerald-500/30 flex items-center space-x-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-300 animate-spin" />
-                    <span>WON ₹{lastOutcome.payout} ({multiplier}x)!</span>
+                  <span className="px-3.5 py-1 rounded-full text-xs font-black font-mono bg-emerald-950/90 border border-emerald-400 text-emerald-300 animate-pop-in shadow-lg shadow-emerald-500/30 flex items-center space-x-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>HIT ({lastOutcome.number} {rollType === 'over' ? '>' : '<'} {target.toFixed(2)}) • WON ₹{lastOutcome.payout} ({multiplier}x)!</span>
                   </span>
                 ) : (
-                  <span className="px-3 py-1 rounded-full text-xs font-black font-mono bg-rose-950/90 border border-rose-500 text-rose-300 animate-bomb-shake flex items-center space-x-1">
+                  <span className="px-3.5 py-1 rounded-full text-xs font-black font-mono bg-rose-950/90 border border-rose-500 text-rose-300 animate-bomb-shake flex items-center space-x-1.5">
                     <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                    <span>MISSED TARGET</span>
+                    <span>MISSED ({lastOutcome.number} not {rollType === 'over' ? '>' : '<'} {target.toFixed(2)})</span>
                   </span>
                 )}
               </div>
@@ -190,7 +190,7 @@ export default function QuantumDiceGame({ onBack }) {
           </div>
 
           {/* Interactive Probability Slider */}
-          <div className="mt-5 px-2 relative z-10">
+          <div className="mt-5 px-1 relative z-10">
             <div className="relative mb-2">
               <input
                 type="range"
@@ -200,13 +200,13 @@ export default function QuantumDiceGame({ onBack }) {
                 disabled={rolling}
                 value={target}
                 onChange={(e) => setTarget(Number(e.target.value))}
-                className="w-full h-3 bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                className="w-full h-3 bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 rounded-lg appearance-none cursor-pointer accent-emerald-400"
               />
             </div>
             <div className="flex justify-between text-xs font-mono font-bold text-slate-400">
               <span className="text-rose-400">0.00</span>
-              <span className="text-cyan-400 px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 font-black">
-                Target: {target.toFixed(2)}
+              <span className="text-emerald-400 px-2.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 font-black">
+                Target: {target.toFixed(2)} ({rollType.toUpperCase()})
               </span>
               <span className="text-emerald-400">100.00</span>
             </div>
@@ -214,23 +214,23 @@ export default function QuantumDiceGame({ onBack }) {
         </div>
 
         {/* Dynamic Odds Calculator Bar */}
-        <div className="grid grid-cols-3 gap-2.5 bg-[#0f172a] border border-slate-800 rounded-2xl p-3.5 shadow-xl text-center">
+        <div className="grid grid-cols-3 gap-2 bg-[#0f1826] border border-slate-800 rounded-2xl p-3 shadow-xl text-center">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Multiplier</span>
-            <span className="text-lg font-black font-mono text-cyan-400">{multiplier}x</span>
+            <span className="text-base sm:text-lg font-black font-mono text-emerald-400">{multiplier}x</span>
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Win Chance</span>
-            <span className="text-lg font-black font-mono text-emerald-400">{winChance.toFixed(1)}%</span>
+            <span className="text-base sm:text-lg font-black font-mono text-teal-400">{winChance.toFixed(1)}%</span>
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Profit on Win</span>
-            <span className="text-lg font-black font-mono text-amber-400">₹{potentialProfit}</span>
+            <span className="text-base sm:text-lg font-black font-mono text-amber-400">₹{potentialProfit}</span>
           </div>
         </div>
 
         {/* Controls & Roll Action */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+        <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5">
           {/* Roll Over / Roll Under Switch */}
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -238,10 +238,10 @@ export default function QuantumDiceGame({ onBack }) {
                 sounds.playClick();
                 setRollType('over');
               }}
-              className={`py-3 rounded-2xl font-black text-xs uppercase transition ${
+              className={`py-2.5 rounded-xl text-xs font-black uppercase transition ${
                 rollType === 'over'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'bg-[#131b2e] text-slate-400 hover:bg-slate-800'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'bg-[#131f33] text-slate-400 hover:text-white'
               }`}
             >
               Roll Over ({target.toFixed(0)})
@@ -251,10 +251,10 @@ export default function QuantumDiceGame({ onBack }) {
                 sounds.playClick();
                 setRollType('under');
               }}
-              className={`py-3 rounded-2xl font-black text-xs uppercase transition ${
+              className={`py-2.5 rounded-xl text-xs font-black uppercase transition ${
                 rollType === 'under'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'bg-[#131b2e] text-slate-400 hover:bg-slate-800'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'bg-[#131f33] text-slate-400 hover:text-white'
               }`}
             >
               Roll Under ({target.toFixed(0)})
@@ -263,32 +263,46 @@ export default function QuantumDiceGame({ onBack }) {
 
           {/* Bet Input */}
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Bet Amount (₹)
-              </label>
-              <div className="flex space-x-1">
-                <button onClick={handleHalf} className="px-2 py-0.5 rounded-lg bg-slate-800 text-[10px] font-bold text-slate-300">½</button>
-                <button onClick={handleDouble} className="px-2 py-0.5 rounded-lg bg-slate-800 text-[10px] font-bold text-slate-300">2×</button>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+              Bet Amount (₹)
+            </label>
+            <div className="flex items-center bg-[#131f33] border border-slate-700 rounded-2xl overflow-hidden focus-within:border-emerald-500">
+              <span className="pl-3.5 pr-2 font-black text-emerald-400 font-mono">₹</span>
+              <input
+                type="number"
+                min="10"
+                disabled={rolling}
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                className="w-full bg-transparent py-2.5 pr-2 text-base font-black text-white font-mono focus:outline-none"
+              />
+              <div className="flex items-center space-x-1 pr-2">
+                <button
+                  disabled={rolling}
+                  onClick={handleHalf}
+                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-300 disabled:opacity-40"
+                >
+                  ½
+                </button>
+                <button
+                  disabled={rolling}
+                  onClick={handleDouble}
+                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-300 disabled:opacity-40"
+                >
+                  2×
+                </button>
               </div>
             </div>
-            <input
-              type="number"
-              min="10"
-              value={betAmount}
-              onChange={(e) => setBetAmount(e.target.value)}
-              className="w-full bg-[#131b2e] border border-slate-700 rounded-2xl px-4 py-3 text-base font-black text-white font-mono focus:outline-none focus:border-blue-500"
-            />
           </div>
 
-          {/* Giant Roll Button */}
+          {/* Roll Button */}
           <button
             onClick={handleRoll}
             disabled={rolling}
-            className="w-full py-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-slate-950 font-black rounded-2xl text-base tracking-wide transition transform active:scale-95 shadow-xl shadow-cyan-500/25 flex items-center justify-center space-x-2"
+            className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black rounded-2xl text-base tracking-wide transition transform active:scale-95 shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-2 disabled:opacity-50"
           >
-            <Dices className="w-5 h-5" />
-            <span>{rolling ? 'ROLLING...' : `ROLL (SPACEBAR)`}</span>
+            <Dices className={`w-5 h-5 ${rolling ? 'animate-spin' : ''}`} />
+            <span>{rolling ? 'ROLLING...' : `ROLL DICE (₹${betAmount})`}</span>
           </button>
         </div>
       </div>

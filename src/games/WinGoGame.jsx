@@ -159,22 +159,22 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] p-4 pb-28 selection:bg-purple-500 selection:text-white">
-      <div className="max-w-md mx-auto space-y-4">
+    <div className="min-h-screen bg-[#090e17] p-3 sm:p-4 pb-28 selection:bg-emerald-500 selection:text-black">
+      <div className="max-w-md mx-auto space-y-3 sm:space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-between bg-[#0f1826] border border-slate-800 rounded-2xl p-3">
+          <div className="flex items-center space-x-2.5">
             <button
               onClick={() => {
                 sounds.playClick();
                 onBack();
               }}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-xl font-black text-white flex items-center space-x-2">
+              <h1 className="text-base sm:text-lg font-black text-white flex items-center space-x-2">
                 <span>WIN GO</span>
                 <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold flex items-center">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse" />
@@ -184,24 +184,24 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
                   60s
                 </span>
               </h1>
-              <p className="text-xs text-slate-400 font-mono">{roundId}</p>
+              <p className="text-[11px] text-slate-400 font-mono">{roundId}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
             <button
               onClick={() => {
                 sounds.playClick();
                 setShowRulesModal(true);
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 border border-slate-700 transition"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-bold text-slate-300 border border-slate-700 transition"
               title="Game Rules & Provable Fairness"
             >
               ⚖ Rules
             </button>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-bold">Wallet</span>
-              <span className="text-sm font-black font-mono text-cyan-400">
+              <span className="text-[10px] text-slate-400 block font-bold uppercase">Balance</span>
+              <span className="text-xs sm:text-sm font-black font-mono text-emerald-400">
                 ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
               </span>
             </div>
@@ -221,15 +221,15 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
         )}
 
         {/* 60s Countdown Clock Header */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl text-center relative overflow-hidden">
-          <div className="flex items-center justify-between px-2">
+        <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl text-center relative overflow-hidden">
+          <div className="flex items-center justify-between px-1">
             <div className="text-left">
-              <span className="text-xs font-bold text-slate-400 block">Period Round</span>
-              <span className="text-sm font-black text-cyan-400 font-mono">{roundId}</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Period Round</span>
+              <span className="text-xs sm:text-sm font-black text-emerald-400 font-mono">{roundId}</span>
             </div>
 
             <div className="text-right">
-              <span className="text-xs font-bold text-slate-400 block">Betting Status</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Betting Status</span>
               <span className={`text-xs font-black uppercase font-mono ${isLocked ? 'text-rose-400 animate-pulse' : 'text-emerald-400 flex items-center justify-end space-x-1'}`}>
                 {!isLocked && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-1"></span>}
                 <span>{isLocked ? '🔒 LOCKED (Last 10s)' : '🟢 OPEN FOR BETS'}</span>
@@ -237,52 +237,34 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
             </div>
           </div>
 
-          {/* Large Countdown Pulsing Timer with Neon Radar Ring */}
-          <div className="my-3 flex items-center justify-center relative">
+          {/* Large Countdown Pulsing Timer with Neon Ring */}
+          <div className="my-2.5 sm:my-3 flex items-center justify-center relative">
             {isLocked && (
               <div className="absolute w-32 h-16 rounded-full bg-rose-600/20 blur-xl animate-pulse pointer-events-none" />
             )}
             <div className={`relative z-10 px-6 py-2 rounded-2xl border transition-all duration-300 ${
               isLocked 
                 ? 'bg-gradient-to-r from-rose-950/80 via-red-900/40 to-rose-950/80 border-rose-500 shadow-xl shadow-rose-600/30 text-rose-400 scale-105' 
-                : 'bg-[#131b2e]/60 border-slate-700/60 text-white'
+                : 'bg-[#131f33]/80 border-slate-700/60 text-white shadow-lg'
             }`}>
-              <div className="text-4xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md">
+              <div className="text-3xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md">
                 00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
               </div>
             </div>
           </div>
 
           {winningAnnouncement && (
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-950 via-indigo-900 to-purple-950 border-2 border-purple-400 text-sm font-black text-purple-200 animate-win-celebrate shadow-xl shadow-purple-600/40 flex items-center justify-center space-x-2">
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-950 via-indigo-900 to-purple-950 border-2 border-purple-400 text-xs sm:text-sm font-black text-purple-200 animate-win-celebrate shadow-xl shadow-purple-600/40 flex items-center justify-center space-x-2">
               <Sparkles className="w-4 h-4 text-purple-300 animate-spin" />
               <span>{winningAnnouncement}</span>
             </div>
           )}
         </div>
 
-        {/* Winning Limit Banner if limit reached */}
-        {isWinningLimitReached && (
-          <div 
-            onClick={() => onOpenMaxLimitModal && onOpenMaxLimitModal()}
-            className="p-3.5 bg-gradient-to-r from-amber-950/90 to-yellow-950/90 border-2 border-amber-500/70 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-400 transition text-xs text-amber-200 shadow-lg shadow-amber-950/40"
-          >
-            <div className="flex items-center space-x-2.5">
-              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
-              <span className="font-bold leading-tight">
-                You have reached the winning amount. Please withdraw your funds to play again.
-              </span>
-            </div>
-            <span className="underline font-black text-amber-300 text-[11px] shrink-0 ml-2">
-              Withdraw →
-            </span>
-          </div>
-        )}
-
-        {/* SIMPLIFIED BETTING INTERFACE */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+        {/* AUTHENTIC LOTTERY NUMBER SELECTION & BETTING INTERFACE */}
+        <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-4">
           
-          {/* 1. NUMBERS IN UP (0 - 9) with 10X Payout */}
+          {/* 1. NUMBERS (0 - 9) with 10X Payout */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
@@ -293,7 +275,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
                 10X Payout
               </span>
             </div>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
               {NUMBERS.map((n) => {
                 const isEven = n % 2 === 0;
                 const isPurple = n === 0 || n === 5;
@@ -302,7 +284,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
                     key={n}
                     disabled={isLocked}
                     onClick={() => handleOpenBetSheet('number', n)}
-                    className={`relative overflow-hidden py-3 rounded-2xl font-black font-mono text-xl transition-all duration-200 transform active:scale-90 hover:scale-105 border shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`relative overflow-hidden py-3 rounded-2xl font-black font-mono text-xl transition-all duration-200 transform active:scale-95 hover:scale-105 border shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${
                       isPurple
                         ? 'bg-gradient-to-tr from-purple-700 via-indigo-600 to-purple-800 border-purple-400/60 text-white shadow-purple-600/30 hover:border-purple-300'
                         : isEven
@@ -318,7 +300,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
             </div>
           </div>
 
-          {/* 2. COLORS IN MIDDLE (GREEN on left/middle, RED on right, VIOLET) */}
+          {/* 2. COLORS (GREEN, VIOLET, RED) */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -328,11 +310,11 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
                 2X / 4.5X
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
               <button
                 disabled={isLocked}
                 onClick={() => handleOpenBetSheet('color', 'GREEN')}
-                className="py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-sm border border-emerald-400/40 shadow-lg shadow-emerald-600/20 disabled:opacity-40"
+                className="py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs sm:text-sm border border-emerald-400/40 shadow-lg shadow-emerald-600/20 disabled:opacity-40 transition transform active:scale-95"
               >
                 GREEN 2X
               </button>
@@ -340,7 +322,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
               <button
                 disabled={isLocked}
                 onClick={() => handleOpenBetSheet('color', 'VIOLET')}
-                className="py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm border border-purple-400/40 shadow-lg shadow-purple-600/20 disabled:opacity-40"
+                className="py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm border border-purple-400/40 shadow-lg shadow-purple-600/20 disabled:opacity-40 transition transform active:scale-95"
               >
                 VIOLET 4.5X
               </button>
@@ -348,14 +330,14 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
               <button
                 disabled={isLocked}
                 onClick={() => handleOpenBetSheet('color', 'RED')}
-                className="py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-sm border border-rose-400/40 shadow-lg shadow-rose-600/20 disabled:opacity-40"
+                className="py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs sm:text-sm border border-rose-400/40 shadow-lg shadow-rose-600/20 disabled:opacity-40 transition transform active:scale-95"
               >
                 RED 2X
               </button>
             </div>
           </div>
 
-          {/* 3. BIG AND SMALL IN BELOW */}
+          {/* 3. BIG AND SMALL */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -365,23 +347,23 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
                 2X Payout
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
               <button
                 disabled={isLocked}
                 onClick={() => handleOpenBetSheet('size', 'BIG')}
-                className="py-3.5 rounded-2xl bg-[#162032] hover:bg-[#1c2a44] border border-cyan-500/40 text-cyan-300 font-black text-sm shadow-md disabled:opacity-40 flex flex-col items-center"
+                className="py-3 rounded-2xl bg-[#131f33] hover:bg-[#18263e] border border-emerald-500/40 text-emerald-300 font-black text-xs sm:text-sm shadow-md disabled:opacity-40 flex flex-col items-center transition transform active:scale-95"
               >
                 <span>BIG (5-9)</span>
-                <span className="text-[10px] text-cyan-400/70 font-mono font-bold mt-0.5">2.0X Payout</span>
+                <span className="text-[10px] text-emerald-400/80 font-mono font-bold mt-0.5">2.0X Payout</span>
               </button>
 
               <button
                 disabled={isLocked}
                 onClick={() => handleOpenBetSheet('size', 'SMALL')}
-                className="py-3.5 rounded-2xl bg-[#162032] hover:bg-[#1c2a44] border border-amber-500/40 text-amber-300 font-black text-sm shadow-md disabled:opacity-40 flex flex-col items-center"
+                className="py-3 rounded-2xl bg-[#131f33] hover:bg-[#18263e] border border-amber-500/40 text-amber-300 font-black text-xs sm:text-sm shadow-md disabled:opacity-40 flex flex-col items-center transition transform active:scale-95"
               >
                 <span>SMALL (0-4)</span>
-                <span className="text-[10px] text-amber-400/70 font-mono font-bold mt-0.5">2.0X Payout</span>
+                <span className="text-[10px] text-amber-400/80 font-mono font-bold mt-0.5">2.0X Payout</span>
               </button>
             </div>
           </div>
@@ -390,13 +372,13 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
 
         {/* CURRENT ROUND ACTIVE BETS */}
         {currentBets.length > 0 && (
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-3.5">
+          <div className="bg-[#0f1826] border border-slate-800 rounded-2xl p-3.5">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
               Your Locked Bets for this Round:
             </span>
             <div className="flex flex-wrap gap-2">
               {currentBets.map((b, idx) => (
-                <span key={idx} className="px-3 py-1 bg-[#131b2e] border border-cyan-500/40 rounded-xl text-xs font-mono font-bold text-cyan-300">
+                <span key={idx} className="px-3 py-1 bg-[#131f33] border border-emerald-500/40 rounded-xl text-xs font-mono font-bold text-emerald-300">
                   {b.value}: ₹{b.amount}
                 </span>
               ))}
@@ -405,9 +387,9 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
         )}
 
         {/* 4. PAST OUTCOMES IN BELOW */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-4 shadow-xl">
+        <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 shadow-xl">
           <div className="flex items-center space-x-2 mb-3">
-            <History className="w-4 h-4 text-cyan-400" />
+            <History className="w-4 h-4 text-emerald-400" />
             <h3 className="text-xs font-black text-slate-300 uppercase tracking-wider">
               Past Outcomes & Trends
             </h3>
@@ -417,7 +399,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
             {history.map((h, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between p-2 rounded-xl bg-[#131b2e] text-xs"
+                className="flex items-center justify-between p-2 rounded-xl bg-[#131f33] text-xs"
               >
                 <span className="font-mono text-slate-400 font-bold">{h.round}</span>
                 <div className="flex items-center space-x-2">
@@ -427,7 +409,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
                     {h.num}
                   </span>
                   <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
-                    h.size === 'BIG' ? 'bg-cyan-950 text-cyan-400' : 'bg-amber-950 text-amber-400'
+                    h.size === 'BIG' ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400'
                   }`}>
                     {h.size}
                   </span>
@@ -441,17 +423,17 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
       {/* BOTTOM SHEET BETTING PAD (Slides up smoothly from bottom) */}
       {betModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end justify-center animate-fade-in">
-          <div className="w-full max-w-md bg-[#0f172a] border-t-2 border-cyan-500 rounded-t-3xl p-5 shadow-2xl space-y-4 animate-slide-up">
+          <div className="w-full max-w-md bg-[#0f1826] border-t-2 border-emerald-500 rounded-t-3xl p-5 shadow-2xl space-y-4 animate-slide-up">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-slate-400 uppercase">Selected Prediction:</span>
-                <div className="text-xl font-black text-cyan-400 font-mono mt-0.5">
+                <div className="text-xl font-black text-emerald-400 font-mono mt-0.5">
                   {selectedBetValue} ({selectedBetType === 'number' ? '10X Payout' : '2X Payout'})
                 </div>
               </div>
               <button
                 onClick={() => setBetModalOpen(false)}
-                className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+                className="p-2 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -472,8 +454,8 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
                     }}
                     className={`py-2 rounded-xl text-xs font-bold font-mono transition ${
                       wagerBase === amt
-                        ? 'bg-cyan-500 text-black font-black'
-                        : 'bg-[#131b2e] text-slate-300 hover:bg-slate-800'
+                        ? 'bg-emerald-500 text-slate-950 font-black'
+                        : 'bg-[#131f33] text-slate-300 hover:bg-slate-800'
                     }`}
                   >
                     ₹{amt}
@@ -498,7 +480,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
                     className={`py-2 rounded-xl text-xs font-bold font-mono transition ${
                       selectedMultiplier === mult
                         ? 'bg-purple-600 text-white font-black'
-                        : 'bg-[#131b2e] text-slate-400'
+                        : 'bg-[#131f33] text-slate-400'
                     }`}
                   >
                     ×{mult}
@@ -518,7 +500,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
 
               <button
                 onClick={handleConfirmBet}
-                className="w-full py-3.5 bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 font-black rounded-2xl text-base shadow-lg shadow-cyan-500/25 transition transform active:scale-95"
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black rounded-2xl text-base shadow-lg shadow-emerald-500/25 transition transform active:scale-95"
               >
                 Confirm & Place Bet (₹{totalBetAmount})
               </button>
@@ -530,7 +512,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
       {/* Win Go Rules & Provable Fairness Modal */}
       {showRulesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+          <div className="bg-[#0f1826] border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-2">
                 <span className="text-xl">🎲</span>
@@ -554,7 +536,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
-                <h4 className="font-black text-cyan-400 uppercase tracking-wider mb-1">Provable Fairness & Synchronicity</h4>
+                <h4 className="font-black text-emerald-400 uppercase tracking-wider mb-1">Provable Fairness & Synchronicity</h4>
                 <p>Results are generated using deterministic high-entropy cryptographic avalanche hashing seeded with synchronized global epoch time. Every device worldwide sees the exact same numbers, colors, and countdowns in real-time.</p>
               </div>
 
@@ -567,7 +549,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
 
             <button
               onClick={() => setShowRulesModal(false)}
-              className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs transition"
+              className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition"
             >
               I Understand
             </button>

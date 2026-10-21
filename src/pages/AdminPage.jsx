@@ -358,10 +358,10 @@ export default function AdminPage({ onExit }) {
   // If not logged in, render Admin Login screen
   if (!adminLoggedIn) {
     return (
-      <div className="min-h-screen bg-[#070b14] flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-[#0f172a] border border-cyan-500/40 rounded-3xl p-6 shadow-2xl relative">
+      <div className="min-h-screen bg-[#090e17] flex flex-col items-center justify-center p-4 selection:bg-emerald-500 selection:text-black">
+        <div className="w-full max-w-sm bg-[#0f1826] border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
           <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto mb-3 shadow-lg shadow-cyan-500/20">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-3 shadow-lg shadow-emerald-500/20">
               <ShieldCheck className="w-7 h-7" />
             </div>
             <h2 className="text-xl font-black text-white tracking-wide">
@@ -388,7 +388,7 @@ export default function AdminPage({ onExit }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter username"
-                className="w-full bg-[#131b2e] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#131f33] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder-slate-600 focus:outline-none focus:border-emerald-500"
                 required
               />
             </div>
@@ -402,14 +402,14 @@ export default function AdminPage({ onExit }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
-                className="w-full bg-[#131b2e] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#131f33] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
                 required
               />
             </div>
 
             <button
               type="submit"
-              className="w-full mt-2 py-3 bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 font-black rounded-xl text-sm transition transform active:scale-95 shadow-lg shadow-cyan-500/25"
+              className="w-full mt-2 py-3 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black rounded-xl text-sm transition transform active:scale-95 shadow-lg shadow-emerald-500/25"
             >
               Authenticate & Enter
             </button>
@@ -439,17 +439,17 @@ export default function AdminPage({ onExit }) {
   const pendingWithdrawalsCount = withdrawals.filter(w => w.status === 'PENDING').length;
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-[#090e17] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-black">
       {/* Admin Top Bar */}
-      <header className="bg-[#0f172a] border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+      <header className="bg-[#0f1826] border-b border-slate-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center font-black">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-black">
             C
           </div>
           <div>
             <h1 className="text-base font-black text-white flex items-center space-x-1.5">
               <span>CRVPER Admin Control Center</span>
-              <span className="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-500/40 px-1.5 py-0.2 rounded">LIVE</span>
+              <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.2 rounded font-bold">LIVE</span>
             </h1>
             <p className="text-[11px] text-slate-400">Manage Deposits, Withdrawals, QR, Promoters & Live Support</p>
           </div>
@@ -458,20 +458,20 @@ export default function AdminPage({ onExit }) {
         <div className="flex items-center space-x-2">
           <button
             onClick={loadData}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
             title="Refresh Data"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
             onClick={onExit}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition"
+            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-bold text-slate-300 transition"
           >
             To Platform
           </button>
           <button
             onClick={logoutAdmin}
-            className="p-2 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-400 border border-rose-800 transition"
+            className="p-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 text-rose-400 border border-rose-800 transition"
             title="Log Out"
           >
             <LogOut className="w-4 h-4" />
@@ -480,7 +480,7 @@ export default function AdminPage({ onExit }) {
       </header>
 
       {/* Admin Navigation Tabs */}
-      <div className="bg-[#111827] border-b border-slate-800 px-4 py-2 flex items-center space-x-2 overflow-x-auto text-xs font-bold">
+      <div className="bg-[#0c1220] border-b border-slate-800 px-4 py-2 flex items-center space-x-2 overflow-x-auto text-xs font-bold no-scrollbar">
         {[
           { id: 'overview', label: 'Dashboard Stats', icon: Activity },
           { id: 'deposits', label: `Deposits (${pendingDepositsCount})`, icon: ArrowDownLeft, alert: pendingDepositsCount > 0 },
@@ -500,7 +500,7 @@ export default function AdminPage({ onExit }) {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition shrink-0 ${
                 isActive
-                  ? 'bg-cyan-500 text-black font-extrabold shadow-md'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
