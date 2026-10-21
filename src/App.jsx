@@ -148,7 +148,27 @@ export default function App() {
     return <MinesGame onBack={() => setActiveGame(null)} />;
   }
   if (activeGame === 'wingo') {
-    return <WinGoGame onBack={() => setActiveGame(null)} />;
+    return (
+      <>
+        <WinGoGame 
+          onBack={() => setActiveGame(null)} 
+          onOpenMaxLimitModal={() => setShowMaxLimitModal(true)}
+        />
+        <MaxLimitModal
+          isOpen={showMaxLimitModal}
+          onClose={() => setShowMaxLimitModal(false)}
+          onGoToWithdraw={() => {
+            setActiveGame(null);
+            setCurrentView('withdraw');
+          }}
+          onGoToDeposit={() => {
+            setActiveGame(null);
+            setCurrentView('deposit');
+          }}
+          hasDeposited={user?.hasDeposited}
+        />
+      </>
+    );
   }
   if (activeGame === 'aviator') {
     return (
@@ -238,7 +258,8 @@ export default function App() {
         {/* 2x3 Games Grid */}
         <GamesGrid
           onSelectGame={(gameId) => {
-            if (gameId === 'aviator' && user && user.walletBalance >= 100000) {
+            const limitCheck = storage.checkGameWinningLimit(user?.id, gameId);
+            if (limitCheck.isLimitReached) {
               setShowMaxLimitModal(true);
               return;
             }

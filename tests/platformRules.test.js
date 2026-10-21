@@ -232,7 +232,7 @@ describe('CRVPER Platform Specifications Test Suite', () => {
     assert.strictEqual(limitAviator.isLimitReached, true);
     assert.strictEqual(
       limitAviator.message,
-      'You’ve reached the configured winning limit. Please review your balance and withdrawal options.'
+      'You have reached the winning amount. Please withdraw your funds to play again.'
     );
 
     // WinGo winning limit also reached under the policy

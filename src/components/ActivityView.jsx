@@ -14,13 +14,14 @@ export default function ActivityView() {
   const [deposits, setDeposits] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
 
-  const loadData = () => {
+  const loadData = async () => {
     if (user) {
-      setTransactions(storage.getTransactions(user.id));
-      const userDeps = storage.getDeposits().filter((d) => d.userId === user.id);
-      setDeposits(userDeps.reverse());
-      const userWths = storage.getWithdrawals().filter((w) => w.userId === user.id);
-      setWithdrawals(userWths.reverse());
+      const txs = await storage.getTransactionsAsync(user.id);
+      setTransactions(txs);
+      const userDeps = (await storage.getDepositsAsync()).filter((d) => d.userId === user.id);
+      setDeposits(userDeps);
+      const userWths = (await storage.getWithdrawalsAsync()).filter((w) => w.userId === user.id);
+      setWithdrawals(userWths);
     }
   };
 
@@ -94,7 +95,7 @@ export default function ActivityView() {
             </div>
           ) : (
             deposits.map((dep) => {
-              const isApproved = dep.status === 'APPROVED';
+              const isApproved = dep.status === 'APPROVED' || dep.status === 'CONFIRMED' || dep.status === 'COMPLETED';
               const isRejected = dep.status === 'REJECTED';
               return (
                 <div
@@ -131,7 +132,7 @@ export default function ActivityView() {
                       {isApproved ? (
                         <>
                           <CheckCircle2 className="w-3 h-3" />
-                          <span>COMPLETED</span>
+                          <span>CONFIRMED</span>
                         </>
                       ) : isRejected ? (
                         <>
@@ -162,7 +163,7 @@ export default function ActivityView() {
             </div>
           ) : (
             withdrawals.map((wth) => {
-              const isCompleted = wth.status === 'COMPLETED';
+              const isCompleted = wth.status === 'COMPLETED' || wth.status === 'CONFIRMED' || wth.status === 'APPROVED';
               const isRejected = wth.status === 'REJECTED';
               return (
                 <div
@@ -199,7 +200,7 @@ export default function ActivityView() {
                       {isCompleted ? (
                         <>
                           <CheckCircle2 className="w-3 h-3" />
-                          <span>COMPLETED</span>
+                          <span>CONFIRMED</span>
                         </>
                       ) : isRejected ? (
                         <>
@@ -272,14 +273,14 @@ export default function ActivityView() {
                     </span>
                     <span
                       className={`block text-[9px] font-bold uppercase mt-0.5 ${
-                        tx.status === 'COMPLETED'
+                        (tx.status === 'CONFIRMED' || tx.status === 'COMPLETED' || tx.status === 'APPROVED')
                           ? 'text-emerald-400'
                           : tx.status === 'REJECTED'
                           ? 'text-rose-400'
                           : 'text-amber-400'
                       }`}
                     >
-                      {tx.status}
+                      {(tx.status === 'CONFIRMED' || tx.status === 'COMPLETED' || tx.status === 'APPROVED') ? 'CONFIRMED' : tx.status}
                     </span>
                   </div>
                 </div>

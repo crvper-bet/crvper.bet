@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Clock, History, AlertCircle, ChevronUp, Check, X, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { storage } from '../services/storage';
 import { sounds } from '../services/audio';
 import { getLiveWinGoState, getWinGoHistory, getWinGoOutcomeForRound } from '../services/globalGameEngine';
 
 const NUMBERS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const PRESET_AMOUNTS = [10, 50, 100, 500, 1000];
 
-export default function WinGoGame({ onBack }) {
+export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
   const { user, modifyBalance } = useAuth();
 
   // Global Synchronized State
@@ -77,6 +78,14 @@ export default function WinGoGame({ onBack }) {
           sounds.playWin();
           modifyBalance(totalWin, `Win Go Round Won (${result.num} ${result.color})`);
           setWinningAnnouncement(`🎉 YOU WON ₹${totalWin}! (Result: ${result.num} ${result.color} ${result.size})`);
+
+          // Check limit after win
+          setTimeout(() => {
+            const freshLimit = storage.checkGameWinningLimit(user?.id, 'WinGo');
+            if (freshLimit.isLimitReached && onOpenMaxLimitModal) {
+              onOpenMaxLimitModal();
+            }
+          }, 600);
         } else if (activeBets.length > 0) {
           sounds.playLoss();
           setWinningAnnouncement(`Round Result: ${result.num} ${result.color} ${result.size}`);
@@ -88,11 +97,16 @@ export default function WinGoGame({ onBack }) {
     }, 100);
 
     return () => clearInterval(syncInterval);
-  }, []);
+  }, [user, onOpenMaxLimitModal]);
 
   const handleOpenBetSheet = (type, value) => {
-    if (isWinningLimitReached) {
-      alert("You’ve reached the configured winning limit. Please review your balance and withdrawal options.");
+    const freshLimit = storage.checkGameWinningLimit(user?.id, 'WinGo');
+    if (freshLimit.isLimitReached) {
+      if (onOpenMaxLimitModal) {
+        onOpenMaxLimitModal();
+      } else {
+        alert("You have reached the winning amount. Please withdraw your funds to play again.");
+      }
       return;
     }
     if (isLocked) {
@@ -110,8 +124,13 @@ export default function WinGoGame({ onBack }) {
   const totalBetAmount = wagerBase * selectedMultiplier;
 
   const handleConfirmBet = () => {
-    if (isWinningLimitReached) {
-      alert("You’ve reached the configured winning limit. Please review your balance and withdrawal options.");
+    const freshLimit = storage.checkGameWinningLimit(user?.id, 'WinGo');
+    if (freshLimit.isLimitReached) {
+      if (onOpenMaxLimitModal) {
+        onOpenMaxLimitModal();
+      } else {
+        alert("You have reached the winning amount. Please withdraw your funds to play again.");
+      }
       return;
     }
     if (!user || user.walletBalance < totalBetAmount) {
@@ -241,6 +260,24 @@ export default function WinGoGame({ onBack }) {
             </div>
           )}
         </div>
+
+        {/* Winning Limit Banner if limit reached */}
+        {isWinningLimitReached && (
+          <div 
+            onClick={() => onOpenMaxLimitModal && onOpenMaxLimitModal()}
+            className="p-3.5 bg-gradient-to-r from-amber-950/90 to-yellow-950/90 border-2 border-amber-500/70 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-400 transition text-xs text-amber-200 shadow-lg shadow-amber-950/40"
+          >
+            <div className="flex items-center space-x-2.5">
+              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
+              <span className="font-bold leading-tight">
+                You have reached the winning amount. Please withdraw your funds to play again.
+              </span>
+            </div>
+            <span className="underline font-black text-amber-300 text-[11px] shrink-0 ml-2">
+              Withdraw →
+            </span>
+          </div>
+        )}
 
         {/* SIMPLIFIED BETTING INTERFACE */}
         <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">

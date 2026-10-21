@@ -18,14 +18,14 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
   const [transactions, setTransactions] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'deposits' | 'withdrawals'
 
-  const loadData = () => {
+  const loadData = async () => {
     if (user) {
-      const allDeps = storage.getDeposits().filter(d => d.userId === user.id);
-      const allWths = storage.getWithdrawals().filter(w => w.userId === user.id);
-      const allTxs = storage.getTransactions(user.id);
+      const allDeps = (await storage.getDepositsAsync()).filter(d => d.userId === user.id);
+      const allWths = (await storage.getWithdrawalsAsync()).filter(w => w.userId === user.id);
+      const allTxs = await storage.getTransactionsAsync(user.id);
 
-      setDeposits(allDeps.reverse());
-      setWithdrawals(allWths.reverse());
+      setDeposits(allDeps);
+      setWithdrawals(allWths);
       setTransactions(allTxs);
     }
   };
@@ -273,8 +273,8 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
                     </span>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-[10px] font-black text-cyan-300">
-                  VERIFYING
+                <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-[10px] font-black text-amber-300">
+                  PENDING
                 </span>
               </div>
             ))}
@@ -298,7 +298,7 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
                   </div>
                 </div>
                 <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-[10px] font-black text-amber-300">
-                  PROCESSING
+                  PENDING
                 </span>
               </div>
             ))}
@@ -361,9 +361,20 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
                           </span>
                         </div>
                       </div>
-                      <span className={`text-xs font-black font-mono ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {isPositive ? '+' : '-'}₹{tx.amount.toFixed(2)}
-                      </span>
+                      <div className="text-right">
+                        <span className={`text-xs font-black font-mono block ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {isPositive ? '+' : '-'}₹{tx.amount.toFixed(2)}
+                        </span>
+                        <span className={`text-[9px] font-bold uppercase mt-0.5 inline-block px-1.5 py-0.5 rounded ${
+                          (tx.status === 'CONFIRMED' || tx.status === 'COMPLETED' || tx.status === 'APPROVED')
+                            ? 'text-emerald-400 bg-emerald-950/60'
+                            : tx.status === 'REJECTED'
+                            ? 'text-rose-400 bg-rose-950/60'
+                            : 'text-amber-400 bg-amber-950/60'
+                        }`}>
+                          {(tx.status === 'CONFIRMED' || tx.status === 'COMPLETED' || tx.status === 'APPROVED') ? 'CONFIRMED' : (tx.status === 'REJECTED' ? 'REJECTED' : 'PENDING')}
+                        </span>
+                      </div>
                     </div>
                   );
                 })
@@ -383,11 +394,11 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
                       <span className="text-[10px] text-slate-500 font-mono">UTR: {dep.utr || 'N/A'}</span>
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                      dep.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400' :
+                      (dep.status === 'APPROVED' || dep.status === 'CONFIRMED' || dep.status === 'COMPLETED') ? 'bg-emerald-500/20 text-emerald-400' :
                       dep.status === 'REJECTED' ? 'bg-rose-500/20 text-rose-400' :
-                      'bg-cyan-500/20 text-cyan-300'
+                      'bg-amber-500/20 text-amber-300'
                     }`}>
-                      {dep.status}
+                      {(dep.status === 'APPROVED' || dep.status === 'CONFIRMED' || dep.status === 'COMPLETED') ? 'CONFIRMED' : (dep.status === 'REJECTED' ? 'REJECTED' : 'PENDING')}
                     </span>
                   </div>
                 ))
@@ -407,11 +418,11 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
                       <span className="text-[10px] text-slate-500 font-mono">{wth.upiId || 'UPI QR'}</span>
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                      wth.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' :
+                      (wth.status === 'COMPLETED' || wth.status === 'CONFIRMED' || wth.status === 'APPROVED') ? 'bg-emerald-500/20 text-emerald-400' :
                       wth.status === 'REJECTED' ? 'bg-rose-500/20 text-rose-400' :
                       'bg-amber-500/20 text-amber-300'
                     }`}>
-                      {wth.status}
+                      {(wth.status === 'COMPLETED' || wth.status === 'CONFIRMED' || wth.status === 'APPROVED') ? 'CONFIRMED' : (wth.status === 'REJECTED' ? 'REJECTED' : 'PENDING')}
                     </span>
                   </div>
                 ))

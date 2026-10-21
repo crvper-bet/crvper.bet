@@ -45,14 +45,13 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
   const [showRulesModal, setShowRulesModal] = useState(false);
 
   const limitInfo = storage.checkGameWinningLimit(user?.id, 'Aviator');
-  const isLockedByWinningCap = Boolean(limitInfo.isLimitReached || (user && Number(user.walletBalance || 0) >= 100000));
+  const isLockedByWinningCap = Boolean(limitInfo.isLimitReached);
 
   // Check winning limit cap
   const checkWinningCap = () => {
     const freshUser = storage.getCurrentUser();
     const freshLimit = storage.checkGameWinningLimit(freshUser?.id, 'Aviator');
-    if (freshLimit.isLimitReached || (freshUser && Number(freshUser.walletBalance || 0) >= 100000)) {
-      alert("You’ve reached the configured winning limit. Please review your balance and withdrawal options.");
+    if (freshLimit.isLimitReached) {
       if (onOpenMaxLimitModal) onOpenMaxLimitModal();
       return true;
     }
@@ -110,7 +109,8 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
         if (live.gameState === 'WAITING') {
           // Reset bets and process queues for new flight
           const freshUser = storage.getCurrentUser();
-          const isCapped = Boolean(freshUser && Number(freshUser.walletBalance || 0) >= 100000);
+          const freshLimit = storage.checkGameWinningLimit(freshUser?.id, 'Aviator');
+          const isCapped = Boolean(freshLimit.isLimitReached);
 
           // Panel 1 auto/queued placement
           const q1 = panel1QueuedBetRef.current;
@@ -500,10 +500,10 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
             <div className="flex items-center space-x-2.5">
               <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
               <span className="font-bold leading-tight">
-                You’ve reached the configured winning limit. Please review your balance and withdrawal options.
+                You have reached the winning amount. Please withdraw your funds to play again.
               </span>
             </div>
-            <span className="font-black text-amber-400 underline text-xs shrink-0 ml-3">Review Balance →</span>
+            <span className="font-black text-amber-400 underline text-xs shrink-0 ml-3">Withdraw →</span>
           </div>
         )}
 

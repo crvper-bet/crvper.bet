@@ -1,7 +1,12 @@
 import React from 'react';
-import { AlertCircle, ArrowRight, ShieldAlert, Trophy, X } from 'lucide-react';
+import { ArrowRight, Trophy, X } from 'lucide-react';
 
-export default function MaxLimitModal({ isOpen, onClose, onGoToWithdraw, onGoToDeposit, hasDeposited }) {
+export default function MaxLimitModal({ 
+  isOpen, 
+  onClose, 
+  onGoToWithdraw, 
+  message = "You have reached the winning amount. Please withdraw your funds to play again." 
+}) {
   if (!isOpen) return null;
 
   return (
@@ -23,12 +28,8 @@ export default function MaxLimitModal({ isOpen, onClose, onGoToWithdraw, onGoToD
           Winning Limit Reached
         </h3>
 
-        <div className="my-3 px-3 py-2 rounded-xl bg-amber-950/50 border border-amber-500/30 text-amber-300 font-mono font-black text-lg">
-          ₹1,00,000 CAP
-        </div>
-
-        <p className="text-sm text-slate-200 font-semibold leading-relaxed">
-          You reached your winning limit. Please withdraw your funds.
+        <p className="mt-4 text-sm text-amber-200/90 font-medium leading-relaxed px-2">
+          {message}
         </p>
 
         <div className="space-y-2 mt-6">

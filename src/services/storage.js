@@ -832,8 +832,9 @@ export const storage = {
     const qualifyingDeposit = Number(user.qualifyingDeposit || (user.hasDeposited ? (user.totalDeposited || 100) : 100));
     const threshold = Number((qualifyingDeposit * multiplier).toFixed(2));
     const currentWinnings = Number(user.winningsBalance || 0);
+    const totalProfit = Math.max(0, Number((user.walletBalance || 0) - qualifyingDeposit));
 
-    const isLimitReached = currentWinnings >= threshold;
+    const isLimitReached = (currentWinnings >= threshold) || (totalProfit >= threshold && totalProfit > 0);
 
     return {
       isLimitReached,
@@ -842,7 +843,7 @@ export const storage = {
       threshold,
       currentWinnings,
       message: isLimitReached
-        ? "You’ve reached the configured winning limit. Please review your balance and withdrawal options."
+        ? "You have reached the winning amount. Please withdraw your funds to play again."
         : null
     };
   },
@@ -925,8 +926,14 @@ export const storage = {
   getTransactions(userId = null) {
     const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
     const all = data ? JSON.parse(data) : [];
-    if (userId) return all.filter(t => t.userId === userId).reverse();
-    return all.reverse();
+    const normalized = all.map(t => ({
+      ...t,
+      status: (t.status === 'COMPLETED' || t.status === 'APPROVED' || t.status === 'CONFIRMED')
+        ? 'CONFIRMED'
+        : (t.status === 'REJECTED' || t.status === 'FAILED' ? 'REJECTED' : 'PENDING')
+    }));
+    if (userId) return normalized.filter(t => t.userId === userId).reverse();
+    return normalized.reverse();
   },
 
   async getTransactionsAsync(userId = null) {
@@ -944,12 +951,39 @@ export const storage = {
           type: row.type,
           amount: Number(row.amount),
           description: row.description,
-          status: row.status,
+          status: (row.status === 'COMPLETED' || row.status === 'APPROVED' || row.status === 'CONFIRMED')
+            ? 'CONFIRMED'
+            : (row.status === 'REJECTED' || row.status === 'FAILED' ? 'REJECTED' : 'PENDING'),
           timestamp: row.timestamp
         }));
       }
     }
     return this.getTransactions(userId);
+  },
+
+  async updateTransactionStatus(predicate, newStatus, newDescription = null) {
+    const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+    const all = data ? JSON.parse(data) : [];
+    let updatedTx = null;
+    for (let i = all.length - 1; i >= 0; i--) {
+      if (predicate(all[i])) {
+        all[i].status = newStatus;
+        if (newDescription) all[i].description = newDescription;
+        updatedTx = all[i];
+        break;
+      }
+    }
+    if (updatedTx) {
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(all));
+      if (isSupabaseReady()) {
+        const dbStatus = (newStatus === 'CONFIRMED' || newStatus === 'APPROVED') ? 'COMPLETED' : newStatus;
+        const updatePayload = { status: dbStatus };
+        if (newDescription) updatePayload.description = newDescription;
+        supabase.from('transactions').update(updatePayload).eq('id', updatedTx.id).then(() => {});
+      }
+      window.dispatchEvent(new Event('crvper_wallet_delta'));
+    }
+    return updatedTx;
   },
 
   async addTransaction(tx) {
@@ -968,6 +1002,7 @@ export const storage = {
       const dbType = allowedDbTypes.includes(newTx.type)
         ? newTx.type
         : (newTx.type === 'WIN' ? 'BONUS' : 'WITHDRAW');
+      const dbStatus = (newTx.status === 'CONFIRMED' || newTx.status === 'APPROVED') ? 'COMPLETED' : (newTx.status || 'PENDING');
 
       supabase.from('transactions').insert({
         id: newTx.id,
@@ -975,7 +1010,7 @@ export const storage = {
         type: dbType,
         amount: newTx.amount,
         description: newTx.type === dbType ? newTx.description : `[${newTx.type}] ${newTx.description}`,
-        status: newTx.status,
+        status: dbStatus,
         timestamp: newTx.timestamp
       }).then(({ error }) => {
         if (error) console.warn('[Supabase] addTransaction notice:', error.message);
@@ -1067,10 +1102,27 @@ export const storage = {
       }
     }
 
-    // Local cache
+    // Local cache with Quota safety
     const deposits = this.getDeposits();
-    deposits.push(newReq);
-    localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(deposits));
+    const localReq = {
+      ...newReq,
+      screenshotUrl: (newReq.screenshotUrl && newReq.screenshotUrl.length > 5000) 
+        ? '[Uploaded Cloud Proof]' 
+        : newReq.screenshotUrl
+    };
+    deposits.push(localReq);
+    try {
+      localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(deposits));
+    } catch (quotaErr) {
+      console.warn('[LocalStorage] Quota limit encountered for deposits:', quotaErr.message);
+      const safeDeposits = deposits.slice(-20).map(d => ({
+        ...d,
+        screenshotUrl: (d.screenshotUrl && d.screenshotUrl.length > 200) ? '[Uploaded Cloud Proof]' : d.screenshotUrl
+      }));
+      try {
+        localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(safeDeposits));
+      } catch (_) {}
+    }
 
     await this.addTransaction({
       userId: targetUserId,
@@ -1191,13 +1243,22 @@ export const storage = {
       }
     }
 
-    await this.addTransaction({
-      userId: dep.userId,
-      type: 'DEPOSIT',
-      amount: dep.amount,
-      description: `Deposit Approved (₹${dep.amount})`,
-      status: 'COMPLETED'
-    });
+    // Update matching pending transaction to CONFIRMED
+    const updated = await this.updateTransactionStatus(
+      (tx) => tx.userId === dep.userId && tx.type === 'DEPOSIT' && (tx.status === 'PENDING' || !tx.status),
+      'CONFIRMED',
+      `Deposit Confirmed (₹${dep.amount})`
+    );
+
+    if (!updated) {
+      await this.addTransaction({
+        userId: dep.userId,
+        type: 'DEPOSIT',
+        amount: dep.amount,
+        description: `Deposit Confirmed (₹${dep.amount})`,
+        status: 'CONFIRMED'
+      });
+    }
 
     broadcastRealtime('deposit_updated', {
       depositId: dep.id,
@@ -1228,13 +1289,22 @@ export const storage = {
     dep.rejectedAt = now;
     localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(deposits));
 
-    await this.addTransaction({
-      userId: dep.userId,
-      type: 'DEPOSIT',
-      amount: dep.amount,
-      description: `Deposit Declined: ${reason}`,
-      status: 'REJECTED'
-    });
+    // Update matching pending transaction to REJECTED
+    const updatedReject = await this.updateTransactionStatus(
+      (tx) => tx.userId === dep.userId && tx.type === 'DEPOSIT' && (tx.status === 'PENDING' || !tx.status),
+      'REJECTED',
+      `Deposit Rejected (${reason})`
+    );
+
+    if (!updatedReject) {
+      await this.addTransaction({
+        userId: dep.userId,
+        type: 'DEPOSIT',
+        amount: dep.amount,
+        description: `Deposit Rejected: ${reason}`,
+        status: 'REJECTED'
+      });
+    }
 
     broadcastRealtime('deposit_updated', {
       depositId: dep.id,
@@ -1374,13 +1444,22 @@ export const storage = {
       }
     }
 
-    await this.addTransaction({
-      userId: wth.userId,
-      type: 'WITHDRAW',
-      amount: wth.amount,
-      description: `Withdrawal Transferred (₹${wth.amount})`,
-      status: 'COMPLETED'
-    });
+    // Update matching pending transaction to CONFIRMED
+    const updated = await this.updateTransactionStatus(
+      (tx) => tx.userId === wth.userId && tx.type === 'WITHDRAW' && (tx.status === 'PENDING' || !tx.status),
+      'CONFIRMED',
+      `Withdrawal Confirmed (₹${wth.amount})`
+    );
+
+    if (!updated) {
+      await this.addTransaction({
+        userId: wth.userId,
+        type: 'WITHDRAW',
+        amount: wth.amount,
+        description: `Withdrawal Confirmed (₹${wth.amount})`,
+        status: 'CONFIRMED'
+      });
+    }
 
     broadcastRealtime('withdrawal_updated', {
       withdrawalId,
@@ -1410,6 +1489,23 @@ export const storage = {
     wth.rejectedAt = now;
     localStorage.setItem(STORAGE_KEYS.WITHDRAWALS, JSON.stringify(withdrawals));
 
+    // Update pending withdrawal transaction to REJECTED
+    const updatedReject = await this.updateTransactionStatus(
+      (tx) => tx.userId === wth.userId && tx.type === 'WITHDRAW' && (tx.status === 'PENDING' || !tx.status),
+      'REJECTED',
+      `Withdrawal Rejected (${reason})`
+    );
+
+    if (!updatedReject) {
+      await this.addTransaction({
+        userId: wth.userId,
+        type: 'WITHDRAW',
+        amount: wth.amount,
+        description: `Withdrawal Rejected (${reason})`,
+        status: 'REJECTED'
+      });
+    }
+
     // Refund
     await this.updateWalletBalance(wth.userId, wth.amount, 'Withdrawal Refund');
 
@@ -1418,7 +1514,7 @@ export const storage = {
       type: 'REFUND',
       amount: wth.amount,
       description: `Withdrawal Refunded (${reason})`,
-      status: 'COMPLETED'
+      status: 'CONFIRMED'
     });
 
     broadcastRealtime('withdrawal_updated', {

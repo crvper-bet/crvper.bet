@@ -601,10 +601,10 @@ export default function AdminPage({ onExit }) {
                         </td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                            dep.status === 'APPROVED' ? 'bg-emerald-950 text-emerald-400' :
+                            (dep.status === 'APPROVED' || dep.status === 'CONFIRMED') ? 'bg-emerald-950 text-emerald-400' :
                             dep.status === 'REJECTED' ? 'bg-rose-950 text-rose-400' : 'bg-amber-950 text-amber-400'
                           }`}>
-                            {dep.status}
+                            {(dep.status === 'APPROVED' || dep.status === 'CONFIRMED') ? 'CONFIRMED' : dep.status}
                           </span>
                         </td>
                         <td className="p-3">
@@ -615,14 +615,14 @@ export default function AdminPage({ onExit }) {
                                 className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center space-x-1"
                               >
                                 <CheckCircle2 className="w-3 h-3" />
-                                <span>Approve</span>
+                                <span>Confirm</span>
                               </button>
                               <button
                                 onClick={() => handleRejectDeposit(dep.id)}
                                 className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] flex items-center space-x-1"
                               >
                                 <XCircle className="w-3 h-3" />
-                                <span>Decline</span>
+                                <span>Reject</span>
                               </button>
                             </div>
                           ) : (
@@ -689,10 +689,10 @@ export default function AdminPage({ onExit }) {
                         </td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                            wth.status === 'COMPLETED' ? 'bg-emerald-950 text-emerald-400' :
+                            (wth.status === 'COMPLETED' || wth.status === 'CONFIRMED') ? 'bg-emerald-950 text-emerald-400' :
                             wth.status === 'REJECTED' ? 'bg-rose-950 text-rose-400' : 'bg-amber-950 text-amber-400'
                           }`}>
-                            {wth.status}
+                            {(wth.status === 'COMPLETED' || wth.status === 'CONFIRMED') ? 'CONFIRMED' : wth.status}
                           </span>
                         </td>
                         <td className="p-3">
@@ -702,7 +702,7 @@ export default function AdminPage({ onExit }) {
                                 onClick={() => handleApproveWithdrawal(wth.id)}
                                 className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px]"
                               >
-                                Mark Sent
+                                Confirm Sent
                               </button>
                               <button
                                 onClick={() => handleRejectWithdrawal(wth.id)}
