@@ -27,6 +27,12 @@ const DEFAULT_ADMIN_SETTINGS = {
   minDeposit: 100,
   minWithdraw: 100,
   signupBonus: 150,
+  promoActive: true,
+  minQualifyingDeposit: 100,
+  wageringPercentage: 50, // 50%
+  aviatorWingoLimitMultiplier: 3.0, // 3x threshold on qualifying deposit
+  eligibleGames: ['Aviator', 'WinGo', 'Mines', 'Quantum Dice', 'Plinko', 'Neon Tower'],
+  auditLogs: [],
   soundModes: {
     deposit: 'default',
     withdraw: 'default',
@@ -69,13 +75,62 @@ function broadcastRealtime(event, payload) {
 // Map Supabase DB row (snake_case) → app user object (camelCase)
 function dbUserToApp(row) {
   if (!row) return null;
+
+  // Retrieve cached local fields if available to preserve sub-balance separation
+  let cached = null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.USERS);
+    if (raw) {
+      const all = JSON.parse(raw);
+      cached = all.find(u => u.id === row.id);
+    }
+  } catch {}
+
+  const walletBalance = Number(row.wallet_balance ?? 150);
+  const totalDeposited = Number(row.total_deposited ?? 0);
+  const hasDeposited = Boolean(row.has_deposited ?? (totalDeposited >= 100));
+
+  let depositBalance = cached?.depositBalance;
+  let bonusBalance = cached?.bonusBalance;
+  let winningsBalance = cached?.winningsBalance;
+  let bonusClaimed = cached?.bonusClaimed ?? true;
+  let wageringRequired = cached?.wageringRequired;
+  let wageringWagered = cached?.wageringWagered ?? 0;
+  let qualifyingDeposit = cached?.qualifyingDeposit ?? totalDeposited;
+
+  if (depositBalance === undefined || bonusBalance === undefined || winningsBalance === undefined) {
+    if (totalDeposited > 0) {
+      depositBalance = Math.min(walletBalance, totalDeposited);
+      bonusBalance = 0;
+      winningsBalance = Math.max(0, walletBalance - depositBalance);
+    } else {
+      bonusBalance = Math.min(walletBalance, 150);
+      depositBalance = 0;
+      winningsBalance = Math.max(0, walletBalance - bonusBalance);
+    }
+  }
+
+  if (wageringRequired === undefined) {
+    wageringRequired = Number(((bonusBalance * 0.5) + (qualifyingDeposit * 0.5)).toFixed(2));
+  }
+
+  const wageringRemaining = Math.max(0, Number((wageringRequired - wageringWagered).toFixed(2)));
+
   return {
     id: row.id,
     phone: row.phone,
     password: row.password,
-    walletBalance: Number(row.wallet_balance ?? 150),
-    hasDeposited: row.has_deposited ?? false,
-    totalDeposited: Number(row.total_deposited ?? 0),
+    walletBalance,
+    depositBalance: Number(depositBalance.toFixed(2)),
+    bonusBalance: Number(bonusBalance.toFixed(2)),
+    winningsBalance: Number(winningsBalance.toFixed(2)),
+    bonusClaimed,
+    wageringRequired: Number(wageringRequired.toFixed(2)),
+    wageringWagered: Number(wageringWagered.toFixed(2)),
+    wageringRemaining,
+    qualifyingDeposit: Number(qualifyingDeposit.toFixed(2)),
+    hasDeposited,
+    totalDeposited,
     totalWithdrawn: Number(row.total_withdrawn ?? 0),
     referredBy: row.referred_by ?? null,
     createdAt: row.created_at
@@ -84,9 +139,10 @@ function dbUserToApp(row) {
 
 // Map app user object → Supabase DB row
 function appUserToDb(user) {
+  const cleanPhone = String(user.phone || '').replace(/\D/g, '').trim() || user.phone;
   return {
     id: user.id,
-    phone: user.phone,
+    phone: cleanPhone,
     password: user.password,
     wallet_balance: user.walletBalance,
     has_deposited: user.hasDeposited,
@@ -148,14 +204,88 @@ function dbPromoterToApp(row) {
 }
 
 // ─── Ensure user exists in Supabase before FK-dependent inserts ───────────────
-// Silently upserts the user row so deposits/transactions never fail with 23502/23503
+// Heals ID mismatches and guarantees foreign keys never fail with 23503
 async function ensureUserInSupabase(user) {
-  if (!isSupabaseReady() || !user) return;
+  if (!isSupabaseReady() || !user) return user;
   try {
-    await supabase.from('users').upsert(appUserToDb(user), { onConflict: 'id' });
+    const cleanPhone = String(user.phone || '').replace(/\D/g, '').trim();
+
+    // 1. Check if user already exists by exact ID
+    if (user.id) {
+      const { data: byId } = await supabase
+        .from('users')
+        .select('id, phone')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (byId) {
+        return user;
+      }
+    }
+
+    // 2. Check if user exists by phone in Supabase (resolves ID divergence)
+    if (cleanPhone) {
+      const { data: byPhone } = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+
+      if (byPhone) {
+        user.id = byPhone.id;
+        user.phone = byPhone.phone;
+
+        // Sync aligned ID to local cache
+        const rawUsers = localStorage.getItem(STORAGE_KEYS.USERS);
+        if (rawUsers) {
+          try {
+            const users = JSON.parse(rawUsers);
+            const idx = users.findIndex(u => String(u.phone).replace(/\D/g, '').trim() === cleanPhone || u.id === byPhone.id);
+            if (idx !== -1) {
+              users[idx].id = byPhone.id;
+              localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+            }
+          } catch {}
+        }
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+        return user;
+      }
+    }
+
+    // 3. User does not exist in Supabase yet — insert new record
+    const dbPayload = appUserToDb(user);
+    if (cleanPhone) dbPayload.phone = cleanPhone;
+
+    const { data: inserted, error: insertErr } = await supabase
+      .from('users')
+      .upsert(dbPayload, { onConflict: 'id' })
+      .select('id, phone')
+      .maybeSingle();
+
+    if (!insertErr && inserted?.id) {
+      user.id = inserted.id;
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+      return user;
+    }
+
+    if (insertErr && cleanPhone) {
+      console.warn('[Supabase] ensureUserInSupabase insert notice:', insertErr.message);
+      // If error was unique phone constraint, retrieve existing row ID
+      const { data: conflictRow } = await supabase
+        .from('users')
+        .select('id, phone')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+      if (conflictRow?.id) {
+        user.id = conflictRow.id;
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+        return user;
+      }
+    }
   } catch (e) {
-    console.warn('[Supabase] ensureUserInSupabase failed:', e.message);
+    console.warn('[Supabase] ensureUserInSupabase exception:', e.message);
   }
+  return user;
 }
 
 // ─── Storage Service ──────────────────────────────────────────────────────────
@@ -166,27 +296,31 @@ export const storage = {
 
   // Helper: parse qr_image_url which may be a plain data URI or our JSON envelope
   _parseQrEnvelope(raw) {
-    if (!raw) return { qrImageUrl: DEFAULT_UPI_QR, soundModes: {}, soundData: {} };
+    if (!raw) return { qrImageUrl: DEFAULT_UPI_QR, soundModes: {}, soundData: {}, promotions: {}, auditLogs: [] };
     try {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object' && parsed.qr !== undefined) {
         return {
           qrImageUrl: parsed.qr || DEFAULT_UPI_QR,
           soundModes: parsed.soundModes || {},
-          soundData: parsed.soundData || {}
+          soundData: parsed.soundData || {},
+          promotions: parsed.promotions || {},
+          auditLogs: parsed.auditLogs || []
         };
       }
     } catch {}
     // Plain string (legacy — just the QR data URI)
-    return { qrImageUrl: raw, soundModes: {}, soundData: {} };
+    return { qrImageUrl: raw, soundModes: {}, soundData: {}, promotions: {}, auditLogs: [] };
   },
 
   // Build JSON envelope for storing in qr_image_url
-  _buildQrEnvelope(qrImageUrl, soundModes, soundData) {
+  _buildQrEnvelope(qrImageUrl, soundModes, soundData, promotions = {}, auditLogs = []) {
     return JSON.stringify({
       qr: qrImageUrl || DEFAULT_UPI_QR,
       soundModes: soundModes || {},
-      soundData: soundData || {}
+      soundData: soundData || {},
+      promotions: promotions || {},
+      auditLogs: auditLogs || []
     });
   },
 
@@ -200,12 +334,19 @@ export const storage = {
       if (!error && data) {
         const envelope = this._parseQrEnvelope(data.qr_image_url);
         const settings = {
+          ...DEFAULT_ADMIN_SETTINGS,
           upiId: data.upi_id,
           payeeName: data.payee_name,
           qrImageUrl: envelope.qrImageUrl,
           minDeposit: Number(data.min_deposit),
           minWithdraw: Number(data.min_withdraw),
           signupBonus: Number(data.signup_bonus),
+          promoActive: envelope.promotions?.promoActive !== undefined ? Boolean(envelope.promotions.promoActive) : DEFAULT_ADMIN_SETTINGS.promoActive,
+          minQualifyingDeposit: Number(envelope.promotions?.minQualifyingDeposit ?? DEFAULT_ADMIN_SETTINGS.minQualifyingDeposit),
+          wageringPercentage: Number(envelope.promotions?.wageringPercentage ?? DEFAULT_ADMIN_SETTINGS.wageringPercentage),
+          aviatorWingoLimitMultiplier: Number(envelope.promotions?.aviatorWingoLimitMultiplier ?? DEFAULT_ADMIN_SETTINGS.aviatorWingoLimitMultiplier),
+          eligibleGames: envelope.promotions?.eligibleGames || DEFAULT_ADMIN_SETTINGS.eligibleGames,
+          auditLogs: envelope.auditLogs || [],
           soundModes: envelope.soundModes,
         };
         localStorage.setItem(STORAGE_KEYS.ADMIN_SETTINGS, JSON.stringify(settings));
@@ -285,6 +426,14 @@ export const storage = {
       let currentQr = updated.qrImageUrl || existing?.qr_image_url || '';
       let soundModes = updated.soundModes || {};
       let soundData = {};
+      let promotions = {
+        promoActive: updated.promoActive ?? true,
+        minQualifyingDeposit: updated.minQualifyingDeposit ?? 100,
+        wageringPercentage: updated.wageringPercentage ?? 50,
+        aviatorWingoLimitMultiplier: updated.aviatorWingoLimitMultiplier ?? 3.0,
+        eligibleGames: updated.eligibleGames || DEFAULT_ADMIN_SETTINGS.eligibleGames
+      };
+      let auditLogs = updated.auditLogs || [];
 
       try {
         const parsed = JSON.parse(existing?.qr_image_url || '{}');
@@ -292,10 +441,12 @@ export const storage = {
           if (!newSettings.qrImageUrl && parsed.qr) currentQr = parsed.qr;
           soundModes = { ...(parsed.soundModes || {}), ...soundModes };
           soundData = parsed.soundData || {};
+          promotions = { ...(parsed.promotions || {}), ...promotions };
+          auditLogs = updated.auditLogs || parsed.auditLogs || [];
         }
       } catch {}
 
-      const envelope = this._buildQrEnvelope(currentQr, soundModes, soundData);
+      const envelope = this._buildQrEnvelope(currentQr, soundModes, soundData, promotions, auditLogs);
 
       await supabase.from('admin_settings').upsert({
         id: 1,
@@ -312,6 +463,23 @@ export const storage = {
     broadcastRealtime('settings_updated', updated);
     window.dispatchEvent(new Event('crvper_settings_updated'));
     return updated;
+  },
+
+  async logAdminSettingChange(adminUser = 'crvvper (Admin)', settingKey, previousValue, newValue) {
+    const currentSettings = this.getAdminSettings();
+    const auditLogs = [...(currentSettings.auditLogs || [])];
+    const newLog = {
+      id: 'log_' + Date.now() + Math.random().toString(36).substring(2, 5),
+      timestamp: new Date().toISOString(),
+      admin: adminUser,
+      setting: settingKey,
+      previousValue: previousValue !== undefined ? String(previousValue) : 'N/A',
+      newValue: String(newValue)
+    };
+    auditLogs.unshift(newLog);
+    const trimmed = auditLogs.slice(0, 100);
+    await this.updateAdminSettings({ auditLogs: trimmed });
+    return newLog;
   },
 
   // ── Users & Wallet ──────────────────────────────────────────────────────────
@@ -424,11 +592,23 @@ export const storage = {
       }
     }
 
+    const settings = this.getAdminSettings();
+    const signupBonus = settings.promoActive ? Number(settings.signupBonus ?? 150.00) : 0;
+    const wageringReq = settings.promoActive ? Number((signupBonus * ((settings.wageringPercentage ?? 50) / 100)).toFixed(2)) : 0;
+
     const newUser = {
       id: 'usr_' + Date.now() + Math.random().toString(36).substring(2, 6),
       phone,
       password,
-      walletBalance: 150.00,
+      walletBalance: signupBonus,
+      depositBalance: 0.00,
+      bonusBalance: signupBonus,
+      winningsBalance: 0.00,
+      bonusClaimed: true,
+      wageringRequired: wageringReq,
+      wageringWagered: 0.00,
+      wageringRemaining: wageringReq,
+      qualifyingDeposit: 0.00,
       hasDeposited: false,
       totalDeposited: 0,
       totalWithdrawn: 0,
@@ -446,13 +626,15 @@ export const storage = {
     this.saveUsers(users);
     this.setCurrentUser(newUser);
 
-    await this.addTransaction({
-      userId: newUser.id,
-      type: 'BONUS',
-      amount: 150,
-      description: 'Signup Welcome Bonus',
-      status: 'COMPLETED'
-    });
+    if (signupBonus > 0) {
+      await this.addTransaction({
+        userId: newUser.id,
+        type: 'BONUS',
+        amount: signupBonus,
+        description: 'Signup Promotional Welcome Bonus (₹150)',
+        status: 'COMPLETED'
+      });
+    }
 
     return newUser;
   },
@@ -492,21 +674,130 @@ export const storage = {
     const idx = users.findIndex(u => u.id === userId);
     if (idx === -1) return null;
 
-    const currentBalance = Number(users[idx].walletBalance || 0);
-    const newBalance = Math.max(0, Number((currentBalance + deltaAmount).toFixed(2)));
-    users[idx].walletBalance = newBalance;
+    const u = users[idx];
+    let depBal = Number(u.depositBalance ?? 0);
+    let bonBal = Number(u.bonusBalance ?? 0);
+    let winBal = Number(u.winningsBalance ?? 0);
+
+    const curTotal = Number(u.walletBalance || 0);
+    // Auto-heal missing sub-balances if needed
+    if (depBal + bonBal + winBal !== curTotal && curTotal > 0) {
+      if ((u.totalDeposited || 0) > 0) {
+        depBal = Math.min(curTotal, u.totalDeposited);
+        bonBal = 0;
+        winBal = Math.max(0, curTotal - depBal);
+      } else {
+        bonBal = Math.min(curTotal, 150);
+        depBal = 0;
+        winBal = Math.max(0, curTotal - bonBal);
+      }
+    }
+
+    const reasonLower = reason.toLowerCase();
+
+    if (deltaAmount < 0) {
+      const wagerAmt = Math.abs(deltaAmount);
+      let rem = wagerAmt;
+
+      if (reasonLower.includes('withdrawal')) {
+        // Withdrawal holds pull from winnings first, then deposit, then bonus
+        const fromWin = Math.min(winBal, rem);
+        winBal -= fromWin;
+        rem -= fromWin;
+
+        const fromDep = Math.min(depBal, rem);
+        depBal -= fromDep;
+        rem -= fromDep;
+
+        if (rem > 0) {
+          bonBal = Math.max(0, bonBal - rem);
+        }
+      } else {
+        // Game wagers consume bonusBalance first, then depositBalance, then winningsBalance
+        const fromBonus = Math.min(bonBal, rem);
+        bonBal -= fromBonus;
+        rem -= fromBonus;
+
+        const fromDep = Math.min(depBal, rem);
+        depBal -= fromDep;
+        rem -= fromDep;
+
+        const fromWin = Math.min(winBal, rem);
+        winBal -= fromWin;
+        rem -= fromWin;
+
+        // Advance wagering requirement for eligible game wagers
+        const isEligibleWager = !reasonLower.includes('cancel') && !reasonLower.includes('hold');
+        if (isEligibleWager) {
+          u.wageringWagered = Number(((u.wageringWagered || 0) + wagerAmt).toFixed(2));
+          const req = Number(u.wageringRequired || 0);
+          u.wageringRemaining = Math.max(0, Number((req - u.wageringWagered).toFixed(2)));
+        }
+
+        // Add ledger record for bet
+        this.addTransaction({
+          userId,
+          type: 'WAGER',
+          amount: wagerAmt,
+          description: reason,
+          status: 'COMPLETED'
+        }).catch(() => {});
+      }
+    } else if (deltaAmount > 0) {
+      if (reasonLower.includes('refund')) {
+        depBal += deltaAmount;
+        if (reasonLower.includes('bet') || reasonLower.includes('cancel')) {
+          u.wageringWagered = Math.max(0, Number(((u.wageringWagered || 0) - deltaAmount).toFixed(2)));
+          const req = Number(u.wageringRequired || 0);
+          u.wageringRemaining = Math.max(0, Number((req - u.wageringWagered).toFixed(2)));
+        }
+        this.addTransaction({
+          userId,
+          type: 'REFUND',
+          amount: deltaAmount,
+          description: reason,
+          status: 'COMPLETED'
+        }).catch(() => {});
+      } else {
+        // Game win profit goes to winningsBalance
+        winBal += deltaAmount;
+        this.addTransaction({
+          userId,
+          type: 'WIN',
+          amount: deltaAmount,
+          description: reason,
+          status: 'COMPLETED'
+        }).catch(() => {});
+      }
+    }
+
+    u.depositBalance = Number(Math.max(0, depBal).toFixed(2));
+    u.bonusBalance = Number(Math.max(0, bonBal).toFixed(2));
+    u.winningsBalance = Number(Math.max(0, winBal).toFixed(2));
+    const newBalance = Number((u.depositBalance + u.bonusBalance + u.winningsBalance).toFixed(2));
+    u.walletBalance = newBalance;
+
     this.saveUsers(users);
 
     const currentUser = this.getCurrentUser();
     if (currentUser && currentUser.id === userId) {
-      currentUser.walletBalance = newBalance;
+      Object.assign(currentUser, {
+        walletBalance: newBalance,
+        depositBalance: u.depositBalance,
+        bonusBalance: u.bonusBalance,
+        winningsBalance: u.winningsBalance,
+        wageringRequired: u.wageringRequired,
+        wageringWagered: u.wageringWagered,
+        wageringRemaining: u.wageringRemaining
+      });
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(currentUser));
       window.dispatchEvent(new CustomEvent('crvper_wallet_delta', {
         detail: { newBalance, deltaAmount, reason }
       }));
+      window.dispatchEvent(new Event('crvper_user_updated'));
     }
 
-    // Sync to Supabase (fire and forget — don't block gameplay)
+    // Sync to Supabase
     if (isSupabaseReady()) {
       supabase
         .from('users')
@@ -518,6 +809,115 @@ export const storage = {
     }
 
     return newBalance;
+  },
+
+  // ── Winning Limit Check for Aviator & WinGo ─────────────────────────────────
+  checkGameWinningLimit(userId, gameName = 'Aviator') {
+    const restrictedGames = ['aviator', 'wingo'];
+    const norm = String(gameName).toLowerCase().replace(/[^a-z]/g, '');
+    const isRestricted = restrictedGames.some(g => norm.includes(g));
+
+    if (!isRestricted) {
+      return { isLimitReached: false, threshold: Infinity, currentWinnings: 0, reason: null };
+    }
+
+    const user = this.getCurrentUser()?.id === userId ? this.getCurrentUser() : this.getUsers().find(u => u.id === userId);
+    if (!user) {
+      return { isLimitReached: false, threshold: Infinity, currentWinnings: 0, reason: null };
+    }
+
+    const settings = this.getAdminSettings();
+    const multiplier = Number(settings.aviatorWingoLimitMultiplier ?? 3.0);
+    // Base is user's approved qualifying deposits, or default minimum 100
+    const qualifyingDeposit = Number(user.qualifyingDeposit || (user.hasDeposited ? (user.totalDeposited || 100) : 100));
+    const threshold = Number((qualifyingDeposit * multiplier).toFixed(2));
+    const currentWinnings = Number(user.winningsBalance || 0);
+
+    const isLimitReached = currentWinnings >= threshold;
+
+    return {
+      isLimitReached,
+      qualifyingDeposit,
+      multiplier,
+      threshold,
+      currentWinnings,
+      message: isLimitReached
+        ? "You’ve reached the configured winning limit. Please review your balance and withdrawal options."
+        : null
+    };
+  },
+
+  // ── Withdrawal Eligibility Validator ─────────────────────────────────────────
+  getWithdrawalEligibility(userId) {
+    const user = this.getCurrentUser()?.id === userId ? this.getCurrentUser() : this.getUsers().find(u => u.id === userId);
+    if (!user) {
+      return {
+        isEligible: false,
+        hasDeposited: false,
+        depositRequired: 100,
+        depositRemaining: 100,
+        depositMessage: 'A minimum deposit of ₹100 is required to become eligible for withdrawal under this promotion.',
+        hasMetWagering: false,
+        wageringRequired: 0,
+        wageringWagered: 0,
+        wageringRemaining: 0,
+        wageringMessage: null,
+        depositBalance: 0,
+        bonusBalance: 0,
+        winningsBalance: 0,
+        withdrawableBalance: 0,
+        totalBalance: 0
+      };
+    }
+
+    const settings = this.getAdminSettings();
+    const minQualifyingDeposit = Number(settings.minQualifyingDeposit ?? 100);
+    const totalDep = Number(user.totalDeposited || 0);
+    const hasMetDeposit = Boolean(user.hasDeposited || totalDep >= minQualifyingDeposit);
+    const depositRemaining = Math.max(0, Number((minQualifyingDeposit - totalDep).toFixed(2)));
+
+    const depositMessage = !hasMetDeposit
+      ? `A minimum deposit of ₹${minQualifyingDeposit} is required to become eligible for withdrawal under this promotion.`
+      : null;
+
+    const wageringRequired = Number(user.wageringRequired || 0);
+    const wageringWagered = Number(user.wageringWagered || 0);
+    const wageringRemaining = Math.max(0, Number((wageringRequired - wageringWagered).toFixed(2)));
+    const hasMetWagering = wageringRemaining === 0;
+
+    const wageringMessage = !hasMetWagering
+      ? `You need to wager ₹${wageringRemaining.toFixed(2)} more to meet your promotional requirement.`
+      : null;
+
+    const depositBal = Number(user.depositBalance || 0);
+    const winBal = Number(user.winningsBalance || 0);
+    const bonBal = Number(user.bonusBalance || 0);
+    const totalBal = Number(user.walletBalance || (depositBal + winBal + bonBal));
+
+    // Withdrawable balance is depositBalance + winningsBalance when wagering requirements are fulfilled
+    const withdrawableBalance = hasMetWagering
+      ? Number((depositBal + winBal).toFixed(2))
+      : 0;
+
+    const isEligible = hasMetDeposit && hasMetWagering && withdrawableBalance >= (settings.minWithdraw ?? 100);
+
+    return {
+      isEligible,
+      hasDeposited: hasMetDeposit,
+      depositRequired: minQualifyingDeposit,
+      depositRemaining,
+      depositMessage,
+      hasMetWagering,
+      wageringRequired,
+      wageringWagered,
+      wageringRemaining,
+      wageringMessage,
+      depositBalance: depositBal,
+      bonusBalance: bonBal,
+      winningsBalance: winBal,
+      withdrawableBalance,
+      totalBalance: totalBal
+    };
   },
 
   // ── Transactions ────────────────────────────────────────────────────────────
@@ -564,16 +964,21 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(all));
 
     if (isSupabaseReady()) {
+      const allowedDbTypes = ['DEPOSIT', 'WITHDRAW', 'BONUS', 'REFUND', 'COMMISSION'];
+      const dbType = allowedDbTypes.includes(newTx.type)
+        ? newTx.type
+        : (newTx.type === 'WIN' ? 'BONUS' : 'WITHDRAW');
+
       supabase.from('transactions').insert({
         id: newTx.id,
         user_id: newTx.userId,
-        type: newTx.type,
+        type: dbType,
         amount: newTx.amount,
-        description: newTx.description,
+        description: newTx.type === dbType ? newTx.description : `[${newTx.type}] ${newTx.description}`,
         status: newTx.status,
         timestamp: newTx.timestamp
       }).then(({ error }) => {
-        if (error) console.error('[Supabase] addTransaction error:', error.message);
+        if (error) console.warn('[Supabase] addTransaction notice:', error.message);
       });
     }
 
@@ -603,10 +1008,17 @@ export const storage = {
   },
 
   async createDepositRequest({ userId, userPhone, amount, utr, screenshotUrl, promoterCode }) {
+    // Guarantee the user exists in Supabase before inserting (FK guard)
+    const currentUser = this.getCurrentUser();
+    const verifiedUser = await ensureUserInSupabase(currentUser);
+
+    const targetUserId = verifiedUser?.id || userId;
+    const targetUserPhone = verifiedUser?.phone || userPhone;
+
     const newReq = {
       id: 'dep_' + Date.now(),
-      userId,
-      userPhone,
+      userId: targetUserId,
+      userPhone: targetUserPhone,
       amount: Number(amount),
       utr: utr || 'N/A',
       screenshotUrl: screenshotUrl || null,
@@ -615,16 +1027,12 @@ export const storage = {
       createdAt: new Date().toISOString()
     };
 
-    // Guarantee the user exists in Supabase before inserting (FK guard)
-    const currentUser = this.getCurrentUser();
-    await ensureUserInSupabase(currentUser);
-
     // Save to Supabase
     if (isSupabaseReady()) {
       const { error } = await supabase.from('deposits').insert({
         id: newReq.id,
-        user_id: newReq.userId,
-        user_phone: newReq.userPhone,
+        user_id: targetUserId,
+        user_phone: targetUserPhone,
         amount: newReq.amount,
         utr: newReq.utr,
         screenshot_url: newReq.screenshotUrl,
@@ -632,9 +1040,30 @@ export const storage = {
         status: 'PENDING',
         created_at: newReq.createdAt
       });
+
       if (error) {
-        console.error('[Supabase] createDepositRequest error:', error.message);
-        throw new Error(error.message);
+        console.warn('[Supabase] createDepositRequest notice:', error.message);
+        // If foreign key constraint failed, re-heal and retry once
+        if (error.code === '23503') {
+          const healed = await ensureUserInSupabase(this.getCurrentUser());
+          if (healed?.id) {
+            newReq.userId = healed.id;
+            const { error: retryErr } = await supabase.from('deposits').insert({
+              id: newReq.id,
+              user_id: healed.id,
+              user_phone: healed.phone || targetUserPhone,
+              amount: newReq.amount,
+              utr: newReq.utr,
+              screenshot_url: newReq.screenshotUrl,
+              promoter_code: newReq.promoterCode,
+              status: 'PENDING',
+              created_at: newReq.createdAt
+            });
+            if (retryErr) {
+              console.warn('[Supabase] deposit retry notice:', retryErr.message);
+            }
+          }
+        }
       }
     }
 
@@ -644,7 +1073,7 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(deposits));
 
     await this.addTransaction({
-      userId,
+      userId: targetUserId,
       type: 'DEPOSIT',
       amount: Number(amount),
       description: `UPI Deposit (UTR: ${utr || 'Pending'})`,
@@ -652,7 +1081,7 @@ export const storage = {
     });
 
     window.dispatchEvent(new Event('crvper_deposit_submitted'));
-    broadcastRealtime('deposit_created', { depositId: newReq.id, userId, amount: newReq.amount });
+    broadcastRealtime('deposit_created', { depositId: newReq.id, userId: targetUserId, amount: newReq.amount });
     return newReq;
   },
 
@@ -677,33 +1106,58 @@ export const storage = {
     dep.approvedAt = now;
     localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(deposits));
 
-    // Credit wallet
+    // Credit wallet and separated balances
     const users = this.getUsers();
     const uIdx = users.findIndex(u => u.id === dep.userId);
     if (uIdx !== -1) {
-      users[uIdx].walletBalance = Number((users[uIdx].walletBalance + dep.amount).toFixed(2));
-      const totalDep = Number(((users[uIdx].totalDeposited || 0) + dep.amount).toFixed(2));
-      users[uIdx].totalDeposited = totalDep;
-      // Compulsory deposit rule: Depositing minimum ₹100 unlocks withdrawals
-      if (totalDep >= 100 || dep.amount >= 100) {
-        users[uIdx].hasDeposited = true;
+      const u = users[uIdx];
+      const settings = this.getAdminSettings();
+
+      u.depositBalance = Number(((u.depositBalance || 0) + dep.amount).toFixed(2));
+      u.bonusBalance = Number((u.bonusBalance || 0).toFixed(2));
+      u.winningsBalance = Number((u.winningsBalance || 0).toFixed(2));
+      u.walletBalance = Number((u.depositBalance + u.bonusBalance + u.winningsBalance).toFixed(2));
+
+      const totalDep = Number(((u.totalDeposited || 0) + dep.amount).toFixed(2));
+      u.totalDeposited = totalDep;
+      u.qualifyingDeposit = Number(((u.qualifyingDeposit || 0) + dep.amount).toFixed(2));
+
+      // Wagering requirement update (e.g. 50% of deposit amount)
+      const wageringPct = Number(settings.wageringPercentage ?? 50);
+      const additionalWagering = Number((dep.amount * (wageringPct / 100)).toFixed(2));
+      u.wageringRequired = Number(((u.wageringRequired || 0) + additionalWagering).toFixed(2));
+      u.wageringWagered = Number((u.wageringWagered || 0).toFixed(2));
+      u.wageringRemaining = Math.max(0, Number((u.wageringRequired - u.wageringWagered).toFixed(2)));
+
+      const minQualifying = Number(settings.minQualifyingDeposit ?? 100);
+      if (totalDep >= minQualifying || dep.amount >= minQualifying) {
+        u.hasDeposited = true;
       }
       this.saveUsers(users);
 
       // Supabase user update
       if (isSupabaseReady()) {
         await supabase.from('users').update({
-          wallet_balance: users[uIdx].walletBalance,
-          has_deposited: users[uIdx].hasDeposited,
-          total_deposited: users[uIdx].totalDeposited
+          wallet_balance: u.walletBalance,
+          has_deposited: u.hasDeposited,
+          total_deposited: u.totalDeposited
         }).eq('id', dep.userId);
       }
 
       const currentUser = this.getCurrentUser();
       if (currentUser && currentUser.id === dep.userId) {
-        currentUser.walletBalance = users[uIdx].walletBalance;
-        currentUser.hasDeposited = true;
-        currentUser.totalDeposited = users[uIdx].totalDeposited;
+        Object.assign(currentUser, {
+          walletBalance: u.walletBalance,
+          depositBalance: u.depositBalance,
+          bonusBalance: u.bonusBalance,
+          winningsBalance: u.winningsBalance,
+          totalDeposited: u.totalDeposited,
+          qualifyingDeposit: u.qualifyingDeposit,
+          wageringRequired: u.wageringRequired,
+          wageringWagered: u.wageringWagered,
+          wageringRemaining: u.wageringRemaining,
+          hasDeposited: u.hasDeposited
+        });
         localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(currentUser));
         window.dispatchEvent(new Event('crvper_user_updated'));
       }
@@ -814,23 +1268,44 @@ export const storage = {
   },
 
   async createWithdrawalRequest({ userId, userPhone, amount, upiId, qrUrl }) {
-    const user = this.getCurrentUser();
+    const user = this.getCurrentUser()?.id === userId ? this.getCurrentUser() : this.getUsers().find(u => u.id === userId);
     if (!user) throw new Error('You must be logged in.');
 
-    // Compulsory rule: must have deposited a minimum of ₹100 to unlock withdrawals
-    const isUnlocked = Boolean(user.hasDeposited || Number(user.totalDeposited || 0) >= 100);
-    if (!isUnlocked) throw new Error('COMPULSORY_DEPOSIT_REQUIRED');
+    const eligibility = this.getWithdrawalEligibility(userId);
 
-    if (amount < 100) throw new Error('Minimum withdrawal amount is ₹100.');
-    if (user.walletBalance < amount) throw new Error('Insufficient wallet balance!');
+    // 1. Minimum deposit requirement validation
+    if (!eligibility.hasDeposited) {
+      throw new Error(eligibility.depositMessage || 'A minimum deposit of ₹100 is required to become eligible for withdrawal under this promotion.');
+    }
 
-    await this.updateWalletBalance(userId, -amount, 'Withdrawal Hold');
+    // 2. Promotional Wagering requirement validation
+    if (!eligibility.hasMetWagering) {
+      throw new Error(eligibility.wageringMessage || `You need to wager ₹${eligibility.wageringRemaining.toFixed(2)} more to meet your promotional requirement.`);
+    }
+
+    const settings = this.getAdminSettings();
+    const minWth = Number(settings.minWithdraw ?? 100);
+    const numAmount = Number(amount);
+
+    if (numAmount < minWth) {
+      throw new Error(`Minimum withdrawal amount is ₹${minWth}.`);
+    }
+
+    if (numAmount > eligibility.withdrawableBalance) {
+      throw new Error(`Amount cannot exceed your withdrawable balance (₹${eligibility.withdrawableBalance.toFixed(2)}). Promotional bonus cannot be withdrawn directly.`);
+    }
+
+    if (numAmount > (user.walletBalance || 0)) {
+      throw new Error('Insufficient wallet balance!');
+    }
+
+    await this.updateWalletBalance(userId, -numAmount, 'Withdrawal Hold');
 
     const newReq = {
       id: 'wth_' + Date.now(),
       userId,
       userPhone,
-      amount: Number(amount),
+      amount: numAmount,
       upiId: upiId || 'QR Uploaded',
       qrUrl: qrUrl || null,
       status: 'PENDING',

@@ -38,6 +38,14 @@ export default function AdminPage({ onExit }) {
   // Per-key mode: 'silent' | 'default' | 'custom'
   const [soundModes, setSoundModes] = useState(() => storage.getAdminSettings()?.soundModes || {});
 
+  // Promotional and Risk Controls State
+  const [promoActive, setPromoActive] = useState(() => storage.getAdminSettings()?.promoActive ?? true);
+  const [signupBonus, setSignupBonus] = useState(() => storage.getAdminSettings()?.signupBonus ?? 150);
+  const [minQualifyingDeposit, setMinQualifyingDeposit] = useState(() => storage.getAdminSettings()?.minQualifyingDeposit ?? 100);
+  const [wageringPercentage, setWageringPercentage] = useState(() => storage.getAdminSettings()?.wageringPercentage ?? 50);
+  const [aviatorWingoLimitMultiplier, setAviatorWingoLimitMultiplier] = useState(() => storage.getAdminSettings()?.aviatorWingoLimitMultiplier ?? 3.0);
+  const [promoFeedback, setPromoFeedback] = useState('');
+
   const loadAudioMeta = async () => {
     const all = await soundStorage.getAllSounds();
     // Strip ArrayBuffer/dataUrl — keep only display metadata
@@ -71,6 +79,11 @@ export default function AdminPage({ onExit }) {
       setSoundModes(settings?.soundModes || {});
       setNewUpiId(settings.upiId);
       setNewPayeeName(settings.payeeName);
+      setPromoActive(settings?.promoActive ?? true);
+      setSignupBonus(settings?.signupBonus ?? 150);
+      setMinQualifyingDeposit(settings?.minQualifyingDeposit ?? 100);
+      setWageringPercentage(settings?.wageringPercentage ?? 50);
+      setAviatorWingoLimitMultiplier(settings?.aviatorWingoLimitMultiplier ?? 3.0);
       setSupportChats(chats || []);
 
       // If a chat is currently open, keep it updated with fresh messages
@@ -282,6 +295,45 @@ export default function AdminPage({ onExit }) {
     }
   };
 
+  const handleSavePromotions = async (e) => {
+    e.preventDefault();
+    setPromoFeedback('⏳ Saving & logging changes to audit log...');
+    try {
+      const cur = adminSettings || storage.getAdminSettings();
+      if (cur.promoActive !== promoActive) {
+        await storage.logAdminSettingChange('crvvper (Admin)', 'Promotion Active', cur.promoActive, promoActive);
+      }
+      if (Number(cur.signupBonus) !== Number(signupBonus)) {
+        await storage.logAdminSettingChange('crvvper (Admin)', 'Registration Bonus', `₹${cur.signupBonus}`, `₹${signupBonus}`);
+      }
+      if (Number(cur.minQualifyingDeposit) !== Number(minQualifyingDeposit)) {
+        await storage.logAdminSettingChange('crvvper (Admin)', 'Min Qualifying Deposit', `₹${cur.minQualifyingDeposit}`, `₹${minQualifyingDeposit}`);
+      }
+      if (Number(cur.wageringPercentage) !== Number(wageringPercentage)) {
+        await storage.logAdminSettingChange('crvvper (Admin)', 'Wagering Requirement %', `${cur.wageringPercentage}%`, `${wageringPercentage}%`);
+      }
+      if (Number(cur.aviatorWingoLimitMultiplier) !== Number(aviatorWingoLimitMultiplier)) {
+        await storage.logAdminSettingChange('crvvper (Admin)', 'Aviator/WinGo Limit Multiplier', `${cur.aviatorWingoLimitMultiplier}x`, `${aviatorWingoLimitMultiplier}x`);
+      }
+
+      await storage.updateAdminSettings({
+        promoActive,
+        signupBonus: Number(signupBonus),
+        minQualifyingDeposit: Number(minQualifyingDeposit),
+        wageringPercentage: Number(wageringPercentage),
+        aviatorWingoLimitMultiplier: Number(aviatorWingoLimitMultiplier)
+      });
+
+      const fresh = await storage.getAdminSettingsAsync();
+      setAdminSettings(fresh);
+      setPromoFeedback('✓ Promotional and limit controls updated & logged successfully!');
+      setTimeout(() => setPromoFeedback(''), 4000);
+    } catch (err) {
+      setPromoFeedback(`❌ Error saving promotional controls: ${err.message}`);
+      setTimeout(() => setPromoFeedback(''), 4000);
+    }
+  };
+
   const handleSendAdminReply = async (e) => {
     e.preventDefault();
     if (!adminReply.trim() || !selectedChatUser) return;
@@ -433,6 +485,7 @@ export default function AdminPage({ onExit }) {
           { id: 'overview', label: 'Dashboard Stats', icon: Activity },
           { id: 'deposits', label: `Deposits (${pendingDepositsCount})`, icon: ArrowDownLeft, alert: pendingDepositsCount > 0 },
           { id: 'withdrawals', label: `Withdrawals (${pendingWithdrawalsCount})`, icon: ArrowUpRight, alert: pendingWithdrawalsCount > 0 },
+          { id: 'promotions', label: 'Promotions & Risk Controls', icon: Sparkles },
           { id: 'qr', label: 'Payment QR Setup', icon: QrCode },
           { id: 'audio', label: 'Audio & FX Studio', icon: Volume2 },
           { id: 'promoters', label: 'Promoters (20%)', icon: Users },
@@ -668,6 +721,201 @@ export default function AdminPage({ onExit }) {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* PROMOTIONS & RISK CONTROLS TAB */}
+        {activeTab === 'promotions' && (
+          <div className="space-y-6 max-w-4xl mx-auto">
+            <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+                <div>
+                  <h2 className="text-base font-black text-white flex items-center space-x-2">
+                    <Sparkles className="w-5 h-5 text-cyan-400" />
+                    <span>Promotional Policy &amp; Risk Controls</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Configure registration bonuses, mandatory wagering percentages, and Aviator/WinGo profit-limits.
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase ${
+                  promoActive ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'
+                }`}>
+                  {promoActive ? 'PROMOTIONS ACTIVE' : 'PROMOTIONS DISABLED'}
+                </span>
+              </div>
+
+              {promoFeedback && (
+                <div className={`p-3 rounded-xl mb-4 text-xs font-bold ${
+                  promoFeedback.includes('✓') 
+                    ? 'bg-emerald-950/80 border border-emerald-500/40 text-emerald-300' 
+                    : promoFeedback.includes('⏳')
+                    ? 'bg-cyan-950/80 border border-cyan-500/40 text-cyan-300'
+                    : 'bg-rose-950/80 border border-rose-500/40 text-rose-300'
+                }`}>
+                  {promoFeedback}
+                </div>
+              )}
+
+              <form onSubmit={handleSavePromotions} className="space-y-5">
+                <div className="p-4 rounded-2xl bg-[#131b2e] border border-slate-700/60 flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-black text-white block">Promotional Welcome Program</span>
+                    <span className="text-xs text-slate-400">Enable promotional bonus credits for new user accounts</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={promoActive}
+                      onChange={(e) => setPromoActive(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Registration Bonus */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">
+                      Registration Bonus (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={signupBonus}
+                      onChange={(e) => setSignupBonus(Number(e.target.value))}
+                      className="w-full bg-[#131b2e] border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono text-cyan-300 focus:outline-none focus:border-cyan-500"
+                      required
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">Credited once to newly registered accounts (Default: ₹150)</span>
+                  </div>
+
+                  {/* Minimum Qualifying Deposit */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">
+                      Minimum Qualifying Deposit (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={minQualifyingDeposit}
+                      onChange={(e) => setMinQualifyingDeposit(Number(e.target.value))}
+                      className="w-full bg-[#131b2e] border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono text-emerald-300 focus:outline-none focus:border-cyan-500"
+                      required
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">Required to unlock promotional withdrawal eligibility (Default: ₹100)</span>
+                  </div>
+
+                  {/* Wagering Percentage */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">
+                      Wagering Requirement Multiplier (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="500"
+                      value={wageringPercentage}
+                      onChange={(e) => setWageringPercentage(Number(e.target.value))}
+                      className="w-full bg-[#131b2e] border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono text-purple-300 focus:outline-none focus:border-cyan-500"
+                      required
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">Percentage of qualifying wallet to wager before withdrawal (Default: 50%)</span>
+                  </div>
+
+                  {/* Aviator & WinGo Profit-Limit Multiplier */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">
+                      Aviator &amp; WinGo Profit-Limit Multiplier (×)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="1.0"
+                      value={aviatorWingoLimitMultiplier}
+                      onChange={(e) => setAviatorWingoLimitMultiplier(Number(e.target.value))}
+                      className="w-full bg-[#131b2e] border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono text-amber-300 focus:outline-none focus:border-cyan-500"
+                      required
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">Threshold = Qualifying Deposit × Multiplier (Default: 3.0× = ₹300 for ₹100 deposit)</span>
+                  </div>
+                </div>
+
+                {/* Eligible Games Disclosure */}
+                <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs">
+                  <span className="font-bold text-slate-300 block mb-1">Eligible Wagering Games</span>
+                  <div className="flex flex-wrap gap-2">
+                    {['Aviator', 'WinGo', 'Mines', 'Quantum Dice', 'Plinko', 'Neon Tower'].map(game => (
+                      <span key={game} className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold">
+                        ✓ {game}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3.5 bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-cyan-500/25"
+                >
+                  Save Policy &amp; Synchronize to Live Network
+                </button>
+              </form>
+            </div>
+
+            {/* Comprehensive Server-Side Audit Logs */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 shadow-xl">
+              <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                <h3 className="text-base font-black text-white flex items-center space-x-2">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  <span>Audit Logs &amp; Change History</span>
+                </h3>
+                <span className="text-xs text-slate-400 font-mono">
+                  {(adminSettings?.auditLogs || []).length} Recorded Modifications
+                </span>
+              </div>
+
+              {(adminSettings?.auditLogs || []).length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-6">
+                  No policy changes logged yet. Any updates to promotional or limit settings will be recorded here with administrator identity and timestamps.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#131b2e] text-slate-400 border-b border-slate-800 uppercase">
+                      <tr>
+                        <th className="p-2.5">Timestamp (UTC/IST)</th>
+                        <th className="p-2.5">Admin Identity</th>
+                        <th className="p-2.5">Setting Modified</th>
+                        <th className="p-2.5">Previous Value</th>
+                        <th className="p-2.5">New Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {(adminSettings.auditLogs || []).map((log) => (
+                        <tr key={log.id} className="hover:bg-[#131b2e]/50">
+                          <td className="p-2.5 font-mono text-slate-400 text-[11px]">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </td>
+                          <td className="p-2.5 font-bold text-cyan-400">
+                            {log.admin}
+                          </td>
+                          <td className="p-2.5 font-bold text-white">
+                            {log.setting}
+                          </td>
+                          <td className="p-2.5 font-mono text-rose-400">
+                            {String(log.previousValue)}
+                          </td>
+                          <td className="p-2.5 font-mono text-emerald-400 font-bold">
+                            {String(log.newValue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

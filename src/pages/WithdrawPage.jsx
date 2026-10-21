@@ -37,7 +37,9 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
     }
   };
 
-  const isUnlocked = Boolean(user && (user.hasDeposited || Number(user.totalDeposited || 0) >= 100));
+  const eligibility = storage.getWithdrawalEligibility(user?.id);
+  const isUnlocked = Boolean(eligibility.hasDeposited);
+  const isWageringDone = Boolean(eligibility.hasMetWagering);
 
   const handleWithdrawRequest = (e) => {
     e.preventDefault();
@@ -46,13 +48,15 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
 
     if (!user) return;
 
-    // Check MANDATORY RULE: Must have completed at least 1 deposit >= 100 to unlock withdrawals
-    if (!isUnlocked) {
-      if (onTriggerCompulsoryModal) {
-        onTriggerCompulsoryModal();
-      } else if (onGoToDeposit) {
-        onGoToDeposit();
-      }
+    // 1. Mandatory promotional deposit condition
+    if (!eligibility.hasDeposited) {
+      setError(eligibility.depositMessage || 'A minimum deposit of ₹100 is required to become eligible for withdrawal under this promotion.');
+      return;
+    }
+
+    // 2. Promotional Wagering requirement condition
+    if (!eligibility.hasMetWagering) {
+      setError(eligibility.wageringMessage || `You need to wager ₹${eligibility.wageringRemaining.toFixed(2)} more to meet your promotional requirement.`);
       return;
     }
 
@@ -62,8 +66,8 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
       return;
     }
 
-    if (numAmount > user.walletBalance) {
-      setError(`Amount cannot exceed your available wallet balance (₹${user.walletBalance.toFixed(2)}).`);
+    if (numAmount > eligibility.withdrawableBalance) {
+      setError(`Amount cannot exceed your withdrawable balance (₹${eligibility.withdrawableBalance.toFixed(2)}). Promotional bonus cannot be withdrawn directly.`);
       return;
     }
 
@@ -86,18 +90,13 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
       setSuccess(true);
       sounds.playWin();
     } catch (err) {
-      if (err.message === 'COMPULSORY_DEPOSIT_REQUIRED') {
-        if (onTriggerCompulsoryModal) onTriggerCompulsoryModal();
-        else if (onGoToDeposit) onGoToDeposit();
-      } else {
-        setError(err.message || 'Withdrawal failed');
-      }
+      setError(err.message || 'Withdrawal failed');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const balance = user ? Number(user.walletBalance || 0) : 0;
+  const withdrawableAmount = eligibility.withdrawableBalance;
 
   return (
     <div className="min-h-screen bg-[#070b14] p-4 pb-24 selection:bg-cyan-500 selection:text-black">
@@ -119,75 +118,110 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
           </div>
         </div>
 
-        {/* ── DEPOSIT REQUIRED BANNER ── shown when user has not deposited minimum ₹100 ── */}
+        {/* ── 1. DEPOSIT REQUIREMENT NOTICE ── */}
         {!isUnlocked && (
-          <div className="mb-5 relative overflow-hidden rounded-3xl border-2 border-amber-400/70 shadow-2xl shadow-amber-500/30">
-            {/* Animated glow background */}
+          <div className="mb-4 relative overflow-hidden rounded-3xl border-2 border-amber-400/70 shadow-2xl shadow-amber-500/20">
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/25 via-yellow-500/15 to-orange-600/20 animate-pulse" />
-            <div className="absolute inset-0 bg-[#0f0a00]/60" />
+            <div className="absolute inset-0 bg-[#0f0a00]/70" />
 
             <div className="relative p-5">
-              {/* Top row: icon + title */}
               <div className="flex items-center space-x-3 mb-3">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg shadow-amber-500/40 shrink-0 animate-bounce">
-                  <ShieldAlert className="w-6 h-6 text-black" />
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg shadow-amber-500/40 shrink-0">
+                  <ShieldAlert className="w-5 h-5 text-black" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold text-amber-400 uppercase tracking-widest">
-                    ⚠ Account Not Verified
+                  <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">
+                    Promotional Requirement
                   </p>
-                  <h3 className="text-base font-black text-white leading-tight">
-                    Withdrawals are Locked
+                  <h3 className="text-sm font-black text-white leading-tight">
+                    Deposit Condition Incomplete
                   </h3>
                 </div>
               </div>
 
-              {/* Body text */}
-              <p className="text-sm text-slate-200 leading-relaxed mb-4">
-                To be able to withdraw funds, you need to make a <span className="text-amber-300 font-black">minimum deposit of ₹100</span> to verify your account. Your wallet balance is 100% safe!
+              <p className="text-xs text-slate-200 leading-relaxed mb-4">
+                A minimum deposit of ₹100 is required to become eligible for withdrawal under this promotion.
               </p>
 
-              {/* CTA Button — navigates directly to Deposit page */}
               <button
                 onClick={() => {
                   sounds.playDeposit();
-                  if (onGoToDeposit) {
-                    onGoToDeposit();
-                  } else if (onTriggerCompulsoryModal) {
-                    onTriggerCompulsoryModal();
-                  }
+                  if (onGoToDeposit) onGoToDeposit();
+                  else if (onTriggerCompulsoryModal) onTriggerCompulsoryModal();
                 }}
-                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black font-extrabold text-sm flex items-center justify-center space-x-2 shadow-xl shadow-amber-500/40 transition active:scale-95"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black font-black text-xs flex items-center justify-center space-x-2 shadow-xl shadow-amber-500/30 transition active:scale-95"
               >
-                <span>💰 Deposit ₹100 &amp; Unlock Withdrawals</span>
-                <span className="text-lg">→</span>
+                <span>💰 Deposit ₹100 Now</span>
+                <span className="text-sm">→</span>
               </button>
-
-              {/* Small note */}
-              <p className="text-center text-[10px] text-amber-500/80 mt-2 font-semibold">
-                Minimum ₹100 deposit • Instant account verification • 100% secure
-              </p>
             </div>
           </div>
         )}
 
+        {/* ── 2. WAGERING REQUIREMENT NOTICE ── */}
+        {isUnlocked && !isWageringDone && (
+          <div className="mb-4 relative overflow-hidden rounded-3xl border-2 border-cyan-500/70 shadow-2xl shadow-cyan-500/20 bg-[#0d1627] p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-black uppercase text-cyan-400 tracking-wider">Promotional Wagering</span>
+              </div>
+              <span className="text-xs font-mono font-bold text-slate-300">
+                ₹{eligibility.wageringWagered.toFixed(2)} / ₹{eligibility.wageringRequired.toFixed(2)}
+              </span>
+            </div>
 
-        {/* Balance Card */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-4 mb-4 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              Withdrawable Balance
-            </span>
-            <div className="text-2xl font-black font-mono text-white mt-0.5">
-              ₹{balance.toFixed(2)}
+            <p className="text-xs text-slate-200 leading-relaxed mb-3">
+              You need to wager ₹{eligibility.wageringRemaining.toFixed(2)} more to meet your promotional requirement.
+            </p>
+
+            {/* Progress bar */}
+            <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, eligibility.wageringRequired > 0 ? (eligibility.wageringWagered / eligibility.wageringRequired) * 100 : 100)}%`
+                }}
+              />
             </div>
           </div>
-          <button
-            onClick={() => setAmount(String(Math.floor(balance)))}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-cyan-400 border border-slate-700 transition"
-          >
-            Max Amount
-          </button>
+        )}
+
+        {/* ── 3. FOUR-BALANCE VAULT BREAKDOWN ── */}
+        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-4 mb-4 shadow-xl space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">
+                Withdrawable Funds
+              </span>
+              <div className="text-2xl font-black font-mono text-white mt-0.5">
+                ₹{withdrawableAmount.toFixed(2)}
+              </div>
+            </div>
+            <button
+              onClick={() => setAmount(String(Math.floor(withdrawableAmount)))}
+              disabled={withdrawableAmount <= 0}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-cyan-400 border border-slate-700 transition disabled:opacity-40"
+            >
+              Max Withdrawable
+            </button>
+          </div>
+
+          {/* Sub-balances breakdown */}
+          <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800/80">
+              <span className="text-[9px] uppercase font-bold text-slate-400 block">Deposits</span>
+              <span className="text-xs font-mono font-black text-slate-200">₹{eligibility.depositBalance.toFixed(2)}</span>
+            </div>
+            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800/80">
+              <span className="text-[9px] uppercase font-bold text-purple-400 block">Promo Bonus</span>
+              <span className="text-xs font-mono font-black text-purple-300">₹{eligibility.bonusBalance.toFixed(2)}</span>
+            </div>
+            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800/80">
+              <span className="text-[9px] uppercase font-bold text-cyan-400 block">Winnings</span>
+              <span className="text-xs font-mono font-black text-cyan-300">₹{eligibility.winningsBalance.toFixed(2)}</span>
+            </div>
+          </div>
         </div>
 
         {success ? (
@@ -237,7 +271,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
                 <input
                   type="number"
                   min="1"
-                  max={balance}
+                  max={withdrawableAmount}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full bg-transparent py-3.5 pr-4 text-xl font-black text-white font-mono focus:outline-none"

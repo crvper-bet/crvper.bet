@@ -31,6 +31,10 @@ export default function WinGoGame({ onBack }) {
   const [history, setHistory] = useState(() => getWinGoHistory(14));
 
   const [winningAnnouncement, setWinningAnnouncement] = useState(null);
+  const [showRulesModal, setShowRulesModal] = useState(false);
+
+  const limitInfo = storage.checkGameWinningLimit(user?.id, 'WinGo');
+  const isWinningLimitReached = Boolean(limitInfo.isLimitReached);
 
   // Persistent refs so betting does not teardown or restart the clock sync loop
   const currentBetsRef = useRef(currentBets);
@@ -87,6 +91,10 @@ export default function WinGoGame({ onBack }) {
   }, []);
 
   const handleOpenBetSheet = (type, value) => {
+    if (isWinningLimitReached) {
+      alert("You’ve reached the configured winning limit. Please review your balance and withdrawal options.");
+      return;
+    }
     if (isLocked) {
       alert('Betting is locked for the final 10 seconds of this round!');
       return;
@@ -102,6 +110,10 @@ export default function WinGoGame({ onBack }) {
   const totalBetAmount = wagerBase * selectedMultiplier;
 
   const handleConfirmBet = () => {
+    if (isWinningLimitReached) {
+      alert("You’ve reached the configured winning limit. Please review your balance and withdrawal options.");
+      return;
+    }
     if (!user || user.walletBalance < totalBetAmount) {
       alert('Insufficient wallet balance!');
       return;
@@ -157,13 +169,37 @@ export default function WinGoGame({ onBack }) {
             </div>
           </div>
 
-          <div className="text-right">
-            <span className="text-[10px] text-slate-400 block font-bold">Wallet</span>
-            <span className="text-sm font-black font-mono text-cyan-400">
-              ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
-            </span>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => {
+                sounds.playClick();
+                setShowRulesModal(true);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 border border-slate-700 transition"
+              title="Game Rules & Provable Fairness"
+            >
+              ⚖ Rules
+            </button>
+            <div className="text-right">
+              <span className="text-[10px] text-slate-400 block font-bold">Wallet</span>
+              <span className="text-sm font-black font-mono text-cyan-400">
+                ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Winning Limit Banner */}
+        {isWinningLimitReached && (
+          <div className="p-3.5 bg-gradient-to-r from-amber-950/90 to-yellow-950/90 border-2 border-amber-500/70 rounded-2xl flex items-center justify-between text-xs text-amber-200 shadow-lg shadow-amber-950/40">
+            <div className="flex items-center space-x-2.5">
+              <span className="text-amber-400 text-lg">⚠</span>
+              <span className="font-bold leading-tight">
+                You’ve reached the configured winning limit. Please review your balance and withdrawal options.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* 60s Countdown Clock Header */}
         <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl text-center relative overflow-hidden">
@@ -450,6 +486,54 @@ export default function WinGoGame({ onBack }) {
                 Confirm & Place Bet (₹{totalBetAmount})
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Win Go Rules & Provable Fairness Modal */}
+      {showRulesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">🎲</span>
+                <h3 className="text-base font-black text-white">Win Go Rules & Provable Fairness</h3>
+              </div>
+              <button
+                onClick={() => setShowRulesModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
+              <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
+                <h4 className="font-black text-purple-400 uppercase tracking-wider mb-1">Game Mechanics & Payouts</h4>
+                <p>• <strong>Lucky Numbers (0 - 9):</strong> Match exact number for a <strong>10× payout</strong> (9x net profit).</p>
+                <p>• <strong>Colors:</strong> Green (1,3,7,9) &amp; Red (2,4,6,8) pay <strong>2×</strong>. Violet (0, 5) pays <strong>4.5×</strong>.</p>
+                <p>• <strong>Size:</strong> Big (5-9) &amp; Small (0-4) pay <strong>2×</strong>.</p>
+                <p>• <strong>Countdown:</strong> Rounds run on a synchronized 60-second atomic UTC cycle. The final 10 seconds lock bets.</p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
+                <h4 className="font-black text-cyan-400 uppercase tracking-wider mb-1">Provable Fairness & Synchronicity</h4>
+                <p>Results are generated using deterministic high-entropy cryptographic avalanche hashing seeded with synchronized global epoch time. Every device worldwide sees the exact same numbers, colors, and countdowns in real-time.</p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200">
+                <h4 className="font-black text-amber-400 uppercase tracking-wider mb-1">Winning Limit Policy (Aviator & WinGo)</h4>
+                <p>To ensure risk transparency, a profit threshold policy of <strong>3× qualifying deposit</strong> applies to Aviator and WinGo. (Example: ₹100 deposit → ₹300 winning threshold).</p>
+                <p className="mt-1">When reached, new wagers on Aviator and WinGo are temporarily paused so you can review your balance and withdraw. <strong>Your funds are 100% safe, never confiscated</strong>, and all other games remain open.</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowRulesModal(false)}
+              className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs transition"
+            >
+              I Understand
+            </button>
           </div>
         </div>
       )}

@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Wallet, RefreshCw, Plus, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
+import { storage } from '../services/storage';
 
 export default function WalletCard({ onDepositClick, onWithdrawClick, onWalletClick }) {
   const { user, walletFlash, refreshUser } = useAuth();
   const [spinning, setSpinning] = useState(false);
 
   const balance = user ? Number(user.walletBalance || 0).toFixed(2) : '150.00';
+  const eligibility = storage.getWithdrawalEligibility(user?.id);
 
   const handleRefresh = (e) => {
     e.stopPropagation();
@@ -63,9 +65,19 @@ export default function WalletCard({ onDepositClick, onWithdrawClick, onWalletCl
               )}
             </div>
 
-            {user && !(user.hasDeposited || Number(user.totalDeposited || 0) >= 100) && (
+            {user && !eligibility.hasDeposited && (
               <span className="text-[10px] text-amber-400 font-bold flex items-center space-x-1">
                 <span>🔒 Deposit ₹100 to unlock withdrawals</span>
+              </span>
+            )}
+            {user && eligibility.hasDeposited && !eligibility.hasMetWagering && (
+              <span className="text-[10px] text-cyan-400 font-bold flex items-center space-x-1">
+                <span>⏳ ₹{eligibility.wageringRemaining.toFixed(2)} wagering needed to withdraw</span>
+              </span>
+            )}
+            {user && eligibility.hasDeposited && eligibility.hasMetWagering && (
+              <span className="text-[10px] text-emerald-400 font-bold flex items-center space-x-1">
+                <span>✓ Withdrawable: ₹{eligibility.withdrawableBalance.toFixed(2)}</span>
               </span>
             )}
           </div>

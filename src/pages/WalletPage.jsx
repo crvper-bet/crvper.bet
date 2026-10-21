@@ -45,6 +45,7 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
 
   if (!user) return null;
 
+  const eligibility = storage.getWithdrawalEligibility(user.id);
   const balance = Number(user.walletBalance || 0);
   const totalDep = Number(user.totalDeposited || 0);
   const totalWth = Number(user.totalWithdrawn || 0);
@@ -119,18 +120,30 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
               <span className="text-xs font-bold text-slate-400 ml-1">INR</span>
             </div>
 
-            {/* Balance Sub-breakdown */}
-            <div className="mt-4 pt-3.5 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-xs">
+            {/* 4-Balance Vault Breakdown */}
+            <div className="mt-4 pt-3.5 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
               <div className="bg-[#121a2d]/80 rounded-xl p-2.5 border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-bold block">Pre-Deposit Bonus</span>
-                <span className="text-sm font-black font-mono text-cyan-300 mt-0.5 block">
-                  ₹150.00
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Deposited</span>
+                <span className="text-sm font-black font-mono text-emerald-300 mt-0.5 block">
+                  ₹{eligibility.depositBalance.toFixed(2)}
                 </span>
               </div>
               <div className="bg-[#121a2d]/80 rounded-xl p-2.5 border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-bold block">In-Transit / Hold</span>
-                <span className="text-sm font-black font-mono text-amber-400 mt-0.5 block">
-                  ₹{pendingWithdrawSum.toFixed(2)}
+                <span className="text-[10px] text-purple-400 uppercase font-bold block">Promo Bonus</span>
+                <span className="text-sm font-black font-mono text-purple-300 mt-0.5 block">
+                  ₹{eligibility.bonusBalance.toFixed(2)}
+                </span>
+              </div>
+              <div className="bg-[#121a2d]/80 rounded-xl p-2.5 border border-slate-800">
+                <span className="text-[10px] text-cyan-400 uppercase font-bold block">Winnings</span>
+                <span className="text-sm font-black font-mono text-cyan-300 mt-0.5 block">
+                  ₹{eligibility.winningsBalance.toFixed(2)}
+                </span>
+              </div>
+              <div className="bg-[#121a2d]/80 rounded-xl p-2.5 border border-slate-800">
+                <span className="text-[10px] text-amber-400 uppercase font-bold block">Withdrawable</span>
+                <span className="text-sm font-black font-mono text-white mt-0.5 block">
+                  ₹{eligibility.withdrawableBalance.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -151,12 +164,7 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
               <button
                 onClick={() => {
                   sounds.playWithdraw();
-                  const isUnlocked = Boolean(user && (user.hasDeposited || Number(user.totalDeposited || 0) >= 100));
-                  if (!isUnlocked) {
-                    onTriggerCompulsoryModal();
-                  } else {
-                    onGoToWithdraw();
-                  }
+                  onGoToWithdraw();
                 }}
                 className="py-3.5 px-4 bg-gradient-to-r from-rose-600 via-red-500 to-rose-600 hover:from-rose-500 hover:to-red-400 text-white font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-rose-600/25 flex items-center justify-center space-x-2"
               >
@@ -167,8 +175,34 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
           </div>
         </div>
 
-        {/* Deposit ₹100 Unlock Banner if not unlocked */}
-        {user && !(user.hasDeposited || Number(user.totalDeposited || 0) >= 100) && (
+        {/* Promotional Wagering Requirement Tracker */}
+        {!eligibility.hasMetWagering && (
+          <div className="bg-[#0f172a] border border-cyan-500/40 rounded-2xl p-4 shadow-lg">
+            <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+              <span className="text-cyan-400 flex items-center space-x-1.5">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Promotional Wagering Condition</span>
+              </span>
+              <span className="text-slate-300 font-mono">
+                ₹{eligibility.wageringWagered.toFixed(2)} / ₹{eligibility.wageringRequired.toFixed(2)}
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed mb-2.5">
+              You need to wager ₹{eligibility.wageringRemaining.toFixed(2)} more to meet your promotional requirement.
+            </p>
+            <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, eligibility.wageringRequired > 0 ? (eligibility.wageringWagered / eligibility.wageringRequired) * 100 : 100)}%`
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Deposit Requirement Banner */}
+        {!eligibility.hasDeposited && (
           <div 
             onClick={() => {
               sounds.playDeposit();
@@ -179,8 +213,8 @@ export default function WalletPage({ onBack, onGoToDeposit, onGoToWithdraw, onTr
             <div className="flex items-center space-x-2.5">
               <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 animate-bounce" />
               <div>
-                <span className="font-black text-white block">Withdrawals Locked</span>
-                <span className="text-[11px] text-amber-300/90">Deposit minimum ₹100 to verify account & unlock withdrawals</span>
+                <span className="font-black text-white block">Promotional Condition</span>
+                <span className="text-[11px] text-amber-300/90">A minimum deposit of ₹100 is required to become eligible for withdrawal under this promotion.</span>
               </div>
             </div>
             <span className="font-black text-amber-400 underline text-xs shrink-0">Deposit ₹100 →</span>

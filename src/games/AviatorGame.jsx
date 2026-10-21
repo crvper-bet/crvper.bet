@@ -42,12 +42,17 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
   const gameStateRef = useRef(initial.gameState);
   gameStateRef.current = gameState;
 
-  const isLockedByWinningCap = Boolean(user && Number(user.walletBalance || 0) >= 100000);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
-  // Check 100k winning limit cap
+  const limitInfo = storage.checkGameWinningLimit(user?.id, 'Aviator');
+  const isLockedByWinningCap = Boolean(limitInfo.isLimitReached || (user && Number(user.walletBalance || 0) >= 100000));
+
+  // Check winning limit cap
   const checkWinningCap = () => {
     const freshUser = storage.getCurrentUser();
-    if (freshUser && Number(freshUser.walletBalance || 0) >= 100000) {
+    const freshLimit = storage.checkGameWinningLimit(freshUser?.id, 'Aviator');
+    if (freshLimit.isLimitReached || (freshUser && Number(freshUser.walletBalance || 0) >= 100000)) {
+      alert("You’ve reached the configured winning limit. Please review your balance and withdrawal options.");
       if (onOpenMaxLimitModal) onOpenMaxLimitModal();
       return true;
     }
@@ -466,25 +471,39 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
             </div>
           </div>
 
-          <div className="text-right">
-            <span className="text-[10px] text-slate-400 block font-bold">Wallet</span>
-            <span className="text-sm font-black font-mono text-cyan-400">
-              ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
-            </span>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => {
+                sounds.playClick();
+                setShowRulesModal(true);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 border border-slate-700 transition"
+              title="Game Rules & Provable Fairness"
+            >
+              ⚖ Rules
+            </button>
+            <div className="text-right">
+              <span className="text-[10px] text-slate-400 block font-bold">Wallet</span>
+              <span className="text-sm font-black font-mono text-cyan-400">
+                ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* 100k Limit Banner if capped */}
+        {/* Winning Limit Banner if limit reached */}
         {isLockedByWinningCap && (
           <div 
             onClick={checkWinningCap}
-            className="p-3 bg-amber-950/70 border border-amber-500/60 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-amber-950/90 transition text-xs text-amber-300"
+            className="p-3.5 bg-gradient-to-r from-amber-950/90 to-yellow-950/90 border-2 border-amber-500/70 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-400 transition text-xs text-amber-200 shadow-lg shadow-amber-950/40"
           >
-            <div className="flex items-center space-x-2">
-              <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="font-bold">You reached your winning limit. Please withdraw your funds.</span>
+            <div className="flex items-center space-x-2.5">
+              <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
+              <span className="font-bold leading-tight">
+                You’ve reached the configured winning limit. Please review your balance and withdrawal options.
+              </span>
             </div>
-            <span className="font-black text-amber-400 underline text-[11px]">Withdraw →</span>
+            <span className="font-black text-amber-400 underline text-xs shrink-0 ml-3">Review Balance →</span>
           </div>
         )}
 
@@ -686,7 +705,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                       : 'bg-rose-600 hover:bg-rose-500 text-white'
                   }`}
                 >
-                  <span>{isLockedByWinningCap ? 'LOCKED (1 LAKH CAP)' : panel1QueuedBet ? 'QUEUED FOR NEXT' : 'BET (NEXT ROUND)'}</span>
+                  <span>{isLockedByWinningCap ? 'WINNING LIMIT REACHED' : panel1QueuedBet ? 'QUEUED FOR NEXT' : 'BET (NEXT ROUND)'}</span>
                   <span className="text-[10px] font-mono mt-0.5">
                     {panel1QueuedBet ? `₹${panel1QueuedBet}` : `₹${panel1Amount}`}
                   </span>
@@ -703,7 +722,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                       : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black'
                   }`}
                 >
-                  <span>{isLockedByWinningCap ? 'LOCKED (1 LAKH CAP)' : panel1ActiveBet ? 'BET PLACED ✓' : 'BET'}</span>
+                  <span>{isLockedByWinningCap ? 'WINNING LIMIT REACHED' : panel1ActiveBet ? 'BET PLACED ✓' : 'BET'}</span>
                   <span className="text-[10px] font-mono mt-0.5">
                     ₹{panel1ActiveBet ? panel1ActiveBet.amount : panel1Amount}
                   </span>
@@ -831,7 +850,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                       : 'bg-rose-600 hover:bg-rose-500 text-white'
                   }`}
                 >
-                  <span>{isLockedByWinningCap ? 'LOCKED (1 LAKH CAP)' : panel2QueuedBet ? 'QUEUED FOR NEXT' : 'BET (NEXT ROUND)'}</span>
+                  <span>{isLockedByWinningCap ? 'WINNING LIMIT REACHED' : panel2QueuedBet ? 'QUEUED FOR NEXT' : 'BET (NEXT ROUND)'}</span>
                   <span className="text-[10px] font-mono mt-0.5">
                     {panel2QueuedBet ? `₹${panel2QueuedBet}` : `₹${panel2Amount}`}
                   </span>
@@ -848,7 +867,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                       : 'bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white'
                   }`}
                 >
-                  <span>{isLockedByWinningCap ? 'LOCKED (1 LAKH CAP)' : panel2ActiveBet ? 'BET PLACED ✓' : 'BET'}</span>
+                  <span>{isLockedByWinningCap ? 'WINNING LIMIT REACHED' : panel2ActiveBet ? 'BET PLACED ✓' : 'BET'}</span>
                   <span className="text-[10px] font-mono mt-0.5">
                     ₹{panel2ActiveBet ? panel2ActiveBet.amount : panel2Amount}
                   </span>
@@ -864,6 +883,53 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
           </div>
 
         </div>
+
+        {/* Game Rules & Provable Fairness Modal */}
+        {showRulesModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-[#0f172a] border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xl">✈</span>
+                  <h3 className="text-base font-black text-white">Aviator Rules & Provable Fairness</h3>
+                </div>
+                <button
+                  onClick={() => setShowRulesModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
+                  <h4 className="font-black text-rose-400 uppercase tracking-wider mb-1">How To Play</h4>
+                  <p>1. Place one or two bets before the round starts during the 5-second countdown.</p>
+                  <p>2. Watch the plane climb — the multiplier starts at 1.00x and increases exponentially.</p>
+                  <p>3. Hit <strong className="text-amber-400">Cash Out</strong> before the plane crashes to lock in your winnings.</p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
+                  <h4 className="font-black text-cyan-400 uppercase tracking-wider mb-1">Provable Fairness & Synchronicity</h4>
+                  <p>Every round is generated deterministically using a cryptographic non-linear avalanche hash combined with synchronized global atomic UTC time. Outcomes are completely identical on every device across the world in real-time, mathematically unmanipulated, and protected from prediction.</p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200">
+                  <h4 className="font-black text-amber-400 uppercase tracking-wider mb-1">Winning Limit Policy (Aviator & WinGo)</h4>
+                  <p>To ensure transparent risk controls, a profit threshold policy of <strong>3× qualifying deposit</strong> applies to Aviator and WinGo. (Example: ₹100 deposit → ₹300 winning threshold).</p>
+                  <p className="mt-1">When reached, new wagers on Aviator and WinGo are temporarily paused so you can review your balance and withdraw. <strong>Your funds are 100% safe, never confiscated</strong>, and all other games (Mines, Dice, Plinko, Tower) remain accessible.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowRulesModal(false)}
+                className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs transition"
+              >
+                I Understand
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
