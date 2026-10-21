@@ -64,6 +64,35 @@ const INITIAL_PROMOTERS = [
 
 const isSupabaseReady = () => !!supabase;
 
+function safeStorageSet(key, value) {
+  // Use globalThis.localStorage directly so this works in both browser (real window.localStorage)
+  // and Node.js test environments (where globalThis.localStorage is mocked but window.localStorage may not be set)
+  const ls = globalThis.localStorage ?? (typeof window !== 'undefined' ? window.localStorage : null);
+  if (!ls) return;
+  const str = typeof value === 'string' ? value : JSON.stringify(value);
+  try {
+    localStorage.setItem(key, str);
+  } catch (err) {
+    console.warn(`[LocalStorage] safeStorageSet quota handled for "${key}":`, err.message);
+    try {
+      if (Array.isArray(value)) {
+        const lightweight = value.map(item => {
+          if (!item || typeof item !== 'object') return item;
+          const copy = { ...item };
+          if (copy.screenshotUrl && copy.screenshotUrl.length > 500) {
+            copy.screenshotUrl = '[Uploaded Cloud Proof]';
+          }
+          if (copy.qrUrl && copy.qrUrl.length > 500) {
+            copy.qrUrl = '[Uploaded Cloud QR]';
+          }
+          return copy;
+        });
+        localStorage.setItem(key, JSON.stringify(lightweight.slice(-25)));
+      }
+    } catch (_) {}
+  }
+}
+
 function broadcastRealtime(event, payload) {
   try {
     import('./realtimeSync.js').then(({ realtimeSync }) => {
@@ -490,7 +519,7 @@ export const storage = {
   },
 
   saveUsers(users) {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    safeStorageSet(STORAGE_KEYS.USERS, users);
   },
 
   async getUsersAsync() {
@@ -501,7 +530,7 @@ export const storage = {
         .order('created_at', { ascending: false });
       if (!error && data) {
         const mapped = data.map(dbUserToApp);
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(mapped));
+        safeStorageSet(STORAGE_KEYS.USERS, mapped);
         return mapped;
       }
     }
@@ -670,8 +699,22 @@ export const storage = {
   },
 
   async updateWalletBalance(userId, deltaAmount, reason = 'Game Activity') {
-    const users = this.getUsers();
-    const idx = users.findIndex(u => u.id === userId);
+    let users = this.getUsers();
+    let idx = users.findIndex(u => u.id === userId);
+    if (idx === -1 && isSupabaseReady()) {
+      const dbUsers = await this.getUsersAsync();
+      users = dbUsers;
+      idx = users.findIndex(u => u.id === userId);
+      if (idx === -1) {
+        try {
+          const { data: dbUser } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+          if (dbUser) {
+            users.push(dbUserToApp(dbUser));
+            idx = users.length - 1;
+          }
+        } catch {}
+      }
+    }
     if (idx === -1) return null;
 
     const u = users[idx];
@@ -1035,7 +1078,7 @@ export const storage = {
         .order('created_at', { ascending: false });
       if (!error && data) {
         const mapped = data.map(dbDepositToApp);
-        localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(mapped));
+        safeStorageSet(STORAGE_KEYS.DEPOSITS, mapped);
         return mapped;
       }
     }
@@ -1156,11 +1199,21 @@ export const storage = {
     // Update local cache
     dep.status = 'APPROVED';
     dep.approvedAt = now;
-    localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(deposits));
+    safeStorageSet(STORAGE_KEYS.DEPOSITS, deposits);
 
     // Credit wallet and separated balances
-    const users = this.getUsers();
-    const uIdx = users.findIndex(u => u.id === dep.userId);
+    let users = await this.getUsersAsync();
+    let uIdx = users.findIndex(u => u.id === dep.userId);
+    if (uIdx === -1 && isSupabaseReady()) {
+      try {
+        const { data: dbUser } = await supabase.from('users').select('*').eq('id', dep.userId).maybeSingle();
+        if (dbUser) {
+          users.push(dbUserToApp(dbUser));
+          uIdx = users.length - 1;
+        }
+      } catch {}
+    }
+
     if (uIdx !== -1) {
       const u = users[uIdx];
       const settings = this.getAdminSettings();
@@ -1218,7 +1271,7 @@ export const storage = {
     // Promoter commission (20%)
     const promoCode = dep.promoterCode || (users[uIdx] && users[uIdx].referredBy);
     if (promoCode) {
-      const promoters = this.getPromoters();
+      const promoters = await this.getPromotersAsync();
       const pIdx = promoters.findIndex(p => p.code.toUpperCase() === promoCode.toUpperCase());
       if (pIdx !== -1) {
         const commission = Number((dep.amount * 0.20).toFixed(2));
@@ -1287,7 +1340,7 @@ export const storage = {
     dep.status = 'REJECTED';
     dep.rejectionReason = reason;
     dep.rejectedAt = now;
-    localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(deposits));
+    safeStorageSet(STORAGE_KEYS.DEPOSITS, deposits);
 
     // Update matching pending transaction to REJECTED
     const updatedReject = await this.updateTransactionStatus(
@@ -1330,7 +1383,7 @@ export const storage = {
         .order('created_at', { ascending: false });
       if (!error && data) {
         const mapped = data.map(dbWithdrawalToApp);
-        localStorage.setItem(STORAGE_KEYS.WITHDRAWALS, JSON.stringify(mapped));
+        safeStorageSet(STORAGE_KEYS.WITHDRAWALS, mapped);
         return mapped;
       }
     }
@@ -1399,7 +1452,7 @@ export const storage = {
 
     const withdrawals = this.getWithdrawals();
     withdrawals.push(newReq);
-    localStorage.setItem(STORAGE_KEYS.WITHDRAWALS, JSON.stringify(withdrawals));
+    safeStorageSet(STORAGE_KEYS.WITHDRAWALS, withdrawals);
 
     await this.addTransaction({
       userId,
@@ -1430,10 +1483,19 @@ export const storage = {
 
     wth.status = 'COMPLETED';
     wth.completedAt = now;
-    localStorage.setItem(STORAGE_KEYS.WITHDRAWALS, JSON.stringify(withdrawals));
+    safeStorageSet(STORAGE_KEYS.WITHDRAWALS, withdrawals);
 
-    const users = this.getUsers();
-    const idx = users.findIndex(u => u.id === wth.userId);
+    const users = await this.getUsersAsync();
+    let idx = users.findIndex(u => u.id === wth.userId);
+    if (idx === -1 && isSupabaseReady()) {
+      try {
+        const { data: dbUser } = await supabase.from('users').select('*').eq('id', wth.userId).maybeSingle();
+        if (dbUser) {
+          users.push(dbUserToApp(dbUser));
+          idx = users.length - 1;
+        }
+      } catch {}
+    }
     if (idx !== -1) {
       users[idx].totalWithdrawn = (users[idx].totalWithdrawn || 0) + wth.amount;
       this.saveUsers(users);
@@ -1487,7 +1549,7 @@ export const storage = {
     wth.status = 'REJECTED';
     wth.rejectionReason = reason;
     wth.rejectedAt = now;
-    localStorage.setItem(STORAGE_KEYS.WITHDRAWALS, JSON.stringify(withdrawals));
+    safeStorageSet(STORAGE_KEYS.WITHDRAWALS, withdrawals);
 
     // Update pending withdrawal transaction to REJECTED
     const updatedReject = await this.updateTransactionStatus(
@@ -1545,7 +1607,7 @@ export const storage = {
         .order('created_at', { ascending: false });
       if (!error && data) {
         const mapped = data.map(dbPromoterToApp);
-        localStorage.setItem(STORAGE_KEYS.PROMOTERS, JSON.stringify(mapped));
+        safeStorageSet(STORAGE_KEYS.PROMOTERS, mapped);
         return mapped;
       }
     }
@@ -1667,7 +1729,7 @@ export const storage = {
         updatedAt: new Date().toISOString()
       };
       chats.push(chat);
-      localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(chats));
+      safeStorageSet(STORAGE_KEYS.SUPPORT_CHATS, chats);
     }
     return chat;
   },
@@ -1692,7 +1754,7 @@ export const storage = {
           const chats = this.getSupportChats();
           const idx = chats.findIndex(c => c.userId === userId);
           if (idx !== -1) chats[idx] = chat; else chats.push(chat);
-          localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(chats));
+          safeStorageSet(STORAGE_KEYS.SUPPORT_CHATS, chats);
           return chat;
         }
       } catch (e) {
@@ -1718,7 +1780,7 @@ export const storage = {
             status: row.status,
             updatedAt: row.updated_at
           }));
-          localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(mapped));
+          safeStorageSet(STORAGE_KEYS.SUPPORT_CHATS, mapped);
           return mapped;
         }
       } catch (e) {
@@ -1775,7 +1837,7 @@ export const storage = {
       chat.updatedAt = new Date().toISOString();
     }
 
-    localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(chats));
+    safeStorageSet(STORAGE_KEYS.SUPPORT_CHATS, chats);
 
     // Save to Supabase without invalid onConflict specification
     if (isSupabaseReady()) {
@@ -1828,7 +1890,7 @@ export const storage = {
   async deleteChat(userId) {
     let chats = this.getSupportChats();
     chats = chats.filter(c => c.userId !== userId);
-    localStorage.setItem(STORAGE_KEYS.SUPPORT_CHATS, JSON.stringify(chats));
+    safeStorageSet(STORAGE_KEYS.SUPPORT_CHATS, chats);
 
     if (isSupabaseReady()) {
       try {

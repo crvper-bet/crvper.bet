@@ -134,6 +134,20 @@ class RealtimeSyncService {
         window.dispatchEvent(new Event('crvper_support_updated'));
       });
 
+      this.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, async () => {
+        try {
+          await storage.getUsersAsync();
+        } catch {}
+        window.dispatchEvent(new Event('crvper_user_updated'));
+      });
+
+      this.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'promoters' }, async () => {
+        try {
+          await storage.getPromotersAsync();
+        } catch {}
+        window.dispatchEvent(new Event('crvper_promoter_updated'));
+      });
+
       this.channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           this.isSubscribed = true;
