@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from './context/AuthContext';
+import { storage } from './services/storage';
 
 // Components
 import Navbar from './components/Navbar';
@@ -258,10 +259,12 @@ export default function App() {
         {/* 2x3 Games Grid */}
         <GamesGrid
           onSelectGame={(gameId) => {
-            const limitCheck = storage.checkGameWinningLimit(user?.id, gameId);
-            if (limitCheck.isLimitReached) {
-              setShowMaxLimitModal(true);
-              return;
+            if (user) {
+              const limitCheck = storage.checkGameWinningLimit(user.id, gameId);
+              if (limitCheck && limitCheck.isLimitReached) {
+                setShowMaxLimitModal(true);
+                return;
+              }
             }
             requireAuth(() => setActiveGame(gameId));
           }}
