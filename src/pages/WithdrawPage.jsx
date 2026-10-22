@@ -41,6 +41,28 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
   const isUnlocked = Boolean(eligibility.hasDeposited);
   const isWageringDone = Boolean(eligibility.hasMetWagering);
 
+  // Live countdown timer for 12-hour limit reset
+  const [resetCountdown, setResetCountdown] = useState(eligibility.resetTimeFormatted);
+
+  useEffect(() => {
+    if (!eligibility.isLimitReached || !eligibility.resetTimeRemainingMs) {
+      setResetCountdown(null);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const fresh = storage.getWithdrawalEligibility(user?.id);
+      if (!fresh.isLimitReached) {
+        setResetCountdown(null);
+        refreshUser();
+      } else {
+        setResetCountdown(fresh.resetTimeFormatted);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [eligibility.isLimitReached, eligibility.resetTimeRemainingMs, user?.id]);
+
   const handleWithdrawRequest = (e) => {
     e.preventDefault();
     setError('');
@@ -213,7 +235,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
               <span>Withdrawal Limit Policy</span>
             </span>
             <span className="text-[10px] text-slate-400 font-bold">
-              Max 3 Requests • ₹1,000 Combined
+              Max 3 Requests • ₹1,000 Combined • Resets in 12h
             </span>
           </div>
 
@@ -240,9 +262,21 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
           </div>
 
           {eligibility.isLimitReached && (
-            <div className="p-2.5 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs flex items-center space-x-2 font-bold">
-              <span>⚠</span>
-              <span>{eligibility.limitMessage}</span>
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-950/80 via-yellow-950/50 to-amber-950/80 border border-amber-500/50 text-amber-200 text-xs space-y-2 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="font-bold flex items-center space-x-1.5 text-amber-300">
+                  <Clock className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
+                  <span>Maximum Limit Hit (12-Hour Cooldown)</span>
+                </span>
+                {resetCountdown && (
+                  <span className="px-2.5 py-0.5 rounded-lg bg-black/70 border border-amber-400/50 text-amber-300 font-mono font-black text-xs shadow-inner">
+                    ⏳ {resetCountdown}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                {eligibility.limitMessage} Your 3-request allowance and ₹1,000 limit automatically refresh after the 12-hour period.
+              </p>
             </div>
           )}
         </div>
@@ -408,7 +442,8 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
                 disabled
                 className="w-full py-3.5 bg-slate-800/80 border border-slate-700 text-slate-400 font-black rounded-2xl text-xs cursor-not-allowed flex items-center justify-center space-x-2 shadow-md"
               >
-                <span>🔒 {eligibility.limitMessage}</span>
+                <Clock className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+                <span>🔒 Max Limit Hit — Resets in {resetCountdown || eligibility.resetTimeFormatted || '12 hours'}</span>
               </button>
             ) : (
               <button

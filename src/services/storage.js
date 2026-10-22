@@ -28,6 +28,7 @@ const DEFAULT_ADMIN_SETTINGS = {
   minWithdraw: 100,
   maxWithdrawalRequests: 3, // User can only request 3 times
   maxCombinedWithdrawal: 1000, // Not more than ₹1,000 combined total
+  withdrawalLimitResetHours: 12, // Limits reset 12 hours after hitting maximum limit
   signupBonus: 150,
   promoActive: true,
   minQualifyingDeposit: 100,
@@ -671,6 +672,28 @@ export const storage = {
     window.dispatchEvent(new Event('crvper_user_updated'));
   },
 
+  updateUser(userId, partial) {
+    if (!userId || !partial) return null;
+    try {
+      const users = this.getUsers();
+      const idx = users.findIndex(u => u.id === userId);
+      if (idx !== -1) {
+        users[idx] = { ...users[idx], ...partial };
+        this.saveUsers(users);
+        const curr = this.getCurrentUser();
+        if (curr && curr.id === userId) {
+          const updatedCurrent = { ...curr, ...partial };
+          safeStorageSet(STORAGE_KEYS.CURRENT_USER, updatedCurrent);
+          window.dispatchEvent(new Event('crvper_user_updated'));
+        }
+        return users[idx];
+      }
+    } catch (e) {
+      console.warn('[Storage] updateUser error:', e.message);
+    }
+    return null;
+  },
+
   async registerUser({ phone, password, inviteCode }) {
     const cleanPhone = String(phone || '').replace(/\D/g, '').trim();
     if (!cleanPhone || cleanPhone.length < 10) {
@@ -1018,26 +1041,86 @@ export const storage = {
     const totalBal = Number(user.walletBalance || (depositBal + winBal + bonBal));
 
     // Platform Policy: Max 3 withdrawal requests & Max ₹1,000 combined total limit
+    // Resets after 12 hours once the user hits the maximum limit
     const maxWithdrawalRequests = Number(settings.maxWithdrawalRequests ?? 3);
     const maxCombinedWithdrawal = Number(settings.maxCombinedWithdrawal ?? 1000);
+    const resetHours = Number(settings.withdrawalLimitResetHours ?? 12);
+    const resetWindowMs = resetHours * 60 * 60 * 1000;
 
     const allWithdrawals = this.getWithdrawals();
-    const userWithdrawals = allWithdrawals.filter(w => w.userId === userId && w.status !== 'REJECTED');
-    const withdrawalCount = userWithdrawals.length;
-    const remainingWithdrawalRequests = Math.max(0, maxWithdrawalRequests - withdrawalCount);
+    
+    // Check if user has an existing cycle reset timestamp
+    const cycleResetTime = user.withdrawalCycleResetAt ? new Date(user.withdrawalCycleResetAt).getTime() : 0;
+    
+    // Withdrawals in current active cycle
+    let userWithdrawals = allWithdrawals.filter(w => 
+      w.userId === userId && 
+      w.status !== 'REJECTED' && 
+      (new Date(w.createdAt).getTime() > cycleResetTime)
+    );
 
-    const totalWithdrawnAmount = Number(userWithdrawals.reduce((sum, w) => sum + Number(w.amount || 0), 0).toFixed(2));
-    const remainingCombinedWithdrawal = Math.max(0, Number((maxCombinedWithdrawal - totalWithdrawnAmount).toFixed(2)));
+    let withdrawalCount = userWithdrawals.length;
+    let totalWithdrawnAmount = Number(userWithdrawals.reduce((sum, w) => sum + Number(w.amount || 0), 0).toFixed(2));
+    let remainingCombinedWithdrawal = Math.max(0, Number((maxCombinedWithdrawal - totalWithdrawnAmount).toFixed(2)));
+    let remainingWithdrawalRequests = Math.max(0, maxWithdrawalRequests - withdrawalCount);
 
-    let isLimitReached = false;
+    let isLimitReached = (withdrawalCount >= maxWithdrawalRequests) || (remainingCombinedWithdrawal <= 0);
+
+    // Track when maximum limit was hit
+    let limitHitAt = user.withdrawalLimitHitAt ? new Date(user.withdrawalLimitHitAt).getTime() : null;
+
+    if (isLimitReached && !limitHitAt) {
+      // Find the timestamp of the withdrawal that hit the limit
+      const latestWth = userWithdrawals[userWithdrawals.length - 1];
+      limitHitAt = latestWth ? new Date(latestWth.createdAt).getTime() : Date.now();
+      this.updateUser(userId, { withdrawalLimitHitAt: new Date(limitHitAt).toISOString() });
+    }
+
+    let resetTimeRemainingMs = 0;
+    let resetTimeFormatted = null;
+
+    if (isLimitReached && limitHitAt) {
+      const elapsedSinceLimit = Date.now() - limitHitAt;
+      if (elapsedSinceLimit >= resetWindowMs) {
+        // 12 HOURS COMPLETED! AUTOMATIC RESET OF LIMITS!
+        const resetTimestamp = new Date().toISOString();
+        this.updateUser(userId, { 
+          withdrawalCycleResetAt: resetTimestamp, 
+          withdrawalLimitHitAt: null 
+        });
+
+        // Reset tracking for return object
+        withdrawalCount = 0;
+        totalWithdrawnAmount = 0;
+        remainingCombinedWithdrawal = maxCombinedWithdrawal;
+        remainingWithdrawalRequests = maxWithdrawalRequests;
+        isLimitReached = false;
+        resetTimeRemainingMs = 0;
+        resetTimeFormatted = null;
+      } else {
+        resetTimeRemainingMs = Math.max(0, resetWindowMs - elapsedSinceLimit);
+        const hoursLeft = Math.floor(resetTimeRemainingMs / (1000 * 60 * 60));
+        const minutesLeft = Math.floor((resetTimeRemainingMs % (1000 * 60 * 60)) / (1000 * 60));
+        const secondsLeft = Math.floor((resetTimeRemainingMs % (1000 * 60)) / 1000);
+
+        if (hoursLeft > 0) {
+          resetTimeFormatted = `${hoursLeft}h ${minutesLeft}m`;
+        } else if (minutesLeft > 0) {
+          resetTimeFormatted = `${minutesLeft}m ${secondsLeft}s`;
+        } else {
+          resetTimeFormatted = `${secondsLeft}s`;
+        }
+      }
+    }
+
     let limitMessage = null;
-
-    if (withdrawalCount >= maxWithdrawalRequests) {
-      isLimitReached = true;
-      limitMessage = `You have reached the maximum limit of ${maxWithdrawalRequests} withdrawal requests.`;
-    } else if (remainingCombinedWithdrawal <= 0) {
-      isLimitReached = true;
-      limitMessage = `You have reached the maximum combined withdrawal limit of ₹${maxCombinedWithdrawal.toLocaleString()}.`;
+    if (isLimitReached) {
+      const countdownMsg = resetTimeFormatted ? ` Resets in ${resetTimeFormatted}.` : '';
+      if (withdrawalCount >= maxWithdrawalRequests) {
+        limitMessage = `You have reached the maximum limit of ${maxWithdrawalRequests} withdrawal requests.${countdownMsg}`;
+      } else {
+        limitMessage = `You have reached the maximum combined withdrawal limit of ₹${maxCombinedWithdrawal.toLocaleString()}.${countdownMsg}`;
+      }
     }
 
     // Raw withdrawable balance is depositBalance + winningsBalance when wagering requirements are fulfilled
@@ -1077,7 +1160,11 @@ export const storage = {
       maxCombinedWithdrawal,
       remainingCombinedWithdrawal,
       isLimitReached,
-      limitMessage
+      limitMessage,
+      resetHours,
+      resetTimeRemainingMs,
+      resetTimeFormatted,
+      withdrawalLimitHitAt: user.withdrawalLimitHitAt || null
     };
   },
 
@@ -1585,6 +1672,21 @@ export const storage = {
     const withdrawals = this.getWithdrawals();
     withdrawals.push(newReq);
     safeStorageSet(STORAGE_KEYS.WITHDRAWALS, withdrawals);
+
+    // Record limit hit timestamp if this request reached the limit (3 requests or ₹1,000 combined)
+    const cycleResetTime = user.withdrawalCycleResetAt ? new Date(user.withdrawalCycleResetAt).getTime() : 0;
+    const postWithdrawals = withdrawals.filter(w => 
+      w.userId === userId && 
+      w.status !== 'REJECTED' && 
+      (new Date(w.createdAt).getTime() > cycleResetTime)
+    );
+    const postCount = postWithdrawals.length;
+    const postTotal = postWithdrawals.reduce((sum, w) => sum + Number(w.amount || 0), 0);
+    if (postCount >= eligibility.maxWithdrawalRequests || postTotal >= eligibility.maxCombinedWithdrawal) {
+      if (!user.withdrawalLimitHitAt) {
+        this.updateUser(userId, { withdrawalLimitHitAt: newReq.createdAt });
+      }
+    }
 
     await this.addTransaction({
       userId,

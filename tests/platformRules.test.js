@@ -251,10 +251,36 @@ describe('CRVPER Platform Specifications Test Suite', () => {
         });
       },
       (err) => {
-        assert.strictEqual(err.message, 'You have reached the maximum limit of 3 withdrawal requests.');
+        assert.ok(err.message.includes('maximum limit of 3 withdrawal requests'));
         return true;
       }
     );
+
+    // Verify 12-hour limit reset
+    const eligLocked = storage.getWithdrawalEligibility(user.id);
+    assert.strictEqual(eligLocked.isLimitReached, true);
+    assert.ok(eligLocked.resetTimeRemainingMs > 0, 'Should have positive cooldown remaining');
+
+    // Fast-forward time past 12 hours (13 hours ago)
+    storage.updateUser(user.id, { 
+      withdrawalLimitHitAt: new Date(Date.now() - 13 * 60 * 60 * 1000).toISOString() 
+    });
+
+    // Check that eligibility is automatically reset after 12 hours
+    const eligReset = storage.getWithdrawalEligibility(user.id);
+    assert.strictEqual(eligReset.isLimitReached, false, 'Limit should be cleared after 12 hours');
+    assert.strictEqual(eligReset.withdrawalCount, 0, 'Withdrawal count should reset to 0');
+    assert.strictEqual(eligReset.remainingWithdrawalRequests, 3, 'Should have 3 requests available again');
+    assert.strictEqual(eligReset.remainingCombinedWithdrawal, 1000, 'Should have full ₹1,000 allowance restored');
+
+    // New withdrawal now succeeds in the new 12-hour cycle!
+    const newCycleWth = await storage.createWithdrawalRequest({
+      userId: user.id,
+      userPhone: user.phone,
+      amount: 150,
+      upiId: 'cycle2@upi'
+    });
+    assert.strictEqual(newCycleWth.amount, 150);
   });
 
   test('4. Winning-Limit Policy: Disabled by default for unrestricted player winnings', async () => {
