@@ -3,7 +3,8 @@ import { ArrowLeft, Play, ShieldCheck, Sparkles, AlertTriangle, Trophy, X } from
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
 
-const PLINKO_WIN_LIMIT = 10000; // ₹10,000 max winnings per session
+const PLINKO_WIN_LIMIT = 10000; // ₹10,000 session profit cap
+const WALLET_WIN_CAP = 10000;   // ₹10,000 hard wallet balance cap — block play when reached
 
 // Plinko Multiplier Bins & Row Geometries based on Risk Level:
 // Low: 8 rows, 9 bins (conservative spread, compact pyramid)
@@ -38,6 +39,16 @@ export default function PlinkoGame({ onBack }) {
   const canvasRef = useRef(null);
   const ballsRef = useRef([]);
   const animFrameRef = useRef(null);
+  // Ref so canvas loop can read latest user balance without stale closure
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+
+  // ── Wallet balance cap: block play when wallet >= ₹10,000 ──────────────
+  useEffect(() => {
+    if (user && user.walletBalance >= WALLET_WIN_CAP) {
+      setShowWinLimitModal(true);
+    }
+  }, [user?.walletBalance]);
 
   const currentConfig = RISK_CONFIG[risk];
   const multipliers = currentConfig.multipliers;
@@ -194,7 +205,13 @@ export default function PlinkoGame({ onBack }) {
 
           setLastWin({ amount: payoutAmount, multiplier: landedMultiplier });
 
-          if (limitHit) {
+          // Check wallet balance cap after payout (estimate post-payout balance)
+          const estimatedBalance = Number(((userRef.current?.walletBalance || 0) + payoutAmount).toFixed(2));
+          if (estimatedBalance >= WALLET_WIN_CAP) {
+            sessionWinningsRef.current = PLINKO_WIN_LIMIT; // Also lock session tracker
+            setSessionWinnings(PLINKO_WIN_LIMIT);
+            setShowWinLimitModal(true);
+          } else if (limitHit) {
             setShowWinLimitModal(true);
           }
 
@@ -222,6 +239,12 @@ export default function PlinkoGame({ onBack }) {
   const handleDropBalls = () => {
     const singleWager = Number(betAmount);
     const totalWager = singleWager * ballCount;
+
+    // Block play if wallet balance has hit the ₹10,000 cap
+    if (user && user.walletBalance >= WALLET_WIN_CAP) {
+      setShowWinLimitModal(true);
+      return;
+    }
 
     // Block play if session winning limit reached
     if (sessionWinningsRef.current >= PLINKO_WIN_LIMIT) {
@@ -284,9 +307,10 @@ export default function PlinkoGame({ onBack }) {
               <div>
                 <h2 className="text-lg font-black text-white">Winning Limit Reached!</h2>
                 <p className="text-sm text-slate-400 mt-1">
-                  You've reached the maximum win of{' '}
-                  <span className="text-amber-400 font-bold">₹{PLINKO_WIN_LIMIT.toLocaleString()}</span>{' '}
-                  on Plinko. Please withdraw your funds to continue playing.
+                  {user && user.walletBalance >= WALLET_WIN_CAP
+                    ? <>Your wallet balance has reached <span className="text-amber-400 font-bold">₹{WALLET_WIN_CAP.toLocaleString()}</span>. Please withdraw your funds to continue playing.</>
+                    : <>You've reached the maximum session win of{' '}<span className="text-amber-400 font-bold">₹{PLINKO_WIN_LIMIT.toLocaleString()}</span> on Plinko. Please withdraw your funds to continue playing.</>
+                  }
                 </p>
               </div>
               <button
@@ -340,27 +364,32 @@ export default function PlinkoGame({ onBack }) {
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
               <Trophy className="w-3.5 h-3.5 text-amber-400" />
-              <span>Session Win Limit</span>
+              <span>Win Limit (Wallet)</span>
             </span>
-            <span className={`text-xs font-mono font-black ${sessionWinnings >= PLINKO_WIN_LIMIT ? 'text-amber-400' : 'text-emerald-400'}`}>
-              ₹{sessionWinnings.toLocaleString()} / ₹{PLINKO_WIN_LIMIT.toLocaleString()}
+            <span className={`text-xs font-mono font-black ${(user && user.walletBalance >= WALLET_WIN_CAP) || sessionWinnings >= PLINKO_WIN_LIMIT ? 'text-amber-400' : 'text-emerald-400'}`}>
+              ₹{user ? Number(user.walletBalance).toFixed(0) : 0} / ₹{WALLET_WIN_CAP.toLocaleString()}
             </span>
           </div>
           <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                sessionWinnings >= PLINKO_WIN_LIMIT
+                user && user.walletBalance >= WALLET_WIN_CAP
                   ? 'bg-amber-400'
-                  : sessionWinnings >= PLINKO_WIN_LIMIT * 0.8
+                  : user && user.walletBalance >= WALLET_WIN_CAP * 0.8
                   ? 'bg-orange-400'
                   : 'bg-emerald-400'
               }`}
-              style={{ width: `${Math.min(100, (sessionWinnings / PLINKO_WIN_LIMIT) * 100)}%` }}
+              style={{ width: `${Math.min(100, ((user?.walletBalance || 0) / WALLET_WIN_CAP) * 100)}%` }}
             />
           </div>
-          {sessionWinnings >= PLINKO_WIN_LIMIT && (
+          {(user && user.walletBalance >= WALLET_WIN_CAP) && (
             <p className="text-[10px] text-amber-400 font-bold text-center">
-              🏆 Max win reached — please withdraw your funds to play again
+              🏆 Wallet limit reached — please withdraw your funds to play again
+            </p>
+          )}
+          {sessionWinnings >= PLINKO_WIN_LIMIT && !(user && user.walletBalance >= WALLET_WIN_CAP) && (
+            <p className="text-[10px] text-amber-400 font-bold text-center">
+              🏆 Max session win reached — please withdraw your funds to play again
             </p>
           )}
         </div>
@@ -470,7 +499,7 @@ export default function PlinkoGame({ onBack }) {
           </div>
 
           {/* Drop Button */}
-          {sessionWinnings >= PLINKO_WIN_LIMIT ? (
+          {(sessionWinnings >= PLINKO_WIN_LIMIT || (user && user.walletBalance >= WALLET_WIN_CAP)) ? (
             <button
               onClick={() => setShowWinLimitModal(true)}
               className="w-full py-3.5 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-black rounded-2xl text-sm tracking-wide flex items-center justify-center space-x-2 cursor-not-allowed"
