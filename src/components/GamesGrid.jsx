@@ -23,7 +23,7 @@ export default function GamesGrid({ onSelectGame }) {
   }, []);
 
   const CATEGORIES = [
-    { id: 'all', label: 'All Games (7)' },
+    { id: 'all', label: 'All Games (6)' },
     { id: 'originals', label: '🔥 Originals' },
     { id: 'crash', label: '⚡ Crash' },
     { id: 'numbers', label: '🎲 Numbers' },
@@ -222,37 +222,6 @@ export default function GamesGrid({ onSelectGame }) {
       previewSvg: (
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-mono font-black text-white text-base shadow-lg group-hover:rotate-12 transition duration-300 border border-blue-400/40">
           88.4
-        </div>
-      )
-    },
-    {
-      id: 'vortex',
-      category: 'originals',
-      name: 'VORTEX',
-      tag: 'CONCENTRIC ELEMENTAL WHEEL',
-      badge: 'OFFICIAL ⚡',
-      rtp: '200x Max',
-      accentColor: '#a855f7',
-      gradient: 'from-[#1e0e2e] via-[#160d26] to-[#0c121d]',
-      border: 'hover:border-purple-500/60 border-purple-900/30',
-      activePlayers: '4,680',
-      liveBadge: (
-        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-purple-500/30 backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
-          <span className="text-[10px] font-mono font-bold text-slate-400">RINGS:</span>
-          <span className="text-xs font-mono font-black text-purple-300">
-            🔥 🌿 💧 Multi-Tier Payout
-          </span>
-        </div>
-      ),
-      previewSvg: (
-        <div className="relative flex items-center justify-center w-14 h-14 group-hover:scale-110 transition duration-300">
-          <div className="absolute inset-0 rounded-full border-2 border-dashed border-purple-500/60 animate-spin" style={{ animationDuration: '8s' }} />
-          <div className="absolute inset-1.5 rounded-full border-2 border-emerald-400/60 animate-spin" style={{ animationDuration: '5s', animationDirection: 'reverse' }} />
-          <div className="absolute inset-3 rounded-full border border-cyan-400/60 animate-spin" style={{ animationDuration: '3s' }} />
-          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-[10px] font-black text-white shadow-[0_0_12px_#a855f7]">
-            🌀
-          </div>
         </div>
       )
     }

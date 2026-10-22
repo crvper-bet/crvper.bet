@@ -2007,7 +2007,7 @@ export default function AdminPage({ onExit }) {
                 <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs">
                   <span className="font-bold text-slate-300 block mb-1">Eligible Wagering Games</span>
                   <div className="flex flex-wrap gap-2">
-                    {['Aviator', 'WinGo', 'Mines', 'Quantum Dice', 'Plinko', 'Neon Tower', 'Vertex'].map(game => (
+                    {['Aviator', 'WinGo', 'Mines', 'Quantum Dice', 'Plinko', 'Neon Tower'].map(game => (
                       <span key={game} className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold">
                         ✓ {game}
                       </span>

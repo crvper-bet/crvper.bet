@@ -31,7 +31,7 @@ const DEFAULT_ADMIN_SETTINGS = {
   minQualifyingDeposit: 100,
   wageringPercentage: 50, // 50%
   aviatorWingoLimitMultiplier: 3.0, // 3x threshold on qualifying deposit
-  eligibleGames: ['Aviator', 'WinGo', 'Mines', 'Quantum Dice', 'Plinko', 'Neon Tower', 'Vertex'],
+  eligibleGames: ['Aviator', 'WinGo', 'Mines', 'Quantum Dice', 'Plinko', 'Neon Tower'],
   auditLogs: [],
   soundModes: {
     deposit: 'default',
@@ -64,32 +64,120 @@ const INITIAL_PROMOTERS = [
 
 const isSupabaseReady = () => !!supabase;
 
-function safeStorageSet(key, value) {
-  // Use globalThis.localStorage directly so this works in both browser (real window.localStorage)
-  // and Node.js test environments (where globalThis.localStorage is mocked but window.localStorage may not be set)
+// In-memory fallback map if localStorage is blocked, corrupted or exceeded
+const inMemoryStore = new Map();
+
+// ── Emergency LocalStorage Quota Janitor ────────────────────────────────────
+// Strips heavy legacy items (multi-megabyte audio configs, base64 screenshots, etc.)
+export function purgeBloatedLocalStorage() {
   const ls = globalThis.localStorage ?? (typeof window !== 'undefined' ? window.localStorage : null);
   if (!ls) return;
-  const str = typeof value === 'string' ? value : JSON.stringify(value);
+
   try {
-    localStorage.setItem(key, str);
+    // 1. Remove legacy heavy audio blobs (audio v5 is stored in IndexedDB)
+    ls.removeItem('crvper_sound_config_v3');
+    ls.removeItem('crvper_sound_config_v2');
+
+    // 2. Prune deposits cache: strip base64 image strings (> 300 chars)
+    const depRaw = ls.getItem(STORAGE_KEYS.DEPOSITS);
+    if (depRaw && (depRaw.length > 50000 || depRaw.includes('data:image'))) {
+      try {
+        const deps = JSON.parse(depRaw);
+        if (Array.isArray(deps)) {
+          const cleaned = deps.slice(-15).map(d => {
+            if (!d || typeof d !== 'object') return d;
+            return {
+              ...d,
+              screenshotUrl: (d.screenshotUrl && d.screenshotUrl.length > 300) ? '[Cloud Proof]' : d.screenshotUrl
+            };
+          });
+          ls.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(cleaned));
+        }
+      } catch {}
+    }
+
+    // 3. Prune admin settings: strip any soundData / large base64
+    const admRaw = ls.getItem(STORAGE_KEYS.ADMIN_SETTINGS);
+    if (admRaw && admRaw.length > 40000) {
+      try {
+        const parsed = JSON.parse(admRaw);
+        if (parsed.customSounds) delete parsed.customSounds;
+        if (parsed.soundData) delete parsed.soundData;
+        ls.setItem(STORAGE_KEYS.ADMIN_SETTINGS, JSON.stringify(parsed));
+      } catch {}
+    }
+
+    // 4. Prune transactions: keep last 25
+    const txRaw = ls.getItem(STORAGE_KEYS.TRANSACTIONS);
+    if (txRaw && txRaw.length > 60000) {
+      try {
+        const txs = JSON.parse(txRaw);
+        if (Array.isArray(txs)) {
+          ls.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs.slice(-25)));
+        }
+      } catch {}
+    }
   } catch (err) {
-    console.warn(`[LocalStorage] safeStorageSet quota handled for "${key}":`, err.message);
+    console.warn('[LocalStorage] purgeBloatedLocalStorage notice:', err?.message);
+  }
+}
+
+// Auto-run once on module initialization
+purgeBloatedLocalStorage();
+
+function safeStorageGet(key) {
+  const ls = globalThis.localStorage ?? (typeof window !== 'undefined' ? window.localStorage : null);
+  if (ls) {
     try {
-      if (Array.isArray(value)) {
-        const lightweight = value.map(item => {
-          if (!item || typeof item !== 'object') return item;
-          const copy = { ...item };
-          if (copy.screenshotUrl && copy.screenshotUrl.length > 500) {
-            copy.screenshotUrl = '[Uploaded Cloud Proof]';
-          }
-          if (copy.qrUrl && copy.qrUrl.length > 500) {
-            copy.qrUrl = '[Uploaded Cloud QR]';
-          }
-          return copy;
-        });
-        localStorage.setItem(key, JSON.stringify(lightweight.slice(-25)));
+      const v = ls.getItem(key);
+      if (v !== null && v !== undefined) return v;
+    } catch {}
+  }
+  return inMemoryStore.get(key) || null;
+}
+
+function safeStorageSet(key, value) {
+  const ls = globalThis.localStorage ?? (typeof window !== 'undefined' ? window.localStorage : null);
+  const str = typeof value === 'string' ? value : JSON.stringify(value);
+  
+  // Always update in-memory store so execution never fails
+  inMemoryStore.set(key, str);
+
+  if (!ls) return;
+
+  try {
+    ls.setItem(key, str);
+  } catch (err) {
+    console.warn(`[LocalStorage] safeStorageSet quota handled for "${key}":`, err?.message);
+    // 1. Purge heavy keys immediately
+    purgeBloatedLocalStorage();
+
+    // 2. Retry setting the key
+    try {
+      ls.setItem(key, str);
+      return;
+    } catch (retryErr) {
+      // 3. If still failing, aggressively prune and retry
+      try {
+        if (key === STORAGE_KEYS.CURRENT_USER) {
+          // Critical for login: clear non-critical caches to guarantee room for CURRENT_USER
+          ls.removeItem(STORAGE_KEYS.DEPOSITS);
+          ls.removeItem(STORAGE_KEYS.TRANSACTIONS);
+          ls.setItem(key, str);
+        } else if (Array.isArray(value)) {
+          const lightweight = value.slice(-10).map(item => {
+            if (!item || typeof item !== 'object') return item;
+            const copy = { ...item };
+            if (copy.screenshotUrl && copy.screenshotUrl.length > 200) copy.screenshotUrl = '[Cloud Proof]';
+            if (copy.qrUrl && copy.qrUrl.length > 200) copy.qrUrl = '[Cloud QR]';
+            return copy;
+          });
+          ls.setItem(key, JSON.stringify(lightweight));
+        }
+      } catch (_) {
+        // Fully absorbed by inMemoryStore — NEVER bubble exception to user!
       }
-    } catch (_) {}
+    }
   }
 }
 
@@ -378,29 +466,18 @@ export const storage = {
           auditLogs: envelope.auditLogs || [],
           soundModes: envelope.soundModes,
         };
-        localStorage.setItem(STORAGE_KEYS.ADMIN_SETTINGS, JSON.stringify(settings));
+        safeStorageSet(STORAGE_KEYS.ADMIN_SETTINGS, settings);
 
-        // Also sync sound config into soundStorage local cache (direct localStorage write, no import needed)
+        // Dispatch events for changed sounds without storing multi-MB audio in localStorage
         try {
-          const localConfig = JSON.parse(localStorage.getItem('crvper_sound_config_v3') || '{}');
-          const remoteTs = new Date(data.updated_at || 0).getTime();
-          if (remoteTs > (localConfig.lastRemoteSync || 0)) {
-            const merged = {
-              ...localConfig,
-              qr: envelope.qrImageUrl,
-              soundModes: { ...localConfig.soundModes, ...envelope.soundModes },
-              soundData: { ...localConfig.soundData, ...envelope.soundData },
-              lastRemoteSync: remoteTs
-            };
-            localStorage.setItem('crvper_sound_config_v3', JSON.stringify(merged));
-            // Fire events for changed sounds
-            Object.keys(envelope.soundData || {}).forEach(key => {
+          if (envelope.soundData) {
+            Object.keys(envelope.soundData).forEach(key => {
               window.dispatchEvent(new CustomEvent('crvper_sound_updated', {
                 detail: { key, dataUrl: envelope.soundData[key]?.dataUrl, meta: envelope.soundData[key] }
               }));
             });
-            window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
           }
+          window.dispatchEvent(new CustomEvent('crvper_settings_updated'));
         } catch {}
 
         return settings;
@@ -552,7 +629,7 @@ export const storage = {
         const idx = users.findIndex(u => u.id === freshUser.id);
         if (idx !== -1) users[idx] = freshUser; else users.push(freshUser);
         this.saveUsers(users);
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(freshUser));
+        safeStorageSet(STORAGE_KEYS.CURRENT_USER, freshUser);
         window.dispatchEvent(new Event('crvper_user_updated'));
         return freshUser;
       }
@@ -563,20 +640,31 @@ export const storage = {
   },
 
   getCurrentUser() {
-    const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    return data ? JSON.parse(data) : null;
+    const data = safeStorageGet(STORAGE_KEYS.CURRENT_USER);
+    if (!data) return null;
+    try {
+      return typeof data === 'string' ? JSON.parse(data) : data;
+    } catch {
+      return null;
+    }
   },
 
   setCurrentUser(user) {
     if (user) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-      const users = this.getUsers();
-      const idx = users.findIndex(u => u.id === user.id);
-      if (idx !== -1) users[idx] = user;
-      else users.push(user);
-      this.saveUsers(users);
+      safeStorageSet(STORAGE_KEYS.CURRENT_USER, user);
+      try {
+        const users = this.getUsers();
+        const idx = users.findIndex(u => u.id === user.id);
+        if (idx !== -1) users[idx] = user;
+        else users.push(user);
+        this.saveUsers(users);
+      } catch {}
     } else {
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      const ls = globalThis.localStorage ?? (typeof window !== 'undefined' ? window.localStorage : null);
+      if (ls) {
+        try { ls.removeItem(STORAGE_KEYS.CURRENT_USER); } catch {}
+      }
+      inMemoryStore.delete(STORAGE_KEYS.CURRENT_USER);
     }
     window.dispatchEvent(new Event('crvper_user_updated'));
   },
@@ -680,12 +768,16 @@ export const storage = {
 
       if (!error && data) {
         const user = dbUserToApp(data);
-        // Sync to local cache
-        const users = this.getUsers();
-        const idx = users.findIndex(u => u.id === user.id);
-        if (idx !== -1) users[idx] = user; else users.push(user);
-        this.saveUsers(users);
-        this.setCurrentUser(user);
+        // Sync to local cache safely without throwing on quota errors
+        try {
+          const users = this.getUsers();
+          const idx = users.findIndex(u => u.id === user.id);
+          if (idx !== -1) users[idx] = user; else users.push(user);
+          this.saveUsers(users);
+        } catch {}
+        try {
+          this.setCurrentUser(user);
+        } catch {}
         return user;
       }
     }

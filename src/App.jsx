@@ -31,7 +31,6 @@ import AviatorGame from './games/AviatorGame';
 import NeonTowerGame from './games/NeonTowerGame';
 import QuantumDiceGame from './games/QuantumDiceGame';
 import PlinkoGame from './games/PlinkoGame';
-import VertexGame from './games/VertexGame';
 import { realtimeSync } from './services/realtimeSync';
 
 export default function App() {
@@ -203,9 +202,6 @@ export default function App() {
   }
   if (activeGame === 'plinko') {
     return <PlinkoGame onBack={() => setActiveGame(null)} />;
-  }
-  if (activeGame === 'vertex' || activeGame === 'vortex') {
-    return <VertexGame onBack={() => setActiveGame(null)} />;
   }
 
   // ROUTE 7: ACTIVITY TAB
