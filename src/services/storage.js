@@ -31,7 +31,7 @@ const DEFAULT_ADMIN_SETTINGS = {
   minQualifyingDeposit: 100,
   wageringPercentage: 50, // 50%
   aviatorWingoLimitMultiplier: 3.0, // 3x threshold on qualifying deposit
-  eligibleGames: ['Aviator', 'WinGo', 'Mines', 'Quantum Dice', 'Plinko', 'Neon Tower'],
+  eligibleGames: ['Aviator', 'WinGo', 'Mines', 'Quantum Dice', 'Plinko', 'Neon Tower', 'Vertex'],
   auditLogs: [],
   soundModes: {
     deposit: 'default',

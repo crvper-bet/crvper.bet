@@ -413,6 +413,93 @@ class SoundEngine {
       o.start(); o.stop(t + 0.05);
     } catch {}
   }
+
+  // ─── Vertex Circular Multiplier & Elemental Engine Audio ──────────────────
+  playWheelTick(speed = 1) {
+    if (this.muted) return;
+    try {
+      this.init(); if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = 'triangle';
+      const baseFreq = 700 + Math.min(speed * 60, 450);
+      o.frequency.setValueAtTime(baseFreq, t);
+      o.frequency.exponentialRampToValueAtTime(260, t + 0.028);
+      g.gain.setValueAtTime(0.08, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.028);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(); o.stop(t + 0.028);
+    } catch {}
+  }
+
+  playWheelSpin() {
+    if (this.muted) return;
+    try {
+      this.init(); if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(140, t);
+      o.frequency.exponentialRampToValueAtTime(520, t + 0.35);
+      g.gain.setValueAtTime(0.07, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(); o.stop(t + 0.38);
+    } catch {}
+  }
+
+  playElementCharge(element = 'fire') {
+    if (this.muted) return;
+    try {
+      this.init(); if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      const base = element === 'fire' ? 440 : element === 'water' ? 587.33 : 349.23;
+      [base, base * 1.25, base * 1.5].forEach((freq, i) => {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, t + i * 0.05);
+        g.gain.setValueAtTime(0.16, t + i * 0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.05 + 0.22);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(t + i * 0.05); o.stop(t + i * 0.05 + 0.22);
+      });
+      if (navigator.vibrate) navigator.vibrate(35);
+    } catch {}
+  }
+
+  playBonusTrigger() {
+    if (this.muted) return;
+    try {
+      this.init(); if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98].forEach((freq, i) => {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(freq, t + i * 0.06);
+        g.gain.setValueAtTime(0.25, t + i * 0.06);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 0.4);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(t + i * 0.06); o.stop(t + i * 0.06 + 0.4);
+      });
+      if (navigator.vibrate) navigator.vibrate([80, 40, 120, 40, 200]);
+    } catch {}
+  }
+
+  playShieldProtect() {
+    if (this.muted) return;
+    try {
+      this.init(); if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(320, t);
+      o.frequency.exponentialRampToValueAtTime(740, t + 0.22);
+      g.gain.setValueAtTime(0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(); o.stop(t + 0.25);
+    } catch {}
+  }
 }
 
 export const sounds = new SoundEngine();

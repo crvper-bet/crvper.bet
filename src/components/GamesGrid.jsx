@@ -23,7 +23,7 @@ export default function GamesGrid({ onSelectGame }) {
   }, []);
 
   const CATEGORIES = [
-    { id: 'all', label: 'All Games (6)' },
+    { id: 'all', label: 'All Games (7)' },
     { id: 'originals', label: '🔥 Originals' },
     { id: 'crash', label: '⚡ Crash' },
     { id: 'numbers', label: '🎲 Numbers' },
@@ -222,6 +222,36 @@ export default function GamesGrid({ onSelectGame }) {
       previewSvg: (
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-mono font-black text-white text-base shadow-lg group-hover:rotate-12 transition duration-300 border border-blue-400/40">
           88.4
+        </div>
+      )
+    },
+    {
+      id: 'vertex',
+      category: 'originals',
+      name: 'VERTEX',
+      tag: 'CONCENTRIC ELEMENTAL WHEEL',
+      badge: 'NEW RELEASE ⚡',
+      rtp: '125x Max',
+      accentColor: '#f43f5e',
+      gradient: 'from-[#220d1c] via-[#1a0f24] to-[#0c121d]',
+      border: 'hover:border-rose-500/60 border-rose-900/30',
+      activePlayers: '3,420',
+      liveBadge: (
+        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-rose-500/30 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+          <span className="text-[10px] font-mono font-bold text-slate-400">BONUS:</span>
+          <span className="text-xs font-mono font-black text-rose-300">
+            🔥 💧 🌿 Element Surge
+          </span>
+        </div>
+      ),
+      previewSvg: (
+        <div className="relative flex items-center justify-center w-14 h-14 group-hover:scale-110 transition duration-300">
+          <div className="absolute inset-0 rounded-full border-2 border-dashed border-rose-500/60 animate-spin" style={{ animationDuration: '8s' }} />
+          <div className="absolute inset-2 rounded-full border border-cyan-400/60 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
+          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center text-[10px] font-black text-white shadow-[0_0_12px_#f43f5e]">
+            V
+          </div>
         </div>
       )
     }

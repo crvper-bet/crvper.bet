@@ -363,3 +363,66 @@ export function getWinGoHistory(count = 12, nowMs = getSyncedNow()) {
   }
   return list;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. GLOBAL DETERMINISTIC VERTEX ENGINE (CIRCULAR MULTIPLIER & ELEMENTAL WHEEL)
+// ─────────────────────────────────────────────────────────────────────────────
+export const GLOBAL_SALT_VERTEX = 0x7f4a7c15;
+
+export const VERTEX_OUTER_SLICES = [
+  { id: 0, label: 'FIRE 2X', type: 'fire', multiplier: 2.0, element: 'fire', color: '#f43f5e', bg: '#2a0e14', icon: '🔥' },
+  { id: 1, label: '1.5x', type: 'multiplier', multiplier: 1.5, element: null, color: '#38bdf8', bg: '#0c2233', icon: '⚡' },
+  { id: 2, label: '0.0x', type: 'hazard', multiplier: 0.0, element: null, color: '#94a3b8', bg: '#18202d', icon: '💀' },
+  { id: 3, label: 'WATER 1.8X', type: 'water', multiplier: 1.8, element: 'water', color: '#06b6d4', bg: '#07242e', icon: '💧' },
+  { id: 4, label: '3.0x', type: 'multiplier', multiplier: 3.0, element: null, color: '#a855f7', bg: '#250f38', icon: '💎' },
+  { id: 5, label: '0.5x', type: 'multiplier', multiplier: 0.5, element: null, color: '#fb923c', bg: '#2d1808', icon: '🛡️' },
+  { id: 6, label: 'EARTH 2.5X', type: 'earth', multiplier: 2.5, element: 'earth', color: '#10b981', bg: '#09291b', icon: '🌿' },
+  { id: 7, label: '5.0x', type: 'multiplier', multiplier: 5.0, element: null, color: '#ec4899', bg: '#330d22', icon: '⭐' },
+  { id: 8, label: 'FIRE 3.0X', type: 'fire', multiplier: 3.0, element: 'fire', color: '#f43f5e', bg: '#2a0e14', icon: '🔥' },
+  { id: 9, label: '1.2x', type: 'multiplier', multiplier: 1.2, element: null, color: '#38bdf8', bg: '#0c2233', icon: '⚡' },
+  { id: 10, label: '10.0x', type: 'multiplier', multiplier: 10.0, element: null, color: '#f59e0b', bg: '#332005', icon: '👑' },
+  { id: 11, label: '0.0x', type: 'hazard', multiplier: 0.0, element: null, color: '#94a3b8', bg: '#18202d', icon: '💀' },
+  { id: 12, label: 'WATER 2.2X', type: 'water', multiplier: 2.2, element: 'water', color: '#06b6d4', bg: '#07242e', icon: '💧' },
+  { id: 13, label: '2.0x', type: 'multiplier', multiplier: 2.0, element: null, color: '#38bdf8', bg: '#0c2233', icon: '⚡' },
+  { id: 14, label: 'EARTH 1.8X', type: 'earth', multiplier: 1.8, element: 'earth', color: '#10b981', bg: '#09291b', icon: '🌿' },
+  { id: 15, label: '25.0x', type: 'jackpot', multiplier: 25.0, element: null, color: '#fbbf24', bg: '#3b2500', icon: '🌟' }
+];
+
+export const VERTEX_INNER_SLICES = [
+  { id: 0, label: '1x', boost: 1.0, type: 'neutral', icon: '✦', color: '#94a3b8' },
+  { id: 1, label: '+1.5x', boost: 1.5, type: 'boost', icon: '⚡', color: '#38bdf8' },
+  { id: 2, label: '2x CORE', boost: 2.0, type: 'double', icon: '✨', color: '#a855f7' },
+  { id: 3, label: 'SHIELD', boost: 1.0, type: 'shield', icon: '🛡️', color: '#10b981' },
+  { id: 4, label: '1x', boost: 1.0, type: 'neutral', icon: '✦', color: '#94a3b8' },
+  { id: 5, label: '3x CORE', boost: 3.0, type: 'triple', icon: '🔥', color: '#f43f5e' },
+  { id: 6, label: 'PRISM', boost: 1.5, type: 'prism', icon: '🔮', color: '#ec4899' },
+  { id: 7, label: '5x HYPER', boost: 5.0, type: 'hyper', icon: '👑', color: '#f59e0b' }
+];
+
+export function getVertexOutcomeForRound(roundNumber, clientSeed = '') {
+  let seed = cryptographicSeedMixer(roundNumber, GLOBAL_SALT_VERTEX);
+  if (clientSeed) {
+    for (let i = 0; i < clientSeed.length; i++) {
+      seed = (seed ^ (clientSeed.charCodeAt(i) << (i % 24))) >>> 0;
+      seed = Math.imul(seed, 0x85ebca6b);
+    }
+  }
+  const rng = mulberry32(seed);
+
+  const outerIndex = Math.floor(rng() * VERTEX_OUTER_SLICES.length);
+  const outerSlice = VERTEX_OUTER_SLICES[outerIndex];
+
+  const innerIndex = Math.floor(rng() * VERTEX_INNER_SLICES.length);
+  const innerSlice = VERTEX_INNER_SLICES[innerIndex];
+
+  return {
+    roundNumber,
+    roundId: `VTX-${roundNumber}`,
+    outerIndex,
+    outerSlice,
+    innerIndex,
+    innerSlice,
+    seedHex: seed.toString(16).toUpperCase()
+  };
+}
+
