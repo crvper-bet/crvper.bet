@@ -719,22 +719,6 @@ export default function AdminPage({ onExit }) {
             </button>
           </form>
 
-          <div className="mt-4 p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between">
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">Master Credentials</span>
-              <span className="font-mono text-xs text-emerald-400 font-bold">crvvper / crvvper@123</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setUsername('crvvper');
-                setPassword('crvvper@123');
-              }}
-              className="px-2.5 py-1 bg-emerald-500 text-slate-950 font-black text-xs rounded-lg hover:bg-emerald-400 transition"
-            >
-              Auto-fill
-            </button>
-          </div>
 
           <button
             onClick={onExit}
