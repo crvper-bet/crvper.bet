@@ -226,31 +226,32 @@ export default function GamesGrid({ onSelectGame }) {
       )
     },
     {
-      id: 'vertex',
+      id: 'vortex',
       category: 'originals',
-      name: 'VERTEX',
+      name: 'VORTEX',
       tag: 'CONCENTRIC ELEMENTAL WHEEL',
-      badge: 'NEW RELEASE ⚡',
-      rtp: '125x Max',
-      accentColor: '#f43f5e',
-      gradient: 'from-[#220d1c] via-[#1a0f24] to-[#0c121d]',
-      border: 'hover:border-rose-500/60 border-rose-900/30',
-      activePlayers: '3,420',
+      badge: 'OFFICIAL ⚡',
+      rtp: '200x Max',
+      accentColor: '#a855f7',
+      gradient: 'from-[#1e0e2e] via-[#160d26] to-[#0c121d]',
+      border: 'hover:border-purple-500/60 border-purple-900/30',
+      activePlayers: '4,680',
       liveBadge: (
-        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-rose-500/30 backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
-          <span className="text-[10px] font-mono font-bold text-slate-400">BONUS:</span>
-          <span className="text-xs font-mono font-black text-rose-300">
-            🔥 💧 🌿 Element Surge
+        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-purple-500/30 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+          <span className="text-[10px] font-mono font-bold text-slate-400">RINGS:</span>
+          <span className="text-xs font-mono font-black text-purple-300">
+            🔥 🌿 💧 Multi-Tier Payout
           </span>
         </div>
       ),
       previewSvg: (
         <div className="relative flex items-center justify-center w-14 h-14 group-hover:scale-110 transition duration-300">
-          <div className="absolute inset-0 rounded-full border-2 border-dashed border-rose-500/60 animate-spin" style={{ animationDuration: '8s' }} />
-          <div className="absolute inset-2 rounded-full border border-cyan-400/60 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
-          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center text-[10px] font-black text-white shadow-[0_0_12px_#f43f5e]">
-            V
+          <div className="absolute inset-0 rounded-full border-2 border-dashed border-purple-500/60 animate-spin" style={{ animationDuration: '8s' }} />
+          <div className="absolute inset-1.5 rounded-full border-2 border-emerald-400/60 animate-spin" style={{ animationDuration: '5s', animationDirection: 'reverse' }} />
+          <div className="absolute inset-3 rounded-full border border-cyan-400/60 animate-spin" style={{ animationDuration: '3s' }} />
+          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-[10px] font-black text-white shadow-[0_0_12px_#a855f7]">
+            🌀
           </div>
         </div>
       )

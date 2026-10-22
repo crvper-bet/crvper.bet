@@ -204,7 +204,7 @@ export default function App() {
   if (activeGame === 'plinko') {
     return <PlinkoGame onBack={() => setActiveGame(null)} />;
   }
-  if (activeGame === 'vertex') {
+  if (activeGame === 'vertex' || activeGame === 'vortex') {
     return <VertexGame onBack={() => setActiveGame(null)} />;
   }
 

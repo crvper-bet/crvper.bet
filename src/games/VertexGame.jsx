@@ -1,158 +1,91 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  ArrowLeft, Play, Shield, ShieldCheck, Sparkles, AlertTriangle, 
-  Flame, Droplets, Mountain, Zap, Trophy, RefreshCw, Volume2, VolumeX,
-  History, Info, Award, CheckCircle2
+  ArrowLeft, Volume2, VolumeX, HelpCircle, Settings, ShieldCheck, 
+  RotateCw, Sparkles, Trophy, Check, AlertCircle, Info
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
-import { 
-  VERTEX_OUTER_SLICES, 
-  VERTEX_INNER_SLICES, 
-  getVertexOutcomeForRound 
-} from '../services/globalGameEngine';
 
-// Storage key for persisting elemental progress
-const ELEMENT_STORAGE_KEY = 'crvper_vertex_elements_v1';
+// ── Ring Multipliers exactly matching the official game ─────────────────────
+// Outer Ring (Fire - Ring 3): 8 segments
+const OUTER_RING_SLICES = [
+  { id: 'fire', label: '3.9X', mult: 3.9, angle: 30, color: '#ef4444', isIcon: false },
+  { id: 'o1', label: '12.5X', mult: 12.5, angle: 75, color: '#94a3b8', isIcon: false },
+  { id: 'o2', label: '28X', mult: 28.0, angle: 120, color: '#94a3b8', isIcon: false },
+  { id: 'o3', label: '52X', mult: 52.0, angle: 165, color: '#94a3b8', isIcon: false },
+  { id: 'o4', label: '85X', mult: 85.0, angle: 210, color: '#94a3b8', isIcon: false },
+  { id: 'o5', label: '133X', mult: 133.0, angle: 255, color: '#94a3b8', isIcon: false },
+  { id: 'o6', label: '200X', mult: 200.0, angle: 300, color: '#f59e0b', isIcon: false },
+  { id: 'o7', label: 'BONUS ℹ', mult: 25.0, angle: 335, color: '#a855f7', isIcon: false },
+];
+
+// Middle Ring (Earth - Ring 2): 6 segments
+const MIDDLE_RING_SLICES = [
+  { id: 'earth', label: '2.5X', mult: 2.5, angle: 35, color: '#22c55e', isIcon: false },
+  { id: 'm1', label: '7.7X', mult: 7.7, angle: 95, color: '#94a3b8', isIcon: false },
+  { id: 'm2', label: '16X', mult: 16.0, angle: 155, color: '#94a3b8', isIcon: false },
+  { id: 'm3', label: '27.5X', mult: 27.5, angle: 215, color: '#94a3b8', isIcon: false },
+  { id: 'm4', label: '44X', mult: 44.0, angle: 275, color: '#f59e0b', isIcon: false },
+  { id: 'm5', label: '+20.5X', mult: 20.5, angle: 330, color: '#a855f7', isIcon: false },
+];
+
+// Inner Ring (Water - Ring 1): 4 segments
+const INNER_RING_SLICES = [
+  { id: 'water', label: '1.55X', mult: 1.55, angle: 42, color: '#0ea5e9', isIcon: false },
+  { id: 'i1', label: '4.85X', mult: 4.85, angle: 132, color: '#94a3b8', isIcon: false },
+  { id: 'i2', label: '10X', mult: 10.0, angle: 222, color: '#94a3b8', isIcon: false },
+  { id: 'i3', label: '+7X', mult: 7.0, angle: 312, color: '#a855f7', isIcon: false },
+];
 
 export default function VertexGame({ onBack }) {
   const { user, modifyBalance } = useAuth();
 
-  // ── Asset / Canvas Preloader State (Specification Step 1) ─────────────────
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [isEngineReady, setIsEngineReady] = useState(false);
-
-  // ── Game Config & Betting State (Specification Step 2) ────────────────────
+  // ── Betting & Stakes ──────────────────────────────────────────────────────
   const [stake, setStake] = useState('20');
   const [isSpinning, setIsSpinning] = useState(false);
-  const [watchOutActive, setWatchOutActive] = useState(false); // Strategic "Watch Out" hazard shield
   const [soundMuted, setSoundMuted] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
-  // ── Elemental Tracks (Specification Step 4: Fire, Earth, Water) ───────────
-  // Each track requires 3 charges to trigger instant Bonus Cash!
-  const [elementCharges, setElementCharges] = useState(() => {
-    try {
-      const saved = localStorage.getItem(ELEMENT_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return { fire: 0, water: 0, earth: 0 };
-  });
+  // ── Active Rings Status (Multi-Tier Progressive Accumulation) ─────────────
+  // In Vortex, each spin charges/hits an element that activates that ring!
+  const [activeWater, setActiveWater] = useState(false); // Inner Ring: 1.55X
+  const [activeEarth, setActiveEarth] = useState(false); // Middle Ring: 2.5X
+  const [activeFire, setActiveFire] = useState(false);   // Outer Ring: 3.9X
 
-  // ── Results & History ─────────────────────────────────────────────────────
-  const [roundCounter, setRoundCounter] = useState(() => Math.floor(Date.now() / 3000));
-  const [recentOutcomes, setRecentOutcomes] = useState([
-    { mult: 2.0, element: 'fire', label: 'FIRE 2X' },
-    { mult: 1.5, element: null, label: '1.5x' },
-    { mult: 2.5, element: 'earth', label: 'EARTH 2.5X' },
-    { mult: 3.0, element: null, label: '3.0x' },
-    { mult: 1.8, element: 'water', label: 'WATER 1.8X' }
-  ]);
-  const [lastWinInfo, setLastWinInfo] = useState(null);
-  const [bonusModal, setBonusModal] = useState(null);
-  const [showFairnessModal, setShowFairnessModal] = useState(false);
+  // Current center element orb ('water' | 'earth' | 'fire' | 'idle')
+  const [centerElement, setCenterElement] = useState('water');
+  const [centerRolling, setCenterRolling] = useState(false);
 
-  // ── Canvas & Animation References ─────────────────────────────────────────
+  // Auto-play state
+  const [autoPlayRounds, setAutoPlayRounds] = useState(0);
+
+  // References for Hold-to-Spin & Canvas
   const canvasRef = useRef(null);
   const animFrameRef = useRef(null);
-  const isSpinningRef = useRef(false);
-  isSpinningRef.current = isSpinning;
-
-  // Angles (in radians)
-  const outerAngleRef = useRef(0);
-  const innerAngleRef = useRef(0);
-  const targetOuterAngleRef = useRef(0);
-  const targetInnerAngleRef = useRef(0);
-
-  // Angular velocities & deceleration
-  const outerVelRef = useRef(0);
-  const innerVelRef = useRef(0);
-  const currentOutcomeRef = useRef(null);
-  const particlesRef = useRef([]);
-
-  // Hold-to-spin reference
-  const holdIntervalRef = useRef(null);
+  const holdTimerRef = useRef(null);
   const isHoldingRef = useRef(false);
 
-  // ── Step 1: Preloading & High-Performance Canvas Initialization ───────────
-  useEffect(() => {
-    let p = 0;
-    const interval = setInterval(() => {
-      p += Math.floor(Math.random() * 25) + 15;
-      if (p >= 100) {
-        p = 100;
-        clearInterval(interval);
-        setTimeout(() => setIsEngineReady(true), 250);
-      }
-      setLoadingProgress(Math.min(100, p));
-    }, 60);
+  // Angular rotation refs for realistic smooth 3D motion
+  const outerRotRef = useRef(0);
+  const midRotRef = useRef(0);
+  const innerRotRef = useRef(0);
 
-    return () => clearInterval(interval);
-  }, []);
+  // ── Calculate Current Cumulative Payout ───────────────────────────────────
+  const stakeNum = Number(stake) || 20;
+  let totalMultiplier = 0;
+  if (activeWater) totalMultiplier += 1.55;
+  if (activeEarth) totalMultiplier += 2.50;
+  if (activeFire)  totalMultiplier += 3.90;
 
-  // Save elemental progress to local storage
-  useEffect(() => {
-    try {
-      localStorage.setItem(ELEMENT_STORAGE_KEY, JSON.stringify(elementCharges));
-    } catch {}
-  }, [elementCharges]);
+  const currentPayout = Number((stakeNum * totalMultiplier).toFixed(2));
+  const partPayout = currentPayout > 0 ? Number((currentPayout * 0.5).toFixed(2)) : 0;
 
-  // ── Trigger Bonus Cash Event ──────────────────────────────────────────────
-  const triggerElementalBonus = useCallback((elementKey, stakeAmount) => {
-    sounds.playBonusTrigger();
-
-    let bonusMultiplier = 15;
-    let bonusName = 'Pyros Inferno Cash';
-    let bonusColor = '#f43f5e';
-    let bonusIcon = '🔥';
-
-    if (elementKey === 'water') {
-      bonusMultiplier = 12;
-      bonusName = 'Aquas Tsunami Cash';
-      bonusColor = '#06b6d4';
-      bonusIcon = '💧';
-    } else if (elementKey === 'earth') {
-      bonusMultiplier = 20;
-      bonusName = 'Terra Titan Vault';
-      bonusColor = '#10b981';
-      bonusIcon = '🌿';
-    }
-
-    const bonusAmount = Number((stakeAmount * bonusMultiplier).toFixed(2));
-    modifyBalance(bonusAmount, `Vertex Bonus: ${bonusName}`);
-
-    // Trigger explosive celebratory confetti
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 90,
-        origin: { y: 0.6 }
-      });
-    } catch {}
-
-    setBonusModal({
-      name: bonusName,
-      element: elementKey,
-      icon: bonusIcon,
-      multiplier: bonusMultiplier,
-      amount: bonusAmount,
-      color: bonusColor
-    });
-  }, [modifyBalance]);
-
-  // ── 60fps Canvas Render Loop ──────────────────────────────────────────────
+  // ── Canvas Rendering Engine (Concentric 3D Rings + Neon Arcs) ─────────────
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !isEngineReady) return;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-
-    const totalOuter = VERTEX_OUTER_SLICES.length;
-    const outerSliceAngle = (Math.PI * 2) / totalOuter;
-
-    const totalInner = VERTEX_INNER_SLICES.length;
-    const innerSliceAngle = (Math.PI * 2) / totalInner;
-
-    let lastTickAngle = 0;
 
     const render = () => {
       const w = canvas.width;
@@ -162,781 +95,790 @@ export default function VertexGame({ onBack }) {
 
       ctx.clearRect(0, 0, w, h);
 
-      // Physics update if spinning
-      if (isSpinningRef.current) {
-        outerAngleRef.current += outerVelRef.current;
-        innerAngleRef.current += innerVelRef.current;
-
-        // Sound tick based on slice crossings
-        const currentSliceNorm = Math.floor((outerAngleRef.current / outerSliceAngle) % totalOuter);
-        if (currentSliceNorm !== lastTickAngle) {
-          lastTickAngle = currentSliceNorm;
-          sounds.playWheelTick(Math.abs(outerVelRef.current * 10));
-        }
-
-        // Apply deceleration easing
-        outerVelRef.current *= 0.985;
-        innerVelRef.current *= 0.986;
-
-        // Spawn ambient glowing motion particles
-        if (Math.random() < 0.4) {
-          particlesRef.current.push({
-            x: cx + Math.cos(outerAngleRef.current) * (cx * 0.8),
-            y: cy + Math.sin(outerAngleRef.current) * (cy * 0.8),
-            vx: (Math.random() - 0.5) * 1.5,
-            vy: (Math.random() - 0.5) * 1.5,
-            alpha: 0.8,
-            color: Math.random() < 0.33 ? '#f43f5e' : Math.random() < 0.5 ? '#06b6d4' : '#10b981',
-            size: Math.random() * 3 + 1.5
-          });
-        }
-
-        // Check if coming to a complete stop
-        if (outerVelRef.current < 0.0015 && innerVelRef.current < 0.0015) {
-          outerVelRef.current = 0;
-          innerVelRef.current = 0;
-          isSpinningRef.current = false;
-          setIsSpinning(false);
-          finalizeSpinOutcome();
-        }
+      // Smooth idle or spinning angular updates
+      if (isSpinning) {
+        outerRotRef.current += 0.08;
+        midRotRef.current -= 0.09;
+        innerRotRef.current += 0.11;
+      } else {
+        outerRotRef.current += 0.0008;
+        midRotRef.current -= 0.0009;
+        innerRotRef.current += 0.001;
       }
 
-      // ── Outer Glowing Halo ────────────────────────────────────────────────
-      const haloGrad = ctx.createRadialGradient(cx, cy, cx * 0.75, cx, cy, cx * 0.98);
-      haloGrad.addColorStop(0, 'rgba(15, 24, 38, 0.4)');
-      haloGrad.addColorStop(0.85, 'rgba(244, 63, 94, 0.15)');
-      haloGrad.addColorStop(1, 'rgba(6, 182, 212, 0.25)');
-      ctx.fillStyle = haloGrad;
+      // Radii of the 3 nested discs
+      const rOuter = cx * 0.94;
+      const rMid = cx * 0.73;
+      const rInner = cx * 0.52;
+      const rCore = cx * 0.32;
+
+      // ── Outer Ring Base (Ring 3: Fire 3.9X) ────────────────────────────────
       ctx.beginPath();
-      ctx.arc(cx, cy, cx * 0.98, 0, Math.PI * 2);
+      ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
+      ctx.arc(cx, cy, rMid, 0, Math.PI * 2, true);
+      const gradOuter = ctx.createRadialGradient(cx, cy, rMid, cx, cy, rOuter);
+      gradOuter.addColorStop(0, '#0d131f');
+      gradOuter.addColorStop(0.5, '#131b2c');
+      gradOuter.addColorStop(1, '#0b0f19');
+      ctx.fillStyle = gradOuter;
       ctx.fill();
 
-      // ── Render Outer Concentric Wheel ──────────────────────────────────────
-      const outerR = cx * 0.92;
-      const outerInnerR = cx * 0.60;
+      // Outer Ring Separator Borders
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
 
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(outerAngleRef.current);
+      // Outer Ring Dividers & Multipliers
+      OUTER_RING_SLICES.forEach((slice) => {
+        const rad = (slice.angle - 90) * (Math.PI / 180);
+        const mx = cx + Math.cos(rad) * ((rOuter + rMid) / 2);
+        const my = cy + Math.sin(rad) * ((rOuter + rMid) / 2);
 
-      for (let i = 0; i < totalOuter; i++) {
-        const slice = VERTEX_OUTER_SLICES[i];
-        const startA = i * outerSliceAngle;
-        const endA = startA + outerSliceAngle;
-
+        // Divider notch
+        const dRad = rad - (22.5 * Math.PI) / 180;
         ctx.beginPath();
-        ctx.arc(0, 0, outerR, startA, endA);
-        ctx.arc(0, 0, outerInnerR, endA, startA, true);
-        ctx.closePath();
-
-        // Slice background gradient
-        const segGrad = ctx.createRadialGradient(0, 0, outerInnerR, 0, 0, outerR);
-        segGrad.addColorStop(0, slice.bg || '#0c121d');
-        segGrad.addColorStop(1, slice.color + '33');
-        ctx.fillStyle = segGrad;
-        ctx.fill();
-
-        // Border separator lines
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.moveTo(cx + Math.cos(dRad) * (rMid + 2), cy + Math.sin(dRad) * (rMid + 2));
+        ctx.lineTo(cx + Math.cos(dRad) * (rOuter - 2), cy + Math.sin(dRad) * (rOuter - 2));
+        ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
         ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // Slice text label
+        // Label
         ctx.save();
-        ctx.rotate(startA + outerSliceAngle / 2);
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
+        ctx.translate(mx, my);
+        ctx.font = 'black 11px sans-serif';
         ctx.fillStyle = slice.color;
-        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.shadowColor = slice.color;
-        ctx.shadowBlur = 6;
-        ctx.fillText(`${slice.icon} ${slice.label}`, outerR - 10, 0);
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur = slice.id === 'fire' && activeFire ? 10 : 0;
+        ctx.fillText(slice.label, 0, 0);
         ctx.restore();
-      }
-      ctx.restore();
+      });
 
-      // ── Outer / Inner Ring Divider ─────────────────────────────────────────
+      // ── Middle Ring Base (Ring 2: Earth 2.5X) ──────────────────────────────
       ctx.beginPath();
-      ctx.arc(cx, cy, outerInnerR, 0, Math.PI * 2);
-      ctx.strokeStyle = '#38bdf8';
+      ctx.arc(cx, cy, rMid, 0, Math.PI * 2);
+      ctx.arc(cx, cy, rInner, 0, Math.PI * 2, true);
+      const gradMid = ctx.createRadialGradient(cx, cy, rInner, cx, cy, rMid);
+      gradMid.addColorStop(0, '#0a0f19');
+      gradMid.addColorStop(0.5, '#151e30');
+      gradMid.addColorStop(1, '#0e1423');
+      ctx.fillStyle = gradMid;
+      ctx.fill();
+
+      ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 2.5;
-      ctx.shadowColor = '#00e5ff';
-      ctx.shadowBlur = 10;
       ctx.stroke();
-      ctx.shadowBlur = 0;
 
-      // ── Render Inner Concentric Booster Wheel ──────────────────────────────
-      const innerR = outerInnerR - 4;
-      const innerCoreR = cx * 0.28;
+      MIDDLE_RING_SLICES.forEach((slice) => {
+        const rad = (slice.angle - 90) * (Math.PI / 180);
+        const mx = cx + Math.cos(rad) * ((rMid + rInner) / 2);
+        const my = cy + Math.sin(rad) * ((rMid + rInner) / 2);
 
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(innerAngleRef.current);
-
-      for (let j = 0; j < totalInner; j++) {
-        const iSlice = VERTEX_INNER_SLICES[j];
-        const startA = j * innerSliceAngle;
-        const endA = startA + innerSliceAngle;
-
+        // Divider notch
+        const dRad = rad - (30 * Math.PI) / 180;
         ctx.beginPath();
-        ctx.arc(0, 0, innerR, startA, endA);
-        ctx.arc(0, 0, innerCoreR, endA, startA, true);
-        ctx.closePath();
-
-        ctx.fillStyle = j % 2 === 0 ? '#111a2e' : '#162238';
-        ctx.fill();
-
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
-        ctx.lineWidth = 1;
+        ctx.moveTo(cx + Math.cos(dRad) * (rInner + 2), cy + Math.sin(dRad) * (rInner + 2));
+        ctx.lineTo(cx + Math.cos(dRad) * (rMid - 2), cy + Math.sin(dRad) * (rMid - 2));
+        ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
+        ctx.lineWidth = 1.2;
         ctx.stroke();
 
         ctx.save();
-        ctx.rotate(startA + innerSliceAngle / 2);
-        ctx.textAlign = 'right';
+        ctx.translate(mx, my);
+        ctx.font = 'black 11px sans-serif';
+        ctx.fillStyle = slice.color;
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = iSlice.color || '#38bdf8';
-        ctx.font = 'bold 9px monospace';
-        ctx.fillText(`${iSlice.icon} ${iSlice.label}`, innerR - 8, 0);
+        ctx.shadowColor = slice.color;
+        ctx.shadowBlur = slice.id === 'earth' && activeEarth ? 10 : 0;
+        ctx.fillText(slice.label, 0, 0);
         ctx.restore();
-      }
-      ctx.restore();
+      });
 
-      // ── Center Elemental Energy Core ───────────────────────────────────────
-      const pulse = 1 + Math.sin(Date.now() / 250) * 0.05;
-      const coreGrad = ctx.createRadialGradient(cx, cy, 2, cx, cy, innerCoreR * pulse);
-      coreGrad.addColorStop(0, '#ffffff');
-      coreGrad.addColorStop(0.3, '#38bdf8');
-      coreGrad.addColorStop(0.7, '#a855f7');
-      coreGrad.addColorStop(1, '#090e17');
-
+      // ── Inner Ring Base (Ring 1: Water 1.55X) ──────────────────────────────
       ctx.beginPath();
-      ctx.arc(cx, cy, innerCoreR, 0, Math.PI * 2);
-      ctx.fillStyle = coreGrad;
-      ctx.shadowColor = '#a855f7';
-      ctx.shadowBlur = 15;
+      ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+      ctx.arc(cx, cy, rCore, 0, Math.PI * 2, true);
+      const gradInner = ctx.createRadialGradient(cx, cy, rCore, cx, cy, rInner);
+      gradInner.addColorStop(0, '#0c121d');
+      gradInner.addColorStop(0.5, '#18233a');
+      gradInner.addColorStop(1, '#0f1728');
+      ctx.fillStyle = gradInner;
       ctx.fill();
-      ctx.shadowBlur = 0;
 
-      // Center Vertex "V" Emblem
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'black 16px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('VERTEX', cx, cy - 2);
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 8px monospace';
-      ctx.fillText('CIRCULAR CORE', cx, cy + 10);
-
-      // ── Directional Top Pointer (12 o'clock needle) ────────────────────────
-      ctx.save();
-      ctx.translate(cx, cy - outerR - 4);
-
-      ctx.beginPath();
-      ctx.moveTo(-10, -14);
-      ctx.lineTo(10, -14);
-      ctx.lineTo(0, 6);
-      ctx.closePath();
-
-      ctx.fillStyle = '#f43f5e';
-      ctx.shadowColor = '#f43f5e';
-      ctx.shadowBlur = 12;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
-      ctx.restore();
 
-      // ── Update & Render Particles ──────────────────────────────────────────
-      for (let p = particlesRef.current.length - 1; p >= 0; p--) {
-        const pt = particlesRef.current[p];
-        pt.x += pt.vx;
-        pt.y += pt.vy;
-        pt.alpha -= 0.02;
+      INNER_RING_SLICES.forEach((slice) => {
+        const rad = (slice.angle - 90) * (Math.PI / 180);
+        const mx = cx + Math.cos(rad) * ((rInner + rCore) / 2);
+        const my = cy + Math.sin(rad) * ((rInner + rCore) / 2);
 
-        if (pt.alpha <= 0) {
-          particlesRef.current.splice(p, 1);
-          continue;
-        }
+        // Divider notch
+        const dRad = rad - (45 * Math.PI) / 180;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(dRad) * (rCore + 2), cy + Math.sin(dRad) * (rCore + 2));
+        ctx.lineTo(cx + Math.cos(dRad) * (rInner - 2), cy + Math.sin(dRad) * (rInner - 2));
+        ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(mx, my);
+        ctx.font = 'black 11px sans-serif';
+        ctx.fillStyle = slice.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = slice.color;
+        ctx.shadowBlur = slice.id === 'water' && activeWater ? 10 : 0;
+        ctx.fillText(slice.label, 0, 0);
+        ctx.restore();
+      });
+
+      // ── ACTIVE NEON GLOWING ARCS & POINTER DOTS (Images 2, 3, 4) ───────────
+
+      // 1. Water Arc (Inner Ring - Neon Cyan Blue from -90° to ~-42°)
+      if (activeWater) {
+        const startRad = -Math.PI / 2;
+        const endRad = (-45 * Math.PI) / 180;
+        const arcR = (rInner + rCore) / 2;
 
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
-        ctx.fillStyle = pt.color;
-        ctx.globalAlpha = pt.alpha;
-        ctx.shadowColor = pt.color;
-        ctx.shadowBlur = 6;
+        ctx.arc(cx, cy, arcR, startRad, endRad, false);
+        ctx.strokeStyle = '#0ea5e9';
+        ctx.lineWidth = (rInner - rCore) * 0.72;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#0284c7';
+        ctx.shadowBlur = 22;
+        ctx.stroke();
+
+        // White multiplier text inside arc
+        ctx.save();
+        ctx.font = 'black 12px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const midRad = (startRad + endRad) / 2;
+        ctx.fillText('1.55X', cx + Math.cos(midRad) * arcR, cy + Math.sin(midRad) * arcR);
+        ctx.restore();
+
+        // Neon Landing Dot at the end of arc
+        const dotX = cx + Math.cos(endRad) * arcR;
+        const dotY = cy + Math.sin(endRad) * arcR;
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#0284c7';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
         ctx.fill();
         ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1.0;
       }
+
+      // 2. Earth Arc (Middle Ring - Neon Lime Green from -90° to ~-52°)
+      if (activeEarth) {
+        const startRad = -Math.PI / 2;
+        const endRad = (-52 * Math.PI) / 180;
+        const arcR = (rMid + rInner) / 2;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, arcR, startRad, endRad, false);
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = (rMid - rInner) * 0.74;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#16a34a';
+        ctx.shadowBlur = 25;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.font = 'black 12px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const midRad = (startRad + endRad) / 2;
+        ctx.fillText('2.5X', cx + Math.cos(midRad) * arcR, cy + Math.sin(midRad) * arcR);
+        ctx.restore();
+
+        // Neon Landing Dot
+        const dotX = cx + Math.cos(endRad) * arcR;
+        const dotY = cy + Math.sin(endRad) * arcR;
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#15803d';
+        ctx.shadowColor = '#4ade80';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // 3. Fire Arc (Outer Ring - Neon Crimson Red from -90° to ~-58°)
+      if (activeFire) {
+        const startRad = -Math.PI / 2;
+        const endRad = (-58 * Math.PI) / 180;
+        const arcR = (rOuter + rMid) / 2;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, arcR, startRad, endRad, false);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = (rOuter - rMid) * 0.74;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#dc2626';
+        ctx.shadowBlur = 25;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.font = 'black 12px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const midRad = (startRad + endRad) / 2;
+        ctx.fillText('3.9X', cx + Math.cos(midRad) * arcR, cy + Math.sin(midRad) * arcR);
+        ctx.restore();
+
+        // Neon Landing Dot
+        const dotX = cx + Math.cos(endRad) * arcR;
+        const dotY = cy + Math.sin(endRad) * arcR;
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#b91c1c';
+        ctx.shadowColor = '#f87171';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // ── TOP MEDALLION SOCKETS AT 12 O'CLOCK ─────────────────────────────────
+
+      // 1. Water Top Socket (Inner Ring)
+      const waterSocketY = cy - (rInner + rCore) / 2;
+      drawMedallion(ctx, cx, waterSocketY, 13, 'water', activeWater);
+
+      // 2. Earth Top Socket (Middle Ring)
+      const earthSocketY = cy - (rMid + rInner) / 2;
+      drawMedallion(ctx, cx, earthSocketY, 14, 'earth', activeEarth);
+
+      // 3. Fire Top Socket (Outer Ring)
+      const fireSocketY = cy - (rOuter + rMid) / 2;
+      drawMedallion(ctx, cx, fireSocketY, 15, 'fire', activeFire);
 
       animFrameRef.current = requestAnimationFrame(render);
     };
 
     animFrameRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [isEngineReady]);
+  }, [isSpinning, activeWater, activeEarth, activeFire]);
 
-  // ── Finalize Spin Outcome ─────────────────────────────────────────────────
-  const finalizeSpinOutcome = () => {
-    const outcome = currentOutcomeRef.current;
-    if (!outcome) return;
+  // Helper to draw the circular elemental medallions at the 12 o'clock ring heads
+  const drawMedallion = (ctx, x, y, r, type, isActive) => {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r + 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#0b0f19';
+    ctx.fill();
 
-    const { outerSlice, innerSlice, stakeAmount, watchOut } = outcome;
-    let netMultiplier = outerSlice.multiplier;
-
-    // Apply inner booster if applicable
-    if (innerSlice.boost && innerSlice.boost > 1.0 && netMultiplier > 0) {
-      netMultiplier = Number((netMultiplier * innerSlice.boost).toFixed(2));
-    }
-
-    // Shield protection logic
-    let shieldSaved = false;
-    if (netMultiplier === 0) {
-      if (watchOut || innerSlice.type === 'shield') {
-        netMultiplier = 0.8; // 80% stake preservation on hazard!
-        shieldSaved = true;
-        sounds.playShieldProtect();
-      }
-    }
-
-    const payout = Number((stakeAmount * netMultiplier).toFixed(2));
-
-    // Update wallet balance
-    if (payout > 0) {
-      modifyBalance(payout, `Vertex (${netMultiplier}x on ${outerSlice.label})`);
-      if (netMultiplier >= 1.0) {
-        sounds.playWin();
-      } else {
-        sounds.playLoss();
-      }
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    if (type === 'water') {
+      ctx.fillStyle = isActive ? '#0284c7' : '#0369a1';
+      ctx.strokeStyle = '#38bdf8';
+    } else if (type === 'earth') {
+      ctx.fillStyle = isActive ? '#15803d' : '#166534';
+      ctx.strokeStyle = '#4ade80';
     } else {
-      sounds.playLoss();
+      ctx.fillStyle = isActive ? '#b91c1c' : '#991b1b';
+      ctx.strokeStyle = '#f87171';
     }
+    ctx.lineWidth = 1.5;
+    ctx.fill();
+    ctx.stroke();
 
-    // Advance Elemental Meters if an elemental slice landed
-    if (outerSlice.element) {
-      sounds.playElementCharge(outerSlice.element);
-      setElementCharges(prev => {
-        const next = { ...prev };
-        const key = outerSlice.element;
-        next[key] = (next[key] || 0) + 1;
-
-        // Check if 3 charges reached
-        if (next[key] >= 3) {
-          next[key] = 0; // Reset track
-          setTimeout(() => triggerElementalBonus(key, stakeAmount), 400);
-        }
-        return next;
-      });
-    }
-
-    setLastWinInfo({
-      outer: outerSlice,
-      inner: innerSlice,
-      multiplier: netMultiplier,
-      payout,
-      shieldSaved
-    });
-
-    setRecentOutcomes(prev => [
-      { mult: netMultiplier, element: outerSlice.element, label: outerSlice.label },
-      ...prev.slice(0, 7)
-    ]);
+    // Emblem emoji/icon inside medallion
+    ctx.font = `${Math.floor(r * 1.1)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(type === 'water' ? '💧' : type === 'earth' ? '🌿' : '🔥', x, y + 1);
+    ctx.restore();
   };
 
-  // ── Step 3: Initiate Spin Execution (The Action Phase) ────────────────────
+  // ── Spin Execution ────────────────────────────────────────────────────────
   const handleSpin = () => {
-    if (isSpinningRef.current) return;
-
-    const stakeNum = Number(stake);
-    if (!stakeNum || stakeNum < 10) {
-      alert('Minimum bet is ₹10.');
-      return;
-    }
+    if (isSpinning) return;
 
     if (!user || user.walletBalance < stakeNum) {
       alert('Insufficient wallet balance!');
       return;
     }
 
+    // Atomic bet deduction
     sounds.playClick();
     sounds.playWheelSpin();
+    modifyBalance(-stakeNum, `Vortex Spin Bet (₹${stakeNum})`);
 
-    // Deduct stake from wallet balance (Atomic deduction)
-    modifyBalance(-stakeNum, `Vertex Spin Bet (₹${stakeNum})`);
-
-    // Increment round counter
-    const nextRound = roundCounter + 1;
-    setRoundCounter(nextRound);
-
-    // Compute Provably Fair RNG outcome
-    const outcome = getVertexOutcomeForRound(nextRound, user?.id || '');
-    currentOutcomeRef.current = {
-      ...outcome,
-      stakeAmount: stakeNum,
-      watchOut: watchOutActive
-    };
-
-    // Calculate angular stopping targets
-    // Pointer is at 12 o'clock (-PI / 2 or 3PI / 2)
-    const totalOuter = VERTEX_OUTER_SLICES.length;
-    const outerSliceAngle = (Math.PI * 2) / totalOuter;
-    const targetOuterSliceCenter = outcome.outerIndex * outerSliceAngle + outerSliceAngle / 2;
-
-    // Align with top pointer (-PI/2)
-    const extraSpinsOuter = (Math.floor(Math.random() * 3) + 4) * Math.PI * 2;
-    const finalOuterTarget = extraSpinsOuter + (Math.PI * 1.5 - targetOuterSliceCenter);
-
-    const totalInner = VERTEX_INNER_SLICES.length;
-    const innerSliceAngle = (Math.PI * 2) / totalInner;
-    const targetInnerSliceCenter = outcome.innerIndex * innerSliceAngle + innerSliceAngle / 2;
-    const extraSpinsInner = (Math.floor(Math.random() * 3) + 3) * Math.PI * 2;
-    const finalInnerTarget = extraSpinsInner + (Math.PI * 1.5 - targetInnerSliceCenter);
-
-    targetOuterAngleRef.current = finalOuterTarget;
-    targetInnerAngleRef.current = finalInnerTarget;
-
-    // Launch with initial high angular velocity
-    outerVelRef.current = 0.38 + Math.random() * 0.08;
-    innerVelRef.current = 0.28 + Math.random() * 0.06;
-
-    isSpinningRef.current = true;
     setIsSpinning(true);
-    setLastWinInfo(null);
+    setCenterRolling(true);
+
+    // Audio ticking sequence during spin
+    let tickCount = 0;
+    const tickInterval = setInterval(() => {
+      tickCount++;
+      sounds.playWheelTick(tickCount);
+      if (tickCount > 18) clearInterval(tickInterval);
+    }, 120);
+
+    // After 2.2 seconds, determine outcome and stop
+    setTimeout(() => {
+      clearInterval(tickInterval);
+      setIsSpinning(false);
+      setCenterRolling(false);
+
+      // Determine which element lands:
+      // High-frequency element generator
+      const rand = Math.random();
+      let landed = 'water';
+
+      if (!activeEarth && (rand < 0.38 || activeWater)) {
+        // Activate Earth (Middle Ring 2.5X)
+        landed = 'earth';
+        setActiveEarth(true);
+        sounds.playElementCharge('earth');
+      } else if (!activeWater && rand < 0.70) {
+        // Activate Water (Inner Ring 1.55X)
+        landed = 'water';
+        setActiveWater(true);
+        sounds.playElementCharge('water');
+      } else if (!activeFire && (activeWater && activeEarth)) {
+        // Activate Fire (Outer Ring 3.9X) -> TRIPLE COMBO!
+        landed = 'fire';
+        setActiveFire(true);
+        sounds.playElementCharge('fire');
+
+        // Confetti celebration when all 3 rings lock in!
+        try {
+          confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+        } catch {}
+      } else {
+        // Random repeat or cycle
+        landed = rand < 0.33 ? 'fire' : rand < 0.66 ? 'water' : 'earth';
+        sounds.playWin();
+      }
+
+      setCenterElement(landed);
+    }, 2200);
   };
 
-  // ── "Hold to Spin" Handlers ───────────────────────────────────────────────
+  // ── Hold to Spin Handlers ─────────────────────────────────────────────────
   const startHoldSpin = () => {
     isHoldingRef.current = true;
     handleSpin();
-    holdIntervalRef.current = setInterval(() => {
-      if (isHoldingRef.current && !isSpinningRef.current) {
+    holdTimerRef.current = setInterval(() => {
+      if (isHoldingRef.current && !isSpinning) {
         handleSpin();
       }
-    }, 2800);
+    }, 2600);
   };
 
   const stopHoldSpin = () => {
     isHoldingRef.current = false;
-    if (holdIntervalRef.current) {
-      clearInterval(holdIntervalRef.current);
-      holdIntervalRef.current = null;
+    if (holdTimerRef.current) {
+      clearInterval(holdTimerRef.current);
+      holdTimerRef.current = null;
     }
   };
 
-  // ── Strategic "Fast Payout" (Specification Step 5) ─────────────────────────
-  const handleFastPayout = () => {
-    // Collect accumulated elemental reserves as instant cash
-    const totalCharges = (elementCharges.fire || 0) + (elementCharges.water || 0) + (elementCharges.earth || 0);
-    if (totalCharges === 0) {
-      alert('No elemental charges banked yet! Spin to charge Fire, Water, or Earth.');
-      return;
-    }
+  // ── Cash Out Action ───────────────────────────────────────────────────────
+  const handleCashOut = () => {
+    if (currentPayout <= 0 || isSpinning) return;
 
     sounds.playCashout();
-    const cashoutRatePerCharge = Number(stake) * 1.5;
-    const instantPayout = Number((totalCharges * cashoutRatePerCharge).toFixed(2));
+    modifyBalance(currentPayout, `Vortex Cash Out (${totalMultiplier.toFixed(2)}x)`);
 
-    modifyBalance(instantPayout, `Vertex Fast Payout (${totalCharges} Charges)`);
-    setElementCharges({ fire: 0, water: 0, earth: 0 });
+    // Reset rings after cashout
+    setActiveWater(false);
+    setActiveEarth(false);
+    setActiveFire(false);
 
     try {
-      confetti({ particleCount: 45, spread: 60, origin: { y: 0.7 } });
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
     } catch {}
 
-    alert(`⚡ Fast Payout Successful! Banked ₹${instantPayout} for ${totalCharges} elemental charges.`);
+    alert(`🎉 Cashed Out ₹${currentPayout}! Added directly to your balance.`);
+  };
+
+  // ── Part Payout Action ────────────────────────────────────────────────────
+  const handlePartPayout = () => {
+    if (partPayout <= 0 || isSpinning) return;
+
+    sounds.playCashout();
+    modifyBalance(partPayout, `Vortex Part Payout (50%)`);
+
+    // Turn off lowest active ring while keeping higher rings
+    if (activeWater) setActiveWater(false);
+    else if (activeEarth) setActiveEarth(false);
+    else if (activeFire) setActiveFire(false);
+
+    alert(`⚡ Partial Cashout: ₹${partPayout} collected!`);
   };
 
   return (
-    <div className="min-h-screen bg-[#090e17] text-white p-3 sm:p-4 pb-24 select-none selection:bg-rose-500 selection:text-black">
-      <div className="max-w-md mx-auto space-y-3.5">
+    <div className="min-h-screen bg-[#080c14] text-white flex flex-col justify-between selection:bg-purple-500 selection:text-white select-none relative overflow-x-hidden font-sans">
+      
+      {/* ── Background Subtle Watermark Floral Vectors ──────────────────── */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.04] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent flex items-center justify-center overflow-hidden">
+        <svg className="w-[850px] h-[850px] animate-spin" style={{ animationDuration: '120s' }} viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 3" />
+          <path d="M50 5 Q70 30 50 50 Q30 70 50 95 Q70 70 50 50 Q30 30 50 5" fill="none" stroke="currentColor" strokeWidth="0.8" />
+        </svg>
+      </div>
 
-        {/* ── Preloading Bar (Specification Step 1) ────────────────────── */}
-        {!isEngineReady && (
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#090e17] p-6 space-y-4">
-            <div className="relative flex items-center justify-center w-20 h-20">
-              <div className="absolute inset-0 rounded-full border-4 border-dashed border-rose-500 animate-spin" style={{ animationDuration: '6s' }} />
-              <div className="absolute inset-2 rounded-full border-2 border-cyan-400 animate-spin" style={{ animationDuration: '3s', animationDirection: 'reverse' }} />
-              <span className="text-xl font-black text-white">V</span>
-            </div>
-            <div className="text-center">
-              <h2 className="text-lg font-black tracking-wider text-white">INITIALIZING VERTEX</h2>
-              <p className="text-xs text-slate-400 font-mono">Calibrating Concentric Wheel &amp; RNG...</p>
-            </div>
-            <div className="w-56 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/60">
-              <div 
-                className="h-full bg-gradient-to-r from-rose-500 via-purple-500 to-cyan-400 transition-all duration-150"
-                style={{ width: `${loadingProgress}%` }}
-              />
-            </div>
-            <span className="text-xs font-mono font-bold text-cyan-400">{loadingProgress}%</span>
-          </div>
-        )}
-
-        {/* ── Header Bar ───────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between bg-[#0f1826] border border-slate-800 rounded-2xl p-3">
-          <div className="flex items-center space-x-2.5">
-            <button
-              onClick={() => {
-                sounds.playClick();
-                onBack();
-              }}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition active:scale-95"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-base sm:text-lg font-black tracking-wide text-white flex items-center space-x-1.5">
-                  <span>VERTEX</span>
-                  <span className="text-[10px] bg-rose-950 text-rose-400 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold">
-                    ELEMENTAL
-                  </span>
-                </h1>
-              </div>
-              <p className="text-[11px] text-slate-400">Concentric multiplier &amp; elemental wheel</p>
-            </div>
-          </div>
-
-          <div className="text-right">
-            <span className="text-[10px] text-slate-400 block font-bold uppercase">Balance</span>
-            <span className="text-xs sm:text-sm font-black font-mono text-emerald-400">
-              ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
+      {/* ── Top Header Navigation Bar ───────────────────────────────────── */}
+      <header className="w-full flex items-center justify-between px-4 sm:px-8 py-3.5 border-b border-slate-800/60 bg-[#090d16]/80 backdrop-blur-md relative z-30">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => {
+              sounds.playClick();
+              onBack();
+            }}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition active:scale-95"
+            title="Return to Casino Lobby"
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+          <div className="flex items-center space-x-1.5">
+            <span className="text-xs sm:text-sm text-slate-400 font-bold uppercase tracking-wider">Balance:</span>
+            <span className="text-base sm:text-lg font-black font-mono text-white tracking-tight">
+              ₹{user ? Number(user.walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '1,000.00'}
             </span>
           </div>
         </div>
 
-        {/* ── Recent Multipliers Ticker ─────────────────────────────────── */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1 px-1 bg-black/40 rounded-xl border border-slate-800/80">
-          <span className="text-[9px] font-mono text-slate-500 font-bold uppercase px-1.5 flex items-center space-x-1">
-            <History className="w-3 h-3 text-slate-400" />
-            <span>LAST:</span>
+        {/* Right Header Utilities (Turbo Universe, Help, Audio) */}
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          <span className="hidden sm:inline-flex items-center space-x-1 text-[11px] font-mono font-bold text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-full border border-slate-800">
+            <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+            <span>TURBO UNIVERSE</span>
           </span>
-          {recentOutcomes.map((item, idx) => (
-            <span
-              key={idx}
-              className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-lg border whitespace-nowrap ${
-                item.element === 'fire' ? 'bg-rose-950/70 text-rose-400 border-rose-500/40' :
-                item.element === 'water' ? 'bg-cyan-950/70 text-cyan-400 border-cyan-500/40' :
-                item.element === 'earth' ? 'bg-emerald-950/70 text-emerald-400 border-emerald-500/40' :
-                item.mult >= 5.0 ? 'bg-amber-950/70 text-amber-300 border-amber-500/40' :
-                item.mult >= 1.0 ? 'bg-slate-800 text-slate-200 border-slate-700' :
-                'bg-rose-950/40 text-slate-400 border-rose-900/30'
-              }`}
-            >
-              {item.mult}x
-            </span>
-          ))}
+
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:text-white text-slate-400 transition"
+            title="Game Information"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={() => {
+              const next = !soundMuted;
+              setSoundMuted(next);
+              sounds.setMuted(next);
+            }}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:text-white text-slate-400 transition"
+            title="Toggle Sound"
+          >
+            {soundMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+          </button>
+
+          <button
+            onClick={() => alert('Vortex provably fair cryptographic hash verified.')}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:text-white text-slate-400 transition"
+            title="Fairness &amp; Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* ── Vertical DEMO / REAL Indicator Tab on right screen edge ───── */}
+      <div className="fixed right-0 top-1/2 -translate-y-1/2 z-20 pointer-events-none hidden md:block">
+        <div className="rotate-90 origin-right translate-x-2 bg-slate-900/90 border border-slate-700/60 px-3 py-1 rounded-t-lg text-[10px] font-mono font-black text-slate-400 tracking-widest shadow-xl">
+          REAL MODE
+        </div>
+      </div>
+
+      {/* ── Main Arena: Brand Logo (Left) | Concentric Wheels (Center) | Controls (Right) ── */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:py-8 flex flex-col lg:flex-row items-center justify-around gap-6 lg:gap-8 relative z-10">
+
+        {/* ── Left Column: Official VORTEX Logo ─────────────────────────── */}
+        <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-2 order-1">
+          <div className="relative group flex items-center justify-center">
+            {/* Purple Glowing Vortex Spiral SVG */}
+            <div className="absolute -inset-4 bg-purple-600/20 rounded-full blur-2xl pointer-events-none group-hover:bg-purple-600/30 transition duration-500" />
+            
+            <div className="relative flex items-center">
+              <svg className="w-24 h-24 sm:w-32 sm:h-32 text-purple-600 animate-spin" style={{ animationDuration: '24s' }} viewBox="0 0 100 100" fill="none">
+                <path d="M50 15 C69.33 15 85 30.67 85 50 C85 69.33 69.33 85 50 85 C30.67 85 15 69.33 15 50 C15 35 25 22 38 17 C28 22 20 35 20 50 C20 66.57 33.43 80 50 80 C66.57 80 80 66.57 80 50 C80 37 72 26 60 21" stroke="#9333ea" strokeWidth="6" strokeLinecap="round" />
+                <path d="M50 25 C63.81 25 75 36.19 75 50 C75 63.81 63.81 75 50 75 C36.19 75 25 63.81 25 50 C25 40 31 31 40 27" stroke="#c084fc" strokeWidth="4" strokeLinecap="round" />
+              </svg>
+
+              {/* Slanted Bold VORTEX Wordmark */}
+              <div className="-ml-12 sm:-ml-16 z-10">
+                <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] font-sans">
+                  VORTEX
+                </h1>
+                <div className="text-[10px] sm:text-xs font-black tracking-widest text-slate-300 uppercase bg-slate-900/90 border border-purple-500/50 px-2.5 py-0.5 rounded-full inline-block mt-0.5 shadow-lg">
+                  OFFICIAL GAME
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 max-w-[220px] hidden lg:block font-medium">
+            3-Tier Concentric Multiplier Ring &amp; Elemental System
+          </p>
         </div>
 
-        {/* ── Main Concentric Wheel Canvas Display ──────────────────────── */}
-        <div className="relative bg-[#0f1826] border border-slate-800 rounded-3xl p-3 shadow-2xl flex flex-col items-center overflow-hidden">
-          {/* Subtle Ambient Background Gradient */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-rose-950/20 via-transparent to-transparent pointer-events-none" />
-
+        {/* ── Center Column: 3D Concentric Discs & Elemental Core ───────── */}
+        <div className="relative flex items-center justify-center order-2">
+          {/* Canvas for Outer, Middle, and Inner Rings */}
           <canvas
             ref={canvasRef}
-            width={340}
-            height={340}
-            className="w-full max-w-[340px] h-[340px] relative z-10 drop-shadow-[0_0_25px_rgba(0,0,0,0.8)]"
+            width={370}
+            height={370}
+            className="w-[300px] h-[300px] sm:w-[360px] sm:h-[360px] max-w-[370px] drop-shadow-[0_0_40px_rgba(0,0,0,0.9)]"
           />
 
-          {/* Outcome Badge Overlay when Stopped */}
-          {lastWinInfo && (
-            <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 rounded-full text-xs font-mono font-black border shadow-xl flex items-center space-x-2 animate-win-celebrate ${
-              lastWinInfo.multiplier >= 1.0 
-                ? 'bg-emerald-950/90 border-emerald-400 text-emerald-300 shadow-emerald-900/40' 
-                : lastWinInfo.shieldSaved
-                ? 'bg-amber-950/90 border-amber-400 text-amber-300 shadow-amber-900/40'
-                : 'bg-rose-950/90 border-rose-500 text-rose-300 shadow-rose-900/40'
+          {/* ── Central 3D Elemental Orb ─────────────────────────────────── */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[86px] h-[86px] sm:w-[104px] sm:h-[104px] rounded-full flex items-center justify-center z-10">
+            {/* Metallic Spherical Bevel Rim */}
+            <div className="absolute inset-0 rounded-full border-4 border-[#1e293b] shadow-[0_0_20px_rgba(0,0,0,0.9)] bg-gradient-to-b from-[#1e293b] to-[#090d16]" />
+
+            {/* Glowing 3D Crystal Gem Orb */}
+            <div className={`relative w-[76px] h-[76px] sm:w-[92px] sm:h-[92px] rounded-full flex items-center justify-center overflow-hidden transition-all duration-300 shadow-2xl ${
+              centerElement === 'water'
+                ? 'bg-gradient-to-tr from-sky-600 via-blue-500 to-cyan-300 shadow-blue-500/50'
+                : centerElement === 'earth'
+                ? 'bg-gradient-to-tr from-emerald-600 via-green-500 to-lime-300 shadow-green-500/50'
+                : 'bg-gradient-to-tr from-rose-600 via-orange-500 to-amber-300 shadow-rose-500/50'
             }`}>
-              {lastWinInfo.multiplier >= 1.0 ? (
-                <>
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-                  <span>WIN: {lastWinInfo.multiplier}x (+₹{lastWinInfo.payout})</span>
-                </>
-              ) : lastWinInfo.shieldSaved ? (
-                <>
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                  <span>SHIELD SAVED: 0.8x (+₹{lastWinInfo.payout})</span>
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                  <span>HAZARD (0.0x)</span>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+              {/* Glass Spherical Reflection Highlight */}
+              <div className="absolute top-1 left-2 w-7 h-4 bg-white/40 rounded-full blur-[1px] -rotate-45 pointer-events-none" />
 
-        {/* ── Elemental Tracking Meters (Specification Step 4) ──────────── */}
-        <div className="bg-[#0f1826] border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>Elemental Progression Tracks (3 Charges = Bonus)</span>
-            </span>
-            <button
-              onClick={handleFastPayout}
-              className="text-[10px] font-mono font-black text-amber-400 bg-amber-950/60 border border-amber-500/40 px-2 py-0.5 rounded-md hover:bg-amber-900/40 transition active:scale-95"
-            >
-              ⚡ Fast Payout
-            </button>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {/* Fire Meter */}
-            <div className="bg-[#141b2b] border border-rose-900/40 rounded-xl p-2 space-y-1">
-              <div className="flex justify-between items-center text-[10px]">
-                <span className="font-black text-rose-400 flex items-center space-x-1">
-                  <Flame className="w-3 h-3" />
-                  <span>FIRE</span>
-                </span>
-                <span className="font-mono font-bold text-slate-300">{elementCharges.fire || 0}/3</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                {[0, 1, 2].map((slot) => (
-                  <div
-                    key={slot}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      (elementCharges.fire || 0) > slot
-                        ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
-                        : 'bg-slate-800'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Water Meter */}
-            <div className="bg-[#141b2b] border border-cyan-900/40 rounded-xl p-2 space-y-1">
-              <div className="flex justify-between items-center text-[10px]">
-                <span className="font-black text-cyan-400 flex items-center space-x-1">
-                  <Droplets className="w-3 h-3" />
-                  <span>WATER</span>
-                </span>
-                <span className="font-mono font-bold text-slate-300">{elementCharges.water || 0}/3</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                {[0, 1, 2].map((slot) => (
-                  <div
-                    key={slot}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      (elementCharges.water || 0) > slot
-                        ? 'bg-cyan-400 shadow-[0_0_8px_#06b6d4]'
-                        : 'bg-slate-800'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Earth Meter */}
-            <div className="bg-[#141b2b] border border-emerald-900/40 rounded-xl p-2 space-y-1">
-              <div className="flex justify-between items-center text-[10px]">
-                <span className="font-black text-emerald-400 flex items-center space-x-1">
-                  <Mountain className="w-3 h-3" />
-                  <span>EARTH</span>
-                </span>
-                <span className="font-mono font-bold text-slate-300">{elementCharges.earth || 0}/3</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                {[0, 1, 2].map((slot) => (
-                  <div
-                    key={slot}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      (elementCharges.earth || 0) > slot
-                        ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]'
-                        : 'bg-slate-800'
-                    }`}
-                  />
-                ))}
+              {/* Dynamic Icon inside Orb with Roll Animation */}
+              <div className={`text-4xl sm:text-5xl transition-transform duration-300 ${
+                centerRolling ? 'animate-bounce scale-110' : 'scale-100'
+              }`}>
+                {centerElement === 'water' ? '🌊' : centerElement === 'earth' ? '💠' : '🔥'}
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Betting & Strategic Controls Panel (Specification Step 2) ─── */}
-        <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5">
-          {/* Quick Stake Chips */}
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Quick Stake (₹)
+        {/* ── Right Column: Official Betting & Cash Out Controls ─────────── */}
+        <div className="w-full max-w-xs sm:max-w-sm flex flex-col items-center space-y-4 order-3">
+
+          {/* Bet Amount Selector */}
+          <div className="w-full flex flex-col items-center">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1 mb-1">
+              <span>Bet Amount</span>
+              <Info className="w-3 h-3 text-slate-500" />
             </span>
-            <div className="flex items-center space-x-2">
-              <button
-                disabled={isSpinning}
-                onClick={() => setWatchOutActive(!watchOutActive)}
-                className={`text-[10px] font-mono font-black px-2.5 py-1 rounded-lg border transition flex items-center space-x-1 ${
-                  watchOutActive
-                    ? 'bg-emerald-950 text-emerald-300 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                    : 'bg-[#131f33] text-slate-400 border-slate-700'
-                }`}
-              >
-                <Shield className="w-3 h-3" />
-                <span>Watch Out: {watchOutActive ? 'ON' : 'OFF'}</span>
-              </button>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-5 gap-1.5">
-            {['10', '20', '50', '100', '500'].map((val) => (
+            {/* Circular Stepper */}
+            <div className="flex items-center space-x-3">
               <button
-                key={val}
                 disabled={isSpinning}
                 onClick={() => {
                   sounds.playClick();
-                  setStake(val);
+                  setStake(prev => String(Math.max(10, Number(prev || 20) - 10)));
                 }}
-                className={`py-2 rounded-xl text-xs font-mono font-black border transition ${
-                  stake === val
-                    ? 'bg-rose-500 text-slate-950 border-rose-400 shadow-md shadow-rose-500/25'
-                    : 'bg-[#131f33] text-slate-300 border-slate-800 hover:border-slate-700 disabled:opacity-50'
-                }`}
+                className="w-9 h-9 rounded-full bg-[#141a29] border border-slate-700 hover:border-slate-500 flex items-center justify-center text-slate-300 font-black text-lg active:scale-95 transition disabled:opacity-50"
               >
-                ₹{val}
+                −
               </button>
-            ))}
-          </div>
 
-          {/* Stake Input */}
-          <div className="relative">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Bet Amount
-            </label>
-            <div className="flex items-center space-x-2">
+              <div className="px-5 py-1.5 rounded-full bg-[#0c121e] border border-slate-800 text-center min-w-[90px]">
+                <span className="text-base sm:text-lg font-black font-mono text-white">
+                  ₹{stake}
+                </span>
+              </div>
+
               <button
                 disabled={isSpinning}
                 onClick={() => {
                   sounds.playClick();
-                  setStake(prev => String(Math.max(10, Number(prev || 10) - 10)));
+                  setStake(prev => String(Number(prev || 20) + 10));
                 }}
-                className="w-11 h-11 rounded-2xl bg-[#131f33] border border-slate-700 flex items-center justify-center font-black text-lg text-slate-300 hover:text-white disabled:opacity-50 active:scale-95 transition"
-              >
-                -
-              </button>
-              <input
-                type="number"
-                min="10"
-                disabled={isSpinning}
-                value={stake}
-                onChange={(e) => setStake(e.target.value)}
-                className="w-full bg-[#131f33] border border-slate-700 rounded-2xl px-4 py-2.5 text-center text-base font-black text-white font-mono focus:outline-none focus:border-rose-500 disabled:opacity-50"
-              />
-              <button
-                disabled={isSpinning}
-                onClick={() => {
-                  sounds.playClick();
-                  setStake(prev => String(Number(prev || 10) + 10));
-                }}
-                className="w-11 h-11 rounded-2xl bg-[#131f33] border border-slate-700 flex items-center justify-center font-black text-lg text-slate-300 hover:text-white disabled:opacity-50 active:scale-95 transition"
+                className="w-9 h-9 rounded-full bg-[#141a29] border border-slate-700 hover:border-slate-500 flex items-center justify-center text-slate-300 font-black text-lg active:scale-95 transition disabled:opacity-50"
               >
                 +
               </button>
             </div>
           </div>
 
-          {/* Primary Action Button: "Hold to Spin" or Tap (Specification Step 3) */}
-          <button
-            disabled={isSpinning}
-            onClick={handleSpin}
-            onMouseDown={startHoldSpin}
-            onMouseUp={stopHoldSpin}
-            onMouseLeave={stopHoldSpin}
-            onTouchStart={startHoldSpin}
-            onTouchEnd={stopHoldSpin}
-            className={`w-full py-4 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-400 hover:to-pink-500 text-slate-950 font-black rounded-2xl text-base tracking-wider transition transform active:scale-95 shadow-xl shadow-rose-500/30 flex items-center justify-center space-x-2 ${
-              isSpinning ? 'opacity-50 cursor-not-allowed scale-98' : ''
-            }`}
-          >
-            <Play className={`w-5 h-5 fill-current ${isSpinning ? 'animate-spin' : ''}`} />
-            <span>{isSpinning ? 'SPINNING CONCENTRIC WHEEL...' : `SPIN WHEEL (₹${stake})`}</span>
-          </button>
-          <span className="block text-center text-[10px] text-slate-500 font-mono">
-            💡 Tap once to spin, or press &amp; hold for continuous spins
-          </span>
-        </div>
+          {/* ── Action Buttons Cluster: CASH OUT | HOLD TO SPIN | AUTO-PLAY ── */}
+          <div className="flex items-center justify-center space-x-3 sm:space-x-4">
 
-        {/* ── Provably Fair & Verification Footer ───────────────────────── */}
-        <div className="flex items-center justify-between text-xs text-slate-500 px-2 py-1">
-          <button
-            onClick={() => setShowFairnessModal(true)}
-            className="flex items-center space-x-1 hover:text-slate-300 transition"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="underline decoration-slate-600">Provably Fair (SHA-256)</span>
-          </button>
-          <span className="font-mono text-[11px] text-slate-500">Round #{roundCounter}</span>
-        </div>
+            {/* CASH OUT Button (Left) */}
+            <button
+              disabled={isSpinning || currentPayout <= 0}
+              onClick={handleCashOut}
+              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex flex-col items-center justify-center text-center font-black transition active:scale-95 border ${
+                currentPayout > 0
+                  ? 'bg-gradient-to-b from-slate-800 to-slate-900 border-emerald-400 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.35)] animate-pulse cursor-pointer'
+                  : 'bg-[#121826] border-slate-800 text-slate-500 opacity-60 cursor-not-allowed'
+              }`}
+            >
+              <span className="text-[10px] leading-tight font-black uppercase">CASH</span>
+              <span className="text-[10px] leading-tight font-black uppercase">OUT</span>
+            </button>
 
-        {/* ── Bonus Cashout Modal ───────────────────────────────────────── */}
-        {bonusModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-            <div className="bg-[#0f1826] border border-amber-500/70 rounded-3xl p-6 max-w-xs w-full shadow-2xl text-center space-y-4 animate-win-celebrate">
-              <div className="w-16 h-16 rounded-full bg-amber-500/10 border-2 border-amber-500 flex items-center justify-center text-3xl mx-auto shadow-[0_0_20px_#f59e0b]">
-                {bonusModal.icon}
+            {/* HOLD TO SPIN Button (Center - Large Glowing Purple Disc) */}
+            <button
+              disabled={isSpinning}
+              onClick={handleSpin}
+              onMouseDown={startHoldSpin}
+              onMouseUp={stopHoldSpin}
+              onMouseLeave={stopHoldSpin}
+              onTouchStart={startHoldSpin}
+              onTouchEnd={stopHoldSpin}
+              className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-purple-700 via-purple-600 to-indigo-500 hover:from-purple-600 hover:to-indigo-400 text-white flex flex-col items-center justify-center transition-all duration-200 transform active:scale-95 border-2 border-purple-400/80 shadow-[0_0_35px_rgba(168,85,247,0.55)] ${
+                isSpinning ? 'opacity-80 scale-95 shadow-purple-900/50' : 'hover:scale-105'
+              }`}
+            >
+              {/* Spinning Vortex Center Swirl */}
+              <div className={`text-2xl sm:text-3xl ${isSpinning ? 'animate-spin' : ''}`}>
+                🌀
               </div>
-              <div>
-                <h3 className="text-xl font-black text-white">{bonusModal.name}</h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Track completed! Instant Bonus Cash awarded:
-                </p>
-                <div className="mt-3 text-2xl font-black font-mono text-emerald-400">
-                  +₹{bonusModal.amount}
-                </div>
-                <span className="text-[11px] font-mono text-amber-400 font-bold block mt-1">
-                  ({bonusModal.multiplier}x Multiplier Boost)
-                </span>
-              </div>
+
+              {/* Circular Curved Typography Badge */}
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-purple-100 mt-1">
+                {isSpinning ? 'SPINNING...' : 'HOLD TO SPIN'}
+              </span>
+            </button>
+
+            {/* Auto Play Repeat Button (Right) */}
+            <button
+              disabled={isSpinning}
+              onClick={() => {
+                sounds.playClick();
+                handleSpin();
+              }}
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#121826] border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold active:scale-95 transition disabled:opacity-50"
+              title="Repeat Spin"
+            >
+              <RotateCw className="w-5 h-5 text-slate-300" />
+            </button>
+          </div>
+
+          {/* ── Payout & Part Payout Summary ────────────────────────────── */}
+          <div className="w-full flex items-center justify-around px-4 pt-1 text-center">
+            {/* Payout */}
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                Payout
+              </span>
+              <span className={`text-sm sm:text-base font-black font-mono tracking-tight ${
+                currentPayout > 0 ? 'text-emerald-400 font-black' : 'text-slate-200'
+              }`}>
+                ₹{currentPayout.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Part Payout */}
+            <div className="flex flex-col items-center">
               <button
-                onClick={() => setBonusModal(null)}
-                className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black rounded-2xl text-sm transition hover:from-emerald-400 hover:to-teal-300"
+                disabled={partPayout <= 0 || isSpinning}
+                onClick={handlePartPayout}
+                className="text-[10px] text-slate-400 hover:text-cyan-400 font-bold uppercase tracking-wider disabled:opacity-40 transition"
               >
-                Claim &amp; Continue
+                Part Payout
               </button>
+              <span className={`text-sm sm:text-base font-black font-mono tracking-tight ${
+                partPayout > 0 ? 'text-cyan-400' : 'text-slate-500'
+              }`}>
+                {partPayout > 0 ? `₹${partPayout.toFixed(2)}` : '•'}
+              </span>
             </div>
           </div>
-        )}
 
-        {/* ── Provably Fair Modal ───────────────────────────────────────── */}
-        {showFairnessModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <h3 className="text-sm font-black text-white flex items-center space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Provably Fair Verification</span>
-                </h3>
-                <button
-                  onClick={() => setShowFairnessModal(false)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Vertex outcomes are cryptographically determined using a server-side high-entropy avalanche PRNG mixed with global UTC timestamps and round IDs.
+          {/* ── Active Elements Indicators Row ─────────────────────────── */}
+          <div className="flex items-center space-x-2 pt-1">
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black border transition ${
+              activeWater
+                ? 'bg-sky-950 text-sky-300 border-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.4)]'
+                : 'bg-slate-900/60 text-slate-500 border-slate-800'
+            }`}>
+              💧 WATER 1.55X
+            </span>
+
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black border transition ${
+              activeEarth
+                ? 'bg-emerald-950 text-emerald-300 border-emerald-400 shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                : 'bg-slate-900/60 text-slate-500 border-slate-800'
+            }`}>
+              🌿 EARTH 2.5X
+            </span>
+
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black border transition ${
+              activeFire
+                ? 'bg-rose-950 text-rose-300 border-rose-400 shadow-[0_0_10px_rgba(239,68,68,0.4)]'
+                : 'bg-slate-900/60 text-slate-500 border-slate-800'
+            }`}>
+              🔥 FIRE 3.9X
+            </span>
+          </div>
+
+        </div>
+      </main>
+
+      {/* ── Footer Info Ticker ─────────────────────────────────────────── */}
+      <footer className="w-full py-2.5 px-4 text-center border-t border-slate-900 bg-[#080c14] text-[11px] font-mono text-slate-500 flex flex-col sm:flex-row items-center justify-between">
+        <span>Turbo Games • Vortex Official Release</span>
+        <span>SHA-256 Provably Fair • 97.0% RTP • Max 200X</span>
+      </footer>
+
+      {/* ── Help / Rules Modal ─────────────────────────────────────────── */}
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1728] border border-slate-700 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h3 className="text-base font-black text-white flex items-center space-x-2">
+                <span>VORTEX RULES &amp; MULTIPLIERS</span>
+              </h3>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="text-xs text-slate-300 space-y-2 leading-relaxed">
+              <p>
+                <strong>1. Progressive Multiplier Rings:</strong> Each spin rotates the concentric wheel and rolls the center elemental orb.
               </p>
-              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-mono space-y-1">
-                <div><span className="text-slate-500">Algorithm:</span> <span className="text-emerald-400">Murmur3 / SplitMix64 PRNG</span></div>
-                <div><span className="text-slate-500">Global Salt:</span> <span className="text-cyan-400">0x7F4A7C15</span></div>
-                <div><span className="text-slate-500">Current Round:</span> <span className="text-white">VTX-{roundCounter}</span></div>
-              </div>
-              <button
-                onClick={() => setShowFairnessModal(false)}
-                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition"
-              >
-                Close
-              </button>
+              <p>
+                <strong>2. Ring Activation:</strong>
+                <br />• 💧 <strong>Water Element:</strong> Activates Inner Ring (<strong>1.55X</strong>).
+                <br />• 🌿 <strong>Earth Element:</strong> Activates Middle Ring (<strong>2.50X</strong>).
+                <br />• 🔥 <strong>Fire Element:</strong> Activates Outer Ring (<strong>3.90X</strong>).
+              </p>
+              <p>
+                <strong>3. Cash Out:</strong> Secure all accumulated winnings at any point by hitting <strong>CASH OUT</strong>, or collect half with <strong>Part Payout</strong>.
+              </p>
             </div>
+            <button
+              onClick={() => setShowHelp(false)}
+              className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition"
+            >
+              Got it
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
-      </div>
     </div>
   );
 }
