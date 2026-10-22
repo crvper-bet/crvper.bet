@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, History, Plus, Minus, CheckCircle2, ShieldAlert, Lock } from 'lucide-react';
+import { ArrowLeft, History, Plus, Minus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { storage } from '../services/storage';
 import { sounds } from '../services/audio';
@@ -574,10 +574,9 @@ export default function AviatorGame({ onBack }) {
                 <label className="flex items-center space-x-1.5 cursor-pointer text-xs select-none">
                   <input
                     type="checkbox"
-                    disabled={isLockedByWinningCap}
                     checked={panel1AutoBet}
                     onChange={(e) => setPanel1AutoBet(e.target.checked)}
-                    className="rounded border-slate-700 text-emerald-500 bg-slate-900 focus:ring-0 disabled:opacity-40"
+                    className="rounded border-slate-700 text-emerald-500 bg-slate-900 focus:ring-0"
                   />
                   <span className="text-slate-300 font-bold text-[11px]">Auto Bet</span>
                 </label>
@@ -709,10 +708,9 @@ export default function AviatorGame({ onBack }) {
                 <label className="flex items-center space-x-1.5 cursor-pointer text-xs select-none">
                   <input
                     type="checkbox"
-                    disabled={isLockedByWinningCap}
                     checked={panel2AutoBet}
                     onChange={(e) => setPanel2AutoBet(e.target.checked)}
-                    className="rounded border-slate-700 text-teal-500 bg-slate-900 focus:ring-0 disabled:opacity-40"
+                    className="rounded border-slate-700 text-teal-500 bg-slate-900 focus:ring-0"
                   />
                   <span className="text-slate-300 font-bold text-[11px]">Auto Bet</span>
                 </label>
