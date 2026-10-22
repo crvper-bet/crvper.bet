@@ -60,14 +60,32 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
       return;
     }
 
-    const numAmount = Number(amount);
-    if (!numAmount || numAmount < 100) {
-      setError('Minimum withdrawal amount is ₹100.');
+    // 3. Platform Limit: Max 3 withdrawal requests
+    if (eligibility.withdrawalCount >= eligibility.maxWithdrawalRequests) {
+      setError(`You have reached the maximum limit of ${eligibility.maxWithdrawalRequests} withdrawal requests.`);
       return;
     }
 
-    if (numAmount > eligibility.withdrawableBalance) {
-      setError(`Amount cannot exceed your withdrawable balance (₹${eligibility.withdrawableBalance.toFixed(2)}). Promotional bonus cannot be withdrawn directly.`);
+    // 4. Platform Limit: Max ₹1,000 combined total withdrawal limit
+    if (eligibility.remainingCombinedWithdrawal <= 0) {
+      setError(`You have reached the maximum combined withdrawal limit of ₹${eligibility.maxCombinedWithdrawal.toLocaleString()}.`);
+      return;
+    }
+
+    const effectiveMin = Math.min(100, eligibility.remainingCombinedWithdrawal);
+    const numAmount = Number(amount);
+    if (!numAmount || numAmount < effectiveMin) {
+      setError(`Minimum withdrawal amount is ₹${effectiveMin}.`);
+      return;
+    }
+
+    if (numAmount > eligibility.remainingCombinedWithdrawal) {
+      setError(`Amount exceeds your remaining withdrawal limit. You have ₹${eligibility.remainingCombinedWithdrawal.toFixed(2)} remaining out of your ₹${eligibility.maxCombinedWithdrawal.toLocaleString()} combined limit across ${eligibility.maxWithdrawalRequests} requests.`);
+      return;
+    }
+
+    if (numAmount > eligibility.rawWithdrawableBalance) {
+      setError(`Amount cannot exceed your withdrawable balance (₹${eligibility.rawWithdrawableBalance.toFixed(2)}). Promotional bonus cannot be withdrawn directly.`);
       return;
     }
 
@@ -187,7 +205,49 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
           </div>
         )}
 
-        {/* ── 3. FOUR-BALANCE VAULT BREAKDOWN ── */}
+        {/* ── 3. WITHDRAWAL POLICY LIMIT NOTICE ── */}
+        <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 mb-4 shadow-xl space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase text-amber-400 tracking-wider flex items-center space-x-1.5">
+              <span>⚡</span>
+              <span>Withdrawal Limit Policy</span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-bold">
+              Max 3 Requests • ₹1,000 Combined
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-center pt-1">
+            <div className="p-2.5 rounded-2xl bg-[#131f33] border border-slate-800/80">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Requests Count</span>
+              <span className={`text-sm font-mono font-black ${eligibility.withdrawalCount >= eligibility.maxWithdrawalRequests ? 'text-rose-400' : 'text-emerald-400'}`}>
+                {eligibility.withdrawalCount} / {eligibility.maxWithdrawalRequests}
+              </span>
+              <span className="text-[9px] text-slate-500 block mt-0.5">
+                {eligibility.remainingWithdrawalRequests} request{eligibility.remainingWithdrawalRequests === 1 ? '' : 's'} remaining
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-2xl bg-[#131f33] border border-slate-800/80">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Combined Total</span>
+              <span className={`text-sm font-mono font-black ${eligibility.remainingCombinedWithdrawal <= 0 ? 'text-rose-400' : 'text-amber-400'}`}>
+                ₹{eligibility.totalWithdrawnAmount.toFixed(0)} / ₹{eligibility.maxCombinedWithdrawal.toLocaleString()}
+              </span>
+              <span className="text-[9px] text-slate-500 block mt-0.5">
+                ₹{eligibility.remainingCombinedWithdrawal.toFixed(2)} remaining limit
+              </span>
+            </div>
+          </div>
+
+          {eligibility.isLimitReached && (
+            <div className="p-2.5 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs flex items-center space-x-2 font-bold">
+              <span>⚠</span>
+              <span>{eligibility.limitMessage}</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── 4. FOUR-BALANCE VAULT BREAKDOWN ── */}
         <div className="bg-[#0f1826] border border-slate-800/90 rounded-3xl p-5 mb-4 shadow-2xl space-y-3">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
@@ -279,6 +339,10 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
                   required
                 />
               </div>
+              <p className="text-[11px] text-slate-400 mt-1.5 pl-1 flex items-center justify-between">
+                <span>Allowance: <strong className="text-amber-400 font-mono">₹{eligibility.remainingCombinedWithdrawal.toFixed(2)}</strong> limit remaining</span>
+                <span className="text-[10px] text-slate-500">({eligibility.remainingWithdrawalRequests} of {eligibility.maxWithdrawalRequests} requests left)</span>
+              </p>
             </div>
 
             {/* UPI ID */}
@@ -337,6 +401,14 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
                 className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-amber-500/30 flex items-center justify-center space-x-2"
               >
                 <span>🔒 Deposit ₹100 to Unlock Withdrawals →</span>
+              </button>
+            ) : eligibility.isLimitReached ? (
+              <button
+                type="button"
+                disabled
+                className="w-full py-3.5 bg-slate-800/80 border border-slate-700 text-slate-400 font-black rounded-2xl text-xs cursor-not-allowed flex items-center justify-center space-x-2 shadow-md"
+              >
+                <span>🔒 {eligibility.limitMessage}</span>
               </button>
             ) : (
               <button

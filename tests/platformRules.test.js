@@ -193,7 +193,7 @@ describe('CRVPER Platform Specifications Test Suite', () => {
     assert.strictEqual(eligibility.isEligible, true);
     assert.ok(eligibility.withdrawableBalance >= 100);
 
-    // Withdrawal now succeeds!
+    // Withdrawal 1 now succeeds!
     const wthReq = await storage.createWithdrawalRequest({
       userId: user.id,
       userPhone: user.phone,
@@ -202,6 +202,59 @@ describe('CRVPER Platform Specifications Test Suite', () => {
     });
     assert.strictEqual(wthReq.status, 'PENDING');
     assert.strictEqual(wthReq.amount, 100);
+
+    // Add ₹1,500 winnings for testing withdrawal limits
+    await storage.updateWalletBalance(user.id, 1500, 'Big Game Win');
+
+    // Withdrawal 2 succeeds (₹400) -> total withdrawn so far = ₹500
+    const wth2 = await storage.createWithdrawalRequest({
+      userId: user.id,
+      userPhone: user.phone,
+      amount: 400,
+      upiId: 'winner@upi'
+    });
+    assert.strictEqual(wth2.amount, 400);
+
+    // Attempting to withdraw ₹600 should fail because ₹500 + ₹600 = ₹1,100 > ₹1,000 limit
+    await assert.rejects(
+      async () => {
+        await storage.createWithdrawalRequest({
+          userId: user.id,
+          userPhone: user.phone,
+          amount: 600,
+          upiId: 'winner@upi'
+        });
+      },
+      (err) => {
+        assert.ok(err.message.includes('Amount exceeds your remaining withdrawal limit'));
+        return true;
+      }
+    );
+
+    // Withdrawal 3 succeeds with remaining ₹500 -> total withdrawn = ₹1,000
+    const wth3 = await storage.createWithdrawalRequest({
+      userId: user.id,
+      userPhone: user.phone,
+      amount: 500,
+      upiId: 'winner@upi'
+    });
+    assert.strictEqual(wth3.amount, 500);
+
+    // Withdrawal 4 must fail because maximum 3 requests reached
+    await assert.rejects(
+      async () => {
+        await storage.createWithdrawalRequest({
+          userId: user.id,
+          userPhone: user.phone,
+          amount: 100,
+          upiId: 'winner@upi'
+        });
+      },
+      (err) => {
+        assert.strictEqual(err.message, 'You have reached the maximum limit of 3 withdrawal requests.');
+        return true;
+      }
+    );
   });
 
   test('4. Winning-Limit Policy: Disabled by default for unrestricted player winnings', async () => {

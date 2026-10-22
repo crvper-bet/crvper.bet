@@ -26,6 +26,8 @@ const DEFAULT_ADMIN_SETTINGS = {
   qrImageUrl: DEFAULT_UPI_QR,
   minDeposit: 100,
   minWithdraw: 100,
+  maxWithdrawalRequests: 3, // User can only request 3 times
+  maxCombinedWithdrawal: 1000, // Not more than ₹1,000 combined total
   signupBonus: 150,
   promoActive: true,
   minQualifyingDeposit: 100,
@@ -977,8 +979,17 @@ export const storage = {
         depositBalance: 0,
         bonusBalance: 0,
         winningsBalance: 0,
+        rawWithdrawableBalance: 0,
         withdrawableBalance: 0,
-        totalBalance: 0
+        totalBalance: 0,
+        withdrawalCount: 0,
+        maxWithdrawalRequests: 3,
+        remainingWithdrawalRequests: 3,
+        totalWithdrawnAmount: 0,
+        maxCombinedWithdrawal: 1000,
+        remainingCombinedWithdrawal: 1000,
+        isLimitReached: false,
+        limitMessage: null
       };
     }
 
@@ -1006,12 +1017,41 @@ export const storage = {
     const bonBal = Number(user.bonusBalance || 0);
     const totalBal = Number(user.walletBalance || (depositBal + winBal + bonBal));
 
-    // Withdrawable balance is depositBalance + winningsBalance when wagering requirements are fulfilled
-    const withdrawableBalance = hasMetWagering
+    // Platform Policy: Max 3 withdrawal requests & Max ₹1,000 combined total limit
+    const maxWithdrawalRequests = Number(settings.maxWithdrawalRequests ?? 3);
+    const maxCombinedWithdrawal = Number(settings.maxCombinedWithdrawal ?? 1000);
+
+    const allWithdrawals = this.getWithdrawals();
+    const userWithdrawals = allWithdrawals.filter(w => w.userId === userId && w.status !== 'REJECTED');
+    const withdrawalCount = userWithdrawals.length;
+    const remainingWithdrawalRequests = Math.max(0, maxWithdrawalRequests - withdrawalCount);
+
+    const totalWithdrawnAmount = Number(userWithdrawals.reduce((sum, w) => sum + Number(w.amount || 0), 0).toFixed(2));
+    const remainingCombinedWithdrawal = Math.max(0, Number((maxCombinedWithdrawal - totalWithdrawnAmount).toFixed(2)));
+
+    let isLimitReached = false;
+    let limitMessage = null;
+
+    if (withdrawalCount >= maxWithdrawalRequests) {
+      isLimitReached = true;
+      limitMessage = `You have reached the maximum limit of ${maxWithdrawalRequests} withdrawal requests.`;
+    } else if (remainingCombinedWithdrawal <= 0) {
+      isLimitReached = true;
+      limitMessage = `You have reached the maximum combined withdrawal limit of ₹${maxCombinedWithdrawal.toLocaleString()}.`;
+    }
+
+    // Raw withdrawable balance is depositBalance + winningsBalance when wagering requirements are fulfilled
+    const rawWithdrawable = hasMetWagering
       ? Number((depositBal + winBal).toFixed(2))
       : 0;
 
-    const isEligible = hasMetDeposit && hasMetWagering && withdrawableBalance >= (settings.minWithdraw ?? 100);
+    // Withdrawable balance is capped by remaining allowance under the ₹1,000 policy
+    const withdrawableBalance = isLimitReached
+      ? 0
+      : Math.min(rawWithdrawable, remainingCombinedWithdrawal);
+
+    const effectiveMin = Math.min(Number(settings.minWithdraw ?? 100), remainingCombinedWithdrawal);
+    const isEligible = hasMetDeposit && hasMetWagering && !isLimitReached && withdrawableBalance >= effectiveMin;
 
     return {
       isEligible,
@@ -1027,8 +1067,17 @@ export const storage = {
       depositBalance: depositBal,
       bonusBalance: bonBal,
       winningsBalance: winBal,
+      rawWithdrawableBalance: rawWithdrawable,
       withdrawableBalance,
-      totalBalance: totalBal
+      totalBalance: totalBal,
+      withdrawalCount,
+      maxWithdrawalRequests,
+      remainingWithdrawalRequests,
+      totalWithdrawnAmount,
+      maxCombinedWithdrawal,
+      remainingCombinedWithdrawal,
+      isLimitReached,
+      limitMessage
     };
   },
 
@@ -1474,16 +1523,31 @@ export const storage = {
       throw new Error(eligibility.wageringMessage || `You need to wager ₹${eligibility.wageringRemaining.toFixed(2)} more to meet your promotional requirement.`);
     }
 
+    // 3. Platform Limit: Max 3 withdrawal requests per user
+    if (eligibility.withdrawalCount >= eligibility.maxWithdrawalRequests) {
+      throw new Error(`You have reached the maximum limit of ${eligibility.maxWithdrawalRequests} withdrawal requests.`);
+    }
+
+    // 4. Platform Limit: Max ₹1,000 combined total withdrawal limit
+    if (eligibility.remainingCombinedWithdrawal <= 0) {
+      throw new Error(`You have reached the maximum combined withdrawal limit of ₹${eligibility.maxCombinedWithdrawal.toLocaleString()}.`);
+    }
+
     const settings = this.getAdminSettings();
     const minWth = Number(settings.minWithdraw ?? 100);
     const numAmount = Number(amount);
 
-    if (numAmount < minWth) {
-      throw new Error(`Minimum withdrawal amount is ₹${minWth}.`);
+    const effectiveMin = Math.min(minWth, eligibility.remainingCombinedWithdrawal);
+    if (numAmount < effectiveMin) {
+      throw new Error(`Minimum withdrawal amount is ₹${effectiveMin}.`);
     }
 
-    if (numAmount > eligibility.withdrawableBalance) {
-      throw new Error(`Amount cannot exceed your withdrawable balance (₹${eligibility.withdrawableBalance.toFixed(2)}). Promotional bonus cannot be withdrawn directly.`);
+    if (numAmount > eligibility.remainingCombinedWithdrawal) {
+      throw new Error(`Amount exceeds your remaining withdrawal limit. You have ₹${eligibility.remainingCombinedWithdrawal.toFixed(2)} remaining out of your ₹${eligibility.maxCombinedWithdrawal.toLocaleString()} combined total limit across ${eligibility.maxWithdrawalRequests} requests.`);
+    }
+
+    if (numAmount > eligibility.rawWithdrawableBalance) {
+      throw new Error(`Amount cannot exceed your withdrawable balance (₹${eligibility.rawWithdrawableBalance.toFixed(2)}). Promotional bonus cannot be withdrawn directly.`);
     }
 
     if (numAmount > (user.walletBalance || 0)) {
