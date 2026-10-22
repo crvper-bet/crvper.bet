@@ -48,9 +48,9 @@ export default function CustomerSupportModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md h-[560px] bg-[#0f172a] border border-cyan-500/30 rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+      <div className="w-full max-w-md h-[560px] bg-white border-sky-200 border border-cyan-500/30 rounded-2xl flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-[#151f33] px-4 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div className="bg-sky-50 px-4 py-3.5 border-b border-sky-100 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
               <Headphones className="w-5 h-5" />
@@ -60,12 +60,12 @@ export default function CustomerSupportModal({ isOpen, onClose }) {
                 <span className="font-bold text-white text-sm">CRVPER VIP Support</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               </div>
-              <p className="text-xs text-slate-400">Online 24/7 • Instant manual assistance</p>
+              <p className="text-xs text-slate-500">Online 24/7 • Instant manual assistance</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -89,7 +89,7 @@ export default function CustomerSupportModal({ isOpen, onClose }) {
                 <div 
                   className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                     isAdmin 
-                      ? 'bg-[#1e293b] text-slate-200 border border-slate-700/60 rounded-tl-sm' 
+                      ? 'bg-[#1e293b] text-slate-800 border border-sky-200/60 rounded-tl-sm' 
                       : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-tr-sm shadow-md'
                   }`}
                 >
@@ -105,13 +105,13 @@ export default function CustomerSupportModal({ isOpen, onClose }) {
         </div>
 
         {/* Input Bar */}
-        <form onSubmit={handleSend} className="p-3 bg-[#151f33] border-t border-slate-800 flex items-center space-x-2">
+        <form onSubmit={handleSend} className="p-3 bg-sky-50 border-t border-sky-100 flex items-center space-x-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message or deposit issue..."
-            className="flex-1 bg-[#0b1120] border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
+            className="flex-1 bg-[#0b1120] border border-sky-200/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
           />
           <button
             type="submit"

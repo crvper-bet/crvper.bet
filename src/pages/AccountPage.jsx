@@ -114,7 +114,7 @@ export default function AccountPage({
     progressPct = Math.min(100, Math.floor((totalDep / 10000) * 100));
   } else if (totalDep >= 500) {
     vipTier = 'SILVER VIP';
-    tierColor = 'from-slate-400 to-slate-600 border-slate-300 text-slate-100';
+    tierColor = 'from-slate-400 to-slate-600 border-slate-300 text-slate-900';
     nextTier = 'Platinum VIP (₹2,500)';
     progressPct = Math.min(100, Math.floor((totalDep / 2500) * 100));
   }
@@ -124,21 +124,21 @@ export default function AccountPage({
   const memberDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '2026';
 
   return (
-    <div className="min-h-screen bg-[#090e17] text-slate-100 pb-28 selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-sky-100 text-slate-900 pb-28 selection:bg-emerald-500 selection:text-black">
       {/* Top Header */}
-      <div className="sticky top-0 z-30 bg-[#090e17]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-3.5">
+      <div className="sticky top-0 z-30 bg-gradient-to-b from-sky-50 via-white to-sky-100/90 backdrop-blur-xl border-b border-sky-100 px-4 py-3.5">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <button
             onClick={() => {
               sounds.playClick();
               onBack();
             }}
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
+            className="p-2 rounded-xl bg-slate-900 border border-sky-100 hover:border-sky-200 text-slate-700 transition"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="text-center">
-            <h1 className="text-base font-black text-white tracking-wide">MY ACCOUNT</h1>
+            <h1 className="text-base font-black text-slate-900 tracking-wide">MY ACCOUNT</h1>
             <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">VIP Player Profile</p>
           </div>
           <button
@@ -158,7 +158,7 @@ export default function AccountPage({
       <div className="max-w-md mx-auto p-4 space-y-4">
         
         {/* User Identity Hero Card */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0f1826] via-[#090e17] to-[#111826] border border-slate-800 rounded-3xl p-5 shadow-2xl">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#0f1826] via-[#090e17] to-[#111826] border border-sky-100 rounded-3xl p-5 shadow-2xl">
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-44 h-44 bg-emerald-500/10 blur-3xl pointer-events-none rounded-full" />
           <div className="absolute bottom-0 left-0 w-36 h-36 bg-teal-500/10 blur-3xl pointer-events-none rounded-full" />
@@ -167,7 +167,7 @@ export default function AccountPage({
             <div className="flex items-center space-x-3.5">
               <div className="relative">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20">
-                  <div className="w-full h-full bg-[#090e17] rounded-2xl flex items-center justify-center text-2xl font-black text-white">
+                  <div className="w-full h-full bg-gradient-to-b from-sky-50 via-white to-sky-100 rounded-2xl flex items-center justify-center text-2xl font-black text-slate-900">
                     {user.phone ? user.phone.slice(-2) : 'CR'}
                   </div>
                 </div>
@@ -176,17 +176,17 @@ export default function AccountPage({
 
               <div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-lg font-black text-white tracking-wide font-mono">
+                  <span className="text-lg font-black text-slate-900 tracking-wide font-mono">
                     +91 {maskedPhone}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2 mt-1">
                   <button 
                     onClick={handleCopyId}
-                    className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-700/80 text-[10px] font-mono text-slate-300 hover:text-white transition"
+                    className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-slate-900 border border-sky-200/80 text-[10px] font-mono text-slate-700 hover:text-slate-900 transition"
                   >
                     <span>ID: {user.id.slice(0, 10)}...</span>
-                    {copiedId ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                    {copiedId ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
                   </button>
                   <span className="text-[10px] text-slate-500">Since {memberDate}</span>
                 </div>
@@ -201,12 +201,12 @@ export default function AccountPage({
           </div>
 
           {/* VIP Progress Bar */}
-          <div className="mt-4 pt-3.5 border-t border-slate-800/80">
+          <div className="mt-4 pt-3.5 border-t border-sky-100">
             <div className="flex justify-between text-[11px] mb-1.5 font-bold">
-              <span className="text-slate-400">VIP Level Progress</span>
+              <span className="text-slate-500">VIP Level Progress</span>
               <span className="text-emerald-400 font-mono">{progressPct}% • {nextTier}</span>
             </div>
-            <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800">
+            <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-sky-100">
               <div 
                 className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-700 rounded-full"
                 style={{ width: `${progressPct}%` }}
@@ -215,12 +215,12 @@ export default function AccountPage({
           </div>
 
           {/* Fast Balance Bar */}
-          <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between">
+          <div className="mt-4 pt-3.5 border-t border-sky-100 flex items-center justify-between">
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
                 Total Wallet Balance
               </span>
-              <span className="text-2xl font-black font-mono text-white mt-0.5 block">
+              <span className="text-2xl font-black font-mono text-slate-900 mt-0.5 block">
                 ₹{Number(user.walletBalance || 0).toFixed(2)}
               </span>
             </div>
@@ -241,7 +241,7 @@ export default function AccountPage({
                   sounds.playWithdraw();
                   onGoToWithdraw();
                 }}
-                className="px-3 py-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white font-black rounded-xl text-xs transition transform active:scale-95 shadow-md shadow-rose-500/20 flex items-center space-x-1"
+                className="px-3 py-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-slate-900 font-black rounded-xl text-xs transition transform active:scale-95 shadow-md shadow-rose-500/20 flex items-center space-x-1"
               >
                 <ArrowUpRight className="w-3.5 h-3.5" />
                 <span>Withdraw</span>
@@ -252,8 +252,8 @@ export default function AccountPage({
 
         {/* Financial Lifetime Performance Matrix */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-3.5">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+          <div className="bg-white border-sky-100 border border-sky-100 rounded-2xl p-3.5">
+            <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
               Total Deposited
             </span>
             <span className="text-lg font-black font-mono text-emerald-400 mt-1 block">
@@ -262,8 +262,8 @@ export default function AccountPage({
             <span className="text-[10px] text-slate-500 mt-0.5 block">Verified Payments</span>
           </div>
 
-          <div className="bg-[#0f1826] border border-slate-800/80 rounded-2xl p-3.5">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+          <div className="bg-white border-sky-100 border border-sky-100 rounded-2xl p-3.5">
+            <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
               Total Withdrawn
             </span>
             <span className="text-lg font-black font-mono text-rose-400 mt-1 block">
@@ -281,14 +281,14 @@ export default function AccountPage({
                 <Gift className="w-4 h-4 text-emerald-400" />
                 <span>Invite Friends & Earn Rewards</span>
               </span>
-              <p className="text-[11px] text-slate-300 leading-snug">
+              <p className="text-[11px] text-slate-700 leading-snug">
                 Share your referral code to earn bonuses & 20% commission on invited player deposits.
               </p>
             </div>
           </div>
 
           <div className="mt-3 flex items-center space-x-2">
-            <div className="flex-1 bg-black/50 border border-emerald-500/30 rounded-xl px-3 py-2 font-mono font-black text-xs text-white">
+            <div className="flex-1 bg-black/50 border border-emerald-500/30 rounded-xl px-3 py-2 font-mono font-black text-xs text-slate-900">
               {user.id.slice(-6).toUpperCase()}
             </div>
             <button
@@ -303,7 +303,7 @@ export default function AccountPage({
 
         {/* Menu Navigation Sections */}
         <div className="space-y-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1 block">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-1 block">
             Wallet & Activities
           </span>
 
@@ -313,15 +313,15 @@ export default function AccountPage({
               sounds.playClick();
               onGoToWallet();
             }}
-            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-white border-sky-100 hover:bg-sky-50/70 border-sky-100 border border-sky-100 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
                 <Wallet className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <span className="text-xs font-black text-white block">Full Wallet Dashboard</span>
-                <span className="text-[10px] text-slate-400">Balance breakdown, quick deposit & history</span>
+                <span className="text-xs font-black text-slate-900 block">Full Wallet Dashboard</span>
+                <span className="text-[10px] text-slate-500">Balance breakdown, quick deposit & history</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition" />
@@ -333,15 +333,15 @@ export default function AccountPage({
               sounds.playClick();
               onGoToActivity();
             }}
-            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-white border-sky-100 hover:bg-sky-50/70 border-sky-100 border border-sky-100 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:scale-105 transition">
                 <Award className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <span className="text-xs font-black text-white block">Game Activity & History</span>
-                <span className="text-[10px] text-slate-400">Wins, losses, multiplier records</span>
+                <span className="text-xs font-black text-slate-900 block">Game Activity & History</span>
+                <span className="text-[10px] text-slate-500">Wins, losses, multiplier records</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-teal-400 transition" />
@@ -353,14 +353,14 @@ export default function AccountPage({
               sounds.playClick();
               onGoToPromoter();
             }}
-            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-white border-sky-100 hover:bg-sky-50/70 border-sky-100 border border-sky-100 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 transition">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <span className="text-xs font-black text-white block">Promoter & Influencer Hub</span>
+                <span className="text-xs font-black text-slate-900 block">Promoter & Influencer Hub</span>
                 <span className="text-[10px] text-purple-400 font-bold">20% Direct Commission Program</span>
               </div>
             </div>
@@ -370,19 +370,19 @@ export default function AccountPage({
 
         {/* Preferences & Security */}
         <div className="space-y-2 pt-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1 block">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-1 block">
             Settings & Support
           </span>
 
           {/* Sound Toggle */}
-          <div className="bg-[#0f1826] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between">
+          <div className="bg-white border-sky-100 border border-sky-100 rounded-2xl p-3.5 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                 {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </div>
               <div className="text-left">
-                <span className="text-xs font-black text-white block">Game Sound FX</span>
-                <span className="text-[10px] text-slate-400">Custom dynamic casino audio effects</span>
+                <span className="text-xs font-black text-slate-900 block">Game Sound FX</span>
+                <span className="text-[10px] text-slate-500">Custom dynamic casino audio effects</span>
               </div>
             </div>
             <button
@@ -405,15 +405,15 @@ export default function AccountPage({
               sounds.playClick();
               setShowPasswordModal(true);
             }}
-            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-white border-sky-100 hover:bg-sky-50/70 border-sky-100 border border-sky-100 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition">
                 <Key className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <span className="text-xs font-black text-white block">Security & Password</span>
-                <span className="text-[10px] text-slate-400">Update your account login password</span>
+                <span className="text-xs font-black text-slate-900 block">Security & Password</span>
+                <span className="text-[10px] text-slate-500">Update your account login password</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition" />
@@ -425,14 +425,14 @@ export default function AccountPage({
               sounds.playClick();
               onOpenSupport();
             }}
-            className="w-full bg-[#0f1826] hover:bg-[#131f33] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between transition group"
+            className="w-full bg-white border-sky-100 hover:bg-sky-50/70 border-sky-100 border border-sky-100 rounded-2xl p-3.5 flex items-center justify-between transition group"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
                 <Headphones className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <span className="text-xs font-black text-white block">24/7 VIP Customer Support</span>
+                <span className="text-xs font-black text-slate-900 block">24/7 VIP Customer Support</span>
                 <span className="text-[10px] text-emerald-400 font-bold">● Active Online Support Desk</span>
               </div>
             </div>
@@ -459,9 +459,9 @@ export default function AccountPage({
       {/* Password Change Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-sm bg-[#0f1826] border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
-            <h3 className="text-lg font-black text-white mb-1">Change Password</h3>
-            <p className="text-xs text-slate-400 mb-4">Set a new secure password for your CRVPER account.</p>
+          <div className="w-full max-w-sm bg-white border-sky-100 border border-sky-100 rounded-3xl p-6 shadow-2xl relative">
+            <h3 className="text-lg font-black text-slate-900 mb-1">Change Password</h3>
+            <p className="text-xs text-slate-500 mb-4">Set a new secure password for your CRVPER account.</p>
 
             {passError && (
               <div className="mb-3 p-2.5 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs font-bold text-center">
@@ -478,34 +478,34 @@ export default function AccountPage({
 
             <form onSubmit={handleChangePassword} className="space-y-3">
               <div>
-                <label className="text-[11px] font-bold text-slate-400 block mb-1">Current Password</label>
+                <label className="text-[11px] font-bold text-slate-500 block mb-1">Current Password</label>
                 <input
                   type="password"
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
-                  className="w-full bg-[#131f33] border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-sky-50/70 border-sky-100 border border-sky-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-400 block mb-1">New Password</label>
+                <label className="text-[11px] font-bold text-slate-500 block mb-1">New Password</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-[#131f33] border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-sky-50/70 border-sky-100 border border-sky-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-400 block mb-1">Confirm New Password</label>
+                <label className="text-[11px] font-bold text-slate-500 block mb-1">Confirm New Password</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-[#131f33] border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-sky-50/70 border-sky-100 border border-sky-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
@@ -514,7 +514,7 @@ export default function AccountPage({
                 <button
                   type="button"
                   onClick={() => setShowPasswordModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-300 hover:text-white"
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-700 hover:text-slate-900"
                 >
                   Cancel
                 </button>

@@ -155,7 +155,7 @@ export default function NeonTowerGame({ onBack }) {
         {/* 9-Row Vertical Tower Stage */}
         <div className={`bg-[#0f172a] border rounded-3xl p-4 shadow-2xl space-y-1.5 select-none transition-all duration-300 ${
           gameOver && !lastWin ? 'border-rose-500/60 shadow-rose-950/40 animate-bomb-shake' :
-          lastWin ? 'border-emerald-400/80 shadow-emerald-500/30' : 'border-slate-800'
+          lastWin ? 'border-emerald-400/80 shadow-emerald-500/30' : 'border-sky-100'
         }`}>
           {Array.from({ length: 9 }).map((_, rIdx) => {
             const rowIndex = 8 - rIdx; // Render row 8 at top, row 0 at bottom
@@ -206,7 +206,7 @@ export default function NeonTowerGame({ onBack }) {
                           : isActiveRow
                           ? 'bg-[#1e2d4d] hover:bg-[#273a63] hover:scale-105 border-2 border-emerald-400/60 shadow-md cursor-pointer animate-pulse active:bg-emerald-500'
                           : isCompletedRow
-                          ? 'bg-[#10192e] border border-slate-800 text-slate-600 cursor-not-allowed'
+                          ? 'bg-[#10192e] border border-sky-100 text-slate-600 cursor-not-allowed'
                           : 'bg-[#0d1424] border border-slate-900 cursor-not-allowed'
                       }`}
                     >
@@ -230,7 +230,7 @@ export default function NeonTowerGame({ onBack }) {
         </div>
 
         {/* Controls & Action Button */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+        <div className="bg-[#0f172a] border border-sky-100 rounded-3xl p-5 shadow-xl space-y-4">
           {/* Difficulty Toggles */}
           {!isPlaying && (
             <div>
@@ -283,7 +283,7 @@ export default function NeonTowerGame({ onBack }) {
               disabled={isPlaying}
               value={betAmount}
               onChange={(e) => setBetAmount(e.target.value)}
-              className="w-full bg-[#131b2e] border border-slate-700 rounded-2xl px-4 py-3 text-base font-black text-white font-mono focus:outline-none focus:border-emerald-500"
+              className="w-full bg-[#131b2e] border border-sky-200 rounded-2xl px-4 py-3 text-base font-black text-white font-mono focus:outline-none focus:border-emerald-500"
             />
           </div>
 

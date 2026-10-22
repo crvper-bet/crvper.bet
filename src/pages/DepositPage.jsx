@@ -45,7 +45,6 @@ export default function DepositPage({ onBack }) {
       }
     };
 
-    // Immediate dynamic fetch on load
     fetchLiveSettings();
     loadUserDeposits();
 
@@ -60,15 +59,18 @@ export default function DepositPage({ onBack }) {
   }, [user]);
 
   const handleCopyUPI = () => {
-    navigator.clipboard.writeText(adminSettings.upiId);
-    setCopied(true);
     sounds.playClick();
-    setTimeout(() => setCopied(false), 2000);
+    if (adminSettings.upiId) {
+      navigator.clipboard.writeText(adminSettings.upiId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      sounds.playClick();
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewUrl(reader.result);
@@ -79,13 +81,8 @@ export default function DepositPage({ onBack }) {
 
   const handleSubmitProof = async (e) => {
     e.preventDefault();
-    if (!user) return;
-    if (Number(amount) < 100) {
-      alert('Minimum deposit amount is ₹100.');
-      return;
-    }
     if (!previewUrl) {
-      alert('Please upload payment screenshot before submitting!');
+      alert('Please upload a screenshot of your payment transfer.');
       return;
     }
 
@@ -117,7 +114,7 @@ export default function DepositPage({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#090e17] p-4 pb-24 selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-sky-100 p-4 pb-24 selection:bg-sky-400 selection:text-white">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center space-x-3 mb-5">
@@ -126,31 +123,31 @@ export default function DepositPage({ onBack }) {
               sounds.playClick();
               onBack();
             }}
-            className="p-2.5 rounded-2xl bg-[#0f1826] hover:bg-slate-800 border border-slate-800 text-slate-300 transition"
+            className="p-2.5 rounded-2xl bg-white hover:bg-sky-50 border border-sky-100 text-slate-700 transition shadow-sm"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-black text-white tracking-wide">Deposit INR</h1>
-            <p className="text-xs text-slate-400">Official Direct UPI Instant Transfer</p>
+            <h1 className="text-xl font-black text-slate-900 tracking-wide">Deposit INR</h1>
+            <p className="text-xs text-slate-500">Official Direct UPI Instant Transfer</p>
           </div>
         </div>
 
         {submittedSuccess ? (
-          <div className="bg-[#0f1826] border border-emerald-500/40 rounded-3xl p-6 text-center shadow-2xl animate-fade-in">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white border border-sky-200 rounded-3xl p-6 text-center shadow-xl shadow-sky-100 animate-fade-in">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto mb-4 shadow-sm">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-black text-white">Deposit Submitted!</h2>
-            <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-              Your deposit of <span className="text-emerald-400 font-bold font-mono">₹{amount}</span> and payment screenshot have been submitted to CRVPER Admin verification queue.
+            <h2 className="text-xl font-black text-slate-900">Deposit Submitted!</h2>
+            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+              Your deposit of <span className="text-sky-600 font-bold font-mono">₹{amount}</span> and payment screenshot have been submitted to CRVPER Admin verification queue.
             </p>
-            <div className="bg-[#142033] border border-slate-800 rounded-2xl p-3.5 my-4 text-xs text-slate-300 text-left">
-              <div className="flex items-center space-x-2 text-emerald-400 font-bold mb-1">
+            <div className="bg-sky-50 border border-sky-100 rounded-2xl p-3.5 my-4 text-xs text-slate-700 text-left">
+              <div className="flex items-center space-x-2 text-sky-700 font-bold mb-1">
                 <Clock className="w-4 h-4" />
                 <span>Verification Time: 2 - 5 Minutes</span>
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Once confirmed by admin, your balance will update immediately and unlock full platform withdrawals!
               </p>
             </div>
@@ -160,27 +157,27 @@ export default function DepositPage({ onBack }) {
                 setStep(1);
                 onBack();
               }}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 text-slate-950 font-black rounded-2xl text-sm transition shadow-lg shadow-emerald-500/25"
+              className="w-full py-3.5 bg-gradient-to-r from-sky-500 to-cyan-400 hover:from-sky-600 text-white font-black rounded-2xl text-sm transition shadow-md shadow-sky-400/30"
             >
               Back to Games
             </button>
           </div>
         ) : step === 1 ? (
           /* Step 1: Select Amount */
-          <div className="bg-[#0f1826] border border-slate-800/90 rounded-3xl p-5 shadow-2xl space-y-4">
+          <div className="bg-white border border-sky-100 rounded-3xl p-5 shadow-xl shadow-sky-100 space-y-4">
             <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-wider block mb-2">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-2">
                 Deposit Amount (Min ₹100)
               </label>
-              <div className="relative flex items-center bg-[#131f33] border border-slate-700/80 rounded-2xl overflow-hidden focus-within:border-emerald-500 transition">
-                <span className="pl-4 pr-2 text-xl font-black text-emerald-400 font-mono">₹</span>
+              <div className="relative flex items-center bg-sky-50/50 border border-sky-200 rounded-2xl overflow-hidden focus-within:border-sky-500 focus-within:bg-white transition">
+                <span className="pl-4 pr-2 text-xl font-black text-sky-600 font-mono">₹</span>
                 <input
                   type="number"
                   min="100"
                   step="10"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full bg-transparent py-3.5 pr-4 text-xl font-black text-white font-mono focus:outline-none"
+                  className="w-full bg-transparent py-3.5 pr-4 text-xl font-black text-slate-900 font-mono focus:outline-none"
                   placeholder="100"
                 />
               </div>
@@ -188,7 +185,7 @@ export default function DepositPage({ onBack }) {
 
             {/* Quick Chips */}
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
                 Quick Select
               </span>
               <div className="grid grid-cols-3 gap-2">
@@ -202,8 +199,8 @@ export default function DepositPage({ onBack }) {
                     }}
                     className={`py-2.5 rounded-xl border font-mono font-bold text-xs transition transform active:scale-95 ${
                       amount === String(amt)
-                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm shadow-emerald-500/30'
-                        : 'bg-[#142033] border-slate-800 text-slate-300 hover:border-slate-700'
+                        ? 'bg-sky-500 text-white border-sky-500 shadow-sm shadow-sky-400/40'
+                        : 'bg-white border-sky-100 text-slate-700 hover:border-sky-300'
                     }`}
                   >
                     +₹{amt}
@@ -213,9 +210,9 @@ export default function DepositPage({ onBack }) {
             </div>
 
             {/* Notice */}
-            <div className="bg-emerald-950/30 border border-emerald-800/40 rounded-2xl p-3 flex items-start space-x-2.5">
-              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-emerald-200/90 leading-snug">
+            <div className="bg-sky-50 border border-sky-200 rounded-2xl p-3 flex items-start space-x-2.5">
+              <ShieldCheck className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-sky-800 leading-snug">
                 Completing a ₹100 real deposit unlocks permanent instant withdrawals and full platform gaming!
               </p>
             </div>
@@ -233,29 +230,29 @@ export default function DepositPage({ onBack }) {
                 });
                 setStep(2);
               }}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2"
+              className="w-full py-3.5 bg-gradient-to-r from-sky-500 via-sky-400 to-cyan-400 hover:from-sky-600 text-white font-black rounded-2xl text-sm transition transform active:scale-95 shadow-lg shadow-sky-400/30 flex items-center justify-center space-x-2"
             >
               <span>Proceed to Pay ₹{amount}</span>
             </button>
           </div>
         ) : (
           /* Step 2: Show Admin-Uploaded Official UPI QR Code */
-          <div className="bg-[#0f1826] border border-slate-800/90 rounded-3xl p-5 shadow-2xl space-y-4 animate-fade-in">
+          <div className="bg-white border border-sky-100 rounded-3xl p-5 shadow-xl shadow-sky-100 space-y-4 animate-fade-in">
             <div className="text-center">
-              <div className="inline-flex items-center space-x-1.5 bg-emerald-950/70 border border-emerald-500/30 px-3 py-1 rounded-full text-[11px] font-bold text-emerald-300 mb-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="inline-flex items-center space-x-1.5 bg-sky-50 border border-sky-200 px-3 py-1 rounded-full text-[11px] font-bold text-sky-700 mb-1">
+                <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
                 <span>OFFICIAL VERIFIED UPI QR</span>
               </div>
-              <h3 className="text-2xl font-black font-mono text-white mt-1">
+              <h3 className="text-2xl font-black font-mono text-slate-900 mt-1">
                 ₹{amount}
               </h3>
             </div>
 
             {/* Full UPI QR Image */}
-            <div className="bg-white p-5 rounded-2xl max-w-[280px] mx-auto shadow-2xl flex flex-col items-center justify-center min-h-[240px]">
+            <div className="bg-white p-5 rounded-2xl max-w-[280px] mx-auto border border-sky-100 shadow-md flex flex-col items-center justify-center min-h-[240px]">
               {loadingSettings && !adminSettings.qrImageUrl ? (
                 <div className="flex flex-col items-center justify-center p-8 space-y-2 text-slate-400">
-                  <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
                   <span className="text-xs font-bold text-slate-600">Loading Live QR…</span>
                 </div>
               ) : (
@@ -268,33 +265,33 @@ export default function DepositPage({ onBack }) {
             </div>
 
             {/* Payee Name & Official UPI ID */}
-            <div className="bg-[#131f33] border border-slate-700/80 rounded-2xl p-3.5 space-y-2.5">
+            <div className="bg-sky-50/60 border border-sky-100 rounded-2xl p-3.5 space-y-2.5">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Payee Name</span>
-                  <span className="text-xs font-bold text-white select-all">
+                  <span className="text-xs font-bold text-slate-900 select-all">
                     {adminSettings.payeeName || 'CRVPER ENTERTAINMENT PVT LTD'}
                   </span>
                 </div>
-                <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-bold flex items-center">
-                  <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-400" />
+                <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold flex items-center">
+                  <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
                   Live Verified
                 </span>
               </div>
 
-              <div className="border-t border-slate-800/80 pt-2 flex items-center justify-between">
+              <div className="border-t border-sky-100 pt-2 flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">UPI ID</span>
-                  <span className="text-xs font-bold text-emerald-400 font-mono select-all">
+                  <span className="text-xs font-bold text-sky-700 font-mono select-all">
                     {adminSettings.upiId}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyUPI}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center space-x-1.5 transition active:scale-95"
+                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-sky-100 border border-sky-200 text-xs font-bold text-slate-700 flex items-center space-x-1.5 transition active:scale-95 shadow-sm"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copied ? 'Copied' : 'Copy'}</span>
                 </button>
               </div>
@@ -303,11 +300,11 @@ export default function DepositPage({ onBack }) {
             {/* Upload Screenshot & Enter UTR form */}
             <form onSubmit={handleSubmitProof} className="space-y-3 pt-2">
               <div>
-                <label className="text-[11px] font-bold text-slate-300 block mb-1">
-                  Upload Payment Screenshot <span className="text-rose-400">*</span>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Upload Payment Screenshot <span className="text-rose-500">*</span>
                 </label>
                 <div className={`relative border-2 border-dashed ${
-                  previewUrl ? 'border-emerald-500 bg-emerald-950/10' : 'border-slate-700 hover:border-emerald-500 bg-[#131f33]'
+                  previewUrl ? 'border-sky-500 bg-sky-50/50' : 'border-sky-200 hover:border-sky-400 bg-sky-50/30'
                 } rounded-2xl p-4 text-center cursor-pointer transition`}>
                   <input
                     type="file"
@@ -321,22 +318,22 @@ export default function DepositPage({ onBack }) {
                       <img
                         src={previewUrl}
                         alt="Preview"
-                        className="max-h-28 rounded-lg object-contain mb-1"
+                        className="max-h-28 rounded-lg object-contain mb-1 shadow-sm"
                       />
-                      <span className="text-[11px] text-emerald-400 font-bold">Screenshot Attached ✓</span>
+                      <span className="text-[11px] text-sky-700 font-bold">Screenshot Attached ✓</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center space-y-1 text-slate-400">
-                      <Upload className="w-6 h-6 text-emerald-400" />
-                      <span className="text-xs font-semibold text-slate-300">Click to upload payment screenshot</span>
-                      <span className="text-[10px] text-slate-500">Must be attached before submitting</span>
+                      <Upload className="w-6 h-6 text-sky-500" />
+                      <span className="text-xs font-semibold text-slate-700">Click to upload payment screenshot</span>
+                      <span className="text-[10px] text-slate-400">Must be attached before submitting</span>
                     </div>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-400 block mb-1">
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">
                   12-Digit UTR / Transaction Reference Number
                 </label>
                 <input
@@ -345,7 +342,7 @@ export default function DepositPage({ onBack }) {
                   value={utr}
                   onChange={(e) => setUtr(e.target.value)}
                   placeholder="e.g. 429188204912"
-                  className="w-full bg-[#131f33] border border-slate-700 rounded-2xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-white border border-sky-200 rounded-2xl px-4 py-3 text-sm text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:border-sky-500 shadow-sm"
                 />
               </div>
 
@@ -353,17 +350,17 @@ export default function DepositPage({ onBack }) {
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="w-1/3 py-3 rounded-2xl bg-slate-800 text-xs font-bold text-slate-300 hover:bg-slate-700 transition"
+                  className="w-1/3 py-3 rounded-2xl bg-white border border-sky-200 text-xs font-bold text-slate-600 hover:bg-sky-50 transition shadow-sm"
                 >
                   Change Amount
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || !previewUrl}
-                  className={`flex-1 py-3 font-black rounded-2xl text-xs sm:text-sm transition transform active:scale-95 shadow-lg ${
+                  className={`flex-1 py-3 font-black rounded-2xl text-xs sm:text-sm transition transform active:scale-95 shadow-md ${
                     previewUrl
-                      ? 'bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 hover:from-emerald-400 text-slate-950 shadow-emerald-500/25'
-                      : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                      ? 'bg-gradient-to-r from-sky-500 via-sky-400 to-cyan-400 hover:from-sky-600 text-white shadow-sky-400/30'
+                      : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
                   }`}
                 >
                   {submitting
@@ -379,28 +376,28 @@ export default function DepositPage({ onBack }) {
 
         {/* Deposit History */}
         {depositHistory.length > 0 && (
-          <div className="mt-6 bg-[#0f1826] border border-slate-800/90 rounded-2xl p-4 shadow-xl">
-            <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">
+          <div className="mt-6 bg-white border border-sky-100 rounded-2xl p-4 shadow-md shadow-sky-100">
+            <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">
               Deposit History
             </h4>
             <div className="space-y-2">
               {depositHistory.map((d) => (
                 <div
                   key={d.id}
-                  className="flex items-center justify-between p-2.5 bg-[#131f33] rounded-xl text-xs"
+                  className="flex items-center justify-between p-2.5 bg-sky-50/50 border border-sky-100 rounded-xl text-xs"
                 >
                   <div>
-                    <span className="font-mono font-bold text-white block">₹{d.amount}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">UTR: {d.utr}</span>
+                    <span className="font-mono font-bold text-slate-900 block">₹{d.amount}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">UTR: {d.utr}</span>
                   </div>
                   <div>
                     <span
                       className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
                         (d.status === 'APPROVED' || d.status === 'CONFIRMED')
-                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : d.status === 'REJECTED'
-                          ? 'bg-rose-950 text-rose-400 border border-rose-500/40'
-                          : 'bg-amber-950 text-amber-400 border border-amber-500/40'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}
                     >
                       {(d.status === 'APPROVED' || d.status === 'CONFIRMED') ? 'CONFIRMED' : d.status}
