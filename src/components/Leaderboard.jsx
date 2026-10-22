@@ -3,9 +3,9 @@ import { Trophy, TrendingUp, Sparkles, ChevronRight, Award } from 'lucide-react'
 
 const TOP_PLAYERS = [
   { rank: 1, name: 'VIP Player 01', phone: '+91 98****3210', won: '₹84,250', game: 'Aviator (18.4x)', color: 'from-amber-400 to-yellow-500', badge: '🥇 1st' },
-  { rank: 2, name: 'VIP Player 02', phone: '+91 91****8842', won: '₹52,900', game: 'Win Go (VIOLET 4.5x)', color: 'from-slate-400 to-slate-500', badge: '🥈 2nd' },
+  { rank: 2, name: 'VIP Player 02', phone: '+91 91****8842', won: '₹52,900', game: 'Win Go (VIOLET 4.5x)', color: 'from-slate-300 to-slate-400', badge: '🥈 2nd' },
   { rank: 3, name: 'Player 03', phone: '+91 87****1109', won: '₹37,400', game: 'Mines (14 Gems)', color: 'from-amber-600 to-amber-700', badge: '🥉 3rd' },
-  { rank: 4, name: 'Player 04', phone: '+91 79****4421', won: '₹22,150', game: 'Circuit Plinko (100x)', color: 'from-sky-500 to-cyan-500', badge: '4th' }
+  { rank: 4, name: 'Player 04', phone: '+91 79****4421', won: '₹22,150', game: 'Circuit Plinko (100x)', color: 'from-emerald-500 to-teal-500', badge: '4th' }
 ];
 
 export default function Leaderboard() {
@@ -28,30 +28,30 @@ export default function Leaderboard() {
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 mt-6 select-none">
-      {/* Live Win Ticker with Glacier Sky pulse */}
-      <div className="mb-4 bg-white border border-sky-100 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs shadow-sm shadow-sky-100">
+      {/* Live Win Ticker with Stake-style pulse */}
+      <div className="mb-4 bg-[#0d1624] border border-slate-800/90 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs shadow-lg">
         <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-ping" />
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
           <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Live Win</span>
-          <span className="text-slate-900 font-black">{liveWin.user}</span>
-          <span className="text-emerald-600 font-mono font-black text-sm">+{liveWin.amount}</span>
+          <span className="text-white font-black">{liveWin.user}</span>
+          <span className="text-emerald-400 font-mono font-black text-sm">+{liveWin.amount}</span>
         </div>
-        <span className="text-sky-700 text-[11px] font-mono font-bold bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-lg">
+        <span className="text-emerald-300 text-[11px] font-mono font-bold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-lg">
           {liveWin.game}
         </span>
       </div>
 
       {/* Top High-Roller Payouts Table */}
-      <div className="bg-white border border-sky-100 rounded-3xl p-4 sm:p-5 shadow-lg shadow-sky-100/60">
+      <div className="bg-[#0f1826] border border-slate-800/90 rounded-3xl p-4 sm:p-5 shadow-2xl">
         <div className="flex items-center justify-between mb-3.5 px-1">
           <div className="flex items-center space-x-2">
-            <Trophy className="w-5 h-5 text-amber-500 animate-pulse" />
-            <h4 className="text-base font-black text-slate-900 tracking-wide font-sans">
+            <Trophy className="w-5 h-5 text-amber-400 animate-pulse" />
+            <h4 className="text-base font-black text-white tracking-wide font-sans">
               Top Winners Today
             </h4>
           </div>
-          <span className="text-[11px] font-bold text-slate-500 flex items-center bg-sky-50 px-2.5 py-1 rounded-xl border border-sky-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-500 mr-1.5" />
+          <span className="text-[11px] font-bold text-slate-400 flex items-center bg-[#152136] px-2.5 py-1 rounded-xl border border-slate-800">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5" />
             <span>Live Audit</span>
           </span>
         </div>
@@ -60,23 +60,26 @@ export default function Leaderboard() {
           {TOP_PLAYERS.map((player) => (
             <div
               key={player.rank}
-              className="flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-sky-50/50 via-white to-sky-50/30 border border-sky-100/80 hover:border-sky-300 transition shadow-sm"
+              className="flex items-center justify-between p-3 rounded-2xl bg-[#142033]/80 hover:bg-[#18263d] border border-slate-800/80 transition-all duration-150"
             >
               <div className="flex items-center space-x-3">
-                <span className="text-sm font-black w-8 text-center">{player.badge}</span>
+                <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${player.color} flex items-center justify-center text-xs font-black text-slate-950 shadow-md`}>
+                  {player.rank}
+                </div>
                 <div>
-                  <h5 className="text-xs sm:text-sm font-black text-slate-900">{player.name}</h5>
-                  <p className="text-[10px] text-slate-400 font-mono">{player.phone}</p>
+                  <div className="text-xs font-black text-white flex items-center space-x-1.5">
+                    <span>{player.name}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">({player.phone})</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-semibold font-mono">Game: {player.game}</span>
                 </div>
               </div>
 
               <div className="text-right">
-                <span className="text-xs sm:text-sm font-black font-mono text-emerald-600 block">
+                <span className="text-sm font-mono font-black text-emerald-400 block">
                   {player.won}
                 </span>
-                <span className="text-[10px] text-sky-700 font-bold bg-sky-50 px-1.5 py-0.2 rounded border border-sky-100">
-                  {player.game}
-                </span>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Settled</p>
               </div>
             </div>
           ))}

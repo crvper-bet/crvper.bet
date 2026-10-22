@@ -3,69 +3,59 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: #090e17;
+  color: #f1f5f9;
   font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Custom scrollbars - Glacier styling */
+/* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #090e17;
 }
 ::-webkit-scrollbar-thumb {
-  background: #bae6fd;
+  background: #1b2c45;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #0ea5e9;
+  background: #10b981;
 }
 
-/* Glowing effects - Glacier Sky Blue Theme */
-.glow-sky {
-  box-shadow: 0 0 25px -4px rgba(14, 165, 233, 0.45);
-}
-
+/* Glowing effects */
 .glow-emerald {
-  box-shadow: 0 0 25px -4px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 25px -4px rgba(0, 231, 1, 0.45);
 }
 
 .glow-cyan {
-  box-shadow: 0 0 25px -5px rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 25px -5px rgba(0, 229, 255, 0.4);
 }
 
 .glow-red {
-  box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.35);
+  box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.4);
 }
 
 .glow-green {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.45);
 }
 
 .glow-gold {
-  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.5);
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(15, 24, 38, 0.78);
   backdrop-filter: blur(14px);
-  border: 1px solid rgba(186, 230, 253, 0.6);
-}
-
-.glacier-card {
-  background: #ffffff;
-  border: 1px solid #e0f2fe;
-  box-shadow: 0 4px 20px -2px rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* ═════════════════════════════════════════════════════════════════════════════
@@ -74,8 +64,8 @@ body {
 
 /* 1. Neon Pulse Glow */
 @keyframes pulseGlow {
-  0%, 100% { opacity: 0.85; transform: scale(1); filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.4)); }
-  50% { opacity: 1; transform: scale(1.02); filter: drop-shadow(0 0 20px rgba(14, 165, 233, 0.8)); }
+  0%, 100% { opacity: 0.85; transform: scale(1); filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.4)); }
+  50% { opacity: 1; transform: scale(1.02); filter: drop-shadow(0 0 20px rgba(0, 229, 255, 0.8)); }
 }
 .animate-pulse-glow {
   animation: pulseGlow 2s infinite ease-in-out;
@@ -108,38 +98,68 @@ body {
 
 /* 4. Triumphant Win Celebration Pulse */
 @keyframes winCelebrate {
-  0% { transform: scale(0.7); opacity: 0; }
-  50% { transform: scale(1.1); filter: drop-shadow(0 0 25px rgba(14, 165, 233, 0.9)); }
-  70% { transform: scale(0.98); }
-  100% { transform: scale(1); opacity: 1; }
+  0% { transform: scale(0.8); opacity: 0; filter: brightness(1.5); }
+  40% { transform: scale(1.12); opacity: 1; filter: brightness(1.8) drop-shadow(0 0 25px rgba(16, 185, 129, 0.8)); }
+  70% { transform: scale(0.98); filter: brightness(1.2); }
+  100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.6)); }
 }
 .animate-win-celebrate {
-  animation: winCelebrate 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: winCelebrate 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
 }
 
-/* 5. Smooth Fade In */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+/* 5. Shimmer / Light Sweep effect for winning chips & banners */
+@keyframes sweepShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
-.animate-fade-in {
-  animation: fadeIn 0.25s ease-out forwards;
-}
-
-/* 6. Subtle Floating Idle (for Aviator Jet & Coins) */
-@keyframes floatIdle {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-6px) rotate(1deg); }
-}
-.animate-float-idle {
-  animation: floatIdle 3s ease-in-out infinite;
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: sweepShimmer 1.8s infinite;
 }
 
-/* Hide scrollbar for clean horizontal strips */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+/* 6. Radar Ping / Ripple Wave */
+@keyframes rippleWave {
+  0% { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.animate-ripple {
+  animation: rippleWave 1.2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+/* 7. Floating Jet / Gem Idle Bob */
+@keyframes floatBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.animate-float {
+  animation: floatBob 2s ease-in-out infinite;
+}
+
+/* 8. Neon Border Cycle */
+@keyframes neonBorderPulse {
+  0%, 100% { border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+  50% { border-color: rgba(168, 85, 247, 0.8); box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
+}
+.animate-neon-border {
+  animation: neonBorderPulse 3s infinite ease-in-out;
+}
+
+/* 9. Number Ticker Roll (Smooth Digit Flip) */
+@keyframes rollDigit {
+  0% { transform: translateY(-30%); opacity: 0.3; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.animate-roll-digit {
+  animation: rollDigit 0.15s ease-out forwards;
+}
+
+/* 10. Coin / Cashout Rain Burst */
+@keyframes coinBurst {
+  0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 1; }
+  50% { transform: translateY(-20px) scale(1.2) rotate(180deg); opacity: 1; }
+  100% { transform: translateY(40px) scale(0.8) rotate(360deg); opacity: 0; }
+}
+.animate-coin-burst {
+  animation: coinBurst 0.8s ease-out forwards;
 }

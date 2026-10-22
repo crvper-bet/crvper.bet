@@ -10,10 +10,10 @@ export default function ProfileModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-sm bg-white border-sky-200 border border-sky-100 rounded-3xl p-6 shadow-2xl relative space-y-4">
+      <div className="w-full max-w-sm bg-[#0f172a] border border-slate-800 rounded-3xl p-6 shadow-2xl relative space-y-4">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-500 hover:text-white p-1 rounded-full bg-slate-800"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-full bg-slate-800"
         >
           <X className="w-5 h-5" />
         </button>
@@ -28,9 +28,9 @@ export default function ProfileModal({ isOpen, onClose }) {
         </div>
 
         {/* Status Pills */}
-        <div className="bg-[#131b2e] border border-sky-200/80 rounded-2xl p-3.5 space-y-2 text-xs">
+        <div className="bg-[#131b2e] border border-slate-700/80 rounded-2xl p-3.5 space-y-2 text-xs">
           <div className="flex justify-between items-center">
-            <span className="text-slate-500">Withdrawal Verification:</span>
+            <span className="text-slate-400">Withdrawal Verification:</span>
             <span className={`font-bold font-mono px-2 py-0.5 rounded-full ${
               user.hasDeposited 
                 ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' 
@@ -41,12 +41,12 @@ export default function ProfileModal({ isOpen, onClose }) {
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-slate-500">Wallet Balance:</span>
+            <span className="text-slate-400">Wallet Balance:</span>
             <span className="font-mono font-bold text-white">₹{Number(user.walletBalance).toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-slate-500">Invited By:</span>
+            <span className="text-slate-400">Invited By:</span>
             <span className="font-mono text-cyan-400 font-bold">{user.referredBy || 'Direct'}</span>
           </div>
         </div>

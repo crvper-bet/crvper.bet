@@ -232,18 +232,18 @@ export default function PlinkoGame({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-sky-100 text-slate-900 p-3 sm:p-4 pb-24 selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-[#090e17] p-3 sm:p-4 pb-24 selection:bg-emerald-500 selection:text-black">
       <div className="max-w-md mx-auto space-y-3 sm:space-y-4">
 
         {/* Header */}
-        <div className="flex items-center justify-between bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-2xl p-3">
+        <div className="flex items-center justify-between bg-[#0f1826] border border-slate-800 rounded-2xl p-3">
           <div className="flex items-center space-x-2.5">
             <button
               onClick={() => {
                 sounds.playClick();
                 onBack();
               }}
-              className="p-2 rounded-xl bg-slate-900 border border-sky-100 hover:border-sky-200 text-slate-300 transition"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -267,9 +267,9 @@ export default function PlinkoGame({ onBack }) {
         </div>
 
         {/* Physics Canvas Pegboard */}
-        <div className={`bg-white border-sky-100 shadow-md shadow-sky-100/60 border rounded-3xl p-3 shadow-2xl relative overflow-hidden flex flex-col items-center transition-all duration-300 ${
+        <div className={`bg-[#0f1826] border rounded-3xl p-3 shadow-2xl relative overflow-hidden flex flex-col items-center transition-all duration-300 ${
           lastWin && lastWin.multiplier >= 2 ? 'border-purple-500/80 shadow-purple-900/40' :
-          lastWin && lastWin.multiplier >= 1 ? 'border-emerald-500/80 shadow-emerald-900/40' : 'border-sky-100'
+          lastWin && lastWin.multiplier >= 1 ? 'border-emerald-500/80 shadow-emerald-900/40' : 'border-slate-800'
         }`}>
           {/* Subtle radial glow */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/20 via-transparent to-transparent pointer-events-none" />
@@ -296,7 +296,7 @@ export default function PlinkoGame({ onBack }) {
         </div>
 
         {/* Controls Panel */}
-        <div className="bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5">
+        <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5">
           {/* Risk Level Selector */}
           <div>
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
@@ -317,7 +317,7 @@ export default function PlinkoGame({ onBack }) {
                   className={`py-2 px-1 rounded-xl text-[11px] font-bold transition text-center ${
                     risk === r.id
                       ? 'bg-emerald-500 text-slate-950 font-black shadow-md'
-                      : 'bg-sky-50/70 border-sky-200 text-slate-400 hover:bg-slate-800'
+                      : 'bg-[#131f33] text-slate-400 hover:bg-slate-800'
                   }`}
                 >
                   {r.label}
@@ -347,7 +347,7 @@ export default function PlinkoGame({ onBack }) {
                   className={`py-1.5 rounded-xl text-xs font-mono font-bold transition ${
                     ballCount === cnt
                       ? 'bg-purple-600 text-white font-black'
-                      : 'bg-sky-50/70 border-sky-200 text-slate-400 hover:bg-slate-800'
+                      : 'bg-[#131f33] text-slate-400 hover:bg-slate-800'
                   }`}
                 >
                   {cnt}×
@@ -366,7 +366,7 @@ export default function PlinkoGame({ onBack }) {
               min="10"
               value={betAmount}
               onChange={(e) => setBetAmount(e.target.value)}
-              className="w-full bg-sky-50/70 border-sky-200 border border-sky-200 rounded-2xl px-4 py-2.5 text-base font-black text-white font-mono focus:outline-none focus:border-emerald-500"
+              className="w-full bg-[#131f33] border border-slate-700 rounded-2xl px-4 py-2.5 text-base font-black text-white font-mono focus:outline-none focus:border-emerald-500"
             />
           </div>
 

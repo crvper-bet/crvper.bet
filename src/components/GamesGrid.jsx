@@ -38,24 +38,24 @@ export default function GamesGrid({ onSelectGame }) {
       badge: 'HOT 🔥',
       rtp: '97% RTP',
       accentColor: '#f43f5e',
-      gradient: 'from-white via-rose-50/50 to-white',
-      border: 'hover:border-rose-400 border-rose-100',
+      gradient: 'from-[#1e1018] via-[#15101a] to-[#0c121d]',
+      border: 'hover:border-rose-500/60 border-rose-900/30',
       activePlayers: '4,120',
       liveBadge: (
-        <div className="mt-2.5 flex items-center space-x-1.5 bg-rose-50/80 px-2.5 py-1 rounded-xl border border-rose-200/60 backdrop-blur-md">
+        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-rose-500/30 backdrop-blur-md">
           <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-          <span className="text-[10px] font-mono font-bold text-slate-500">FLIGHT:</span>
+          <span className="text-[10px] font-mono font-bold text-slate-400">FLIGHT:</span>
           <span className={`text-xs font-mono font-black ${
-            aviatorLive.gameState === 'CRASHED' ? 'text-rose-600' :
-            aviatorLive.gameState === 'WAITING' ? 'text-sky-600' : 'text-emerald-600'
+            aviatorLive.gameState === 'CRASHED' ? 'text-rose-400' :
+            aviatorLive.gameState === 'WAITING' ? 'text-cyan-400' : 'text-emerald-400'
           }`}>
             {aviatorLive.gameState === 'WAITING' ? `Starts ${aviatorLive.countdown}s` :
              aviatorLive.gameState === 'FLYING' ? `${aviatorLive.multiplier.toFixed(2)}x` :
              `Crashed ${aviatorLive.crashPoint.toFixed(2)}x`}
           </span>
-          <div className="flex space-x-1 pl-1.5 border-l border-rose-200">
+          <div className="flex space-x-1 pl-1.5 border-l border-slate-700/60">
             {aviatorRecent.map((c, i) => (
-              <span key={i} className="text-[9px] font-mono text-slate-600 font-bold">{c}x</span>
+              <span key={i} className="text-[9px] font-mono text-slate-400 font-bold">{c}x</span>
             ))}
           </div>
         </div>
@@ -63,7 +63,7 @@ export default function GamesGrid({ onSelectGame }) {
       previewSvg: (
         <div className="relative">
           <div className="absolute -inset-2 bg-rose-500/10 rounded-full blur-xl pointer-events-none" />
-          <svg className="w-16 h-16 sm:w-18 sm:h-18 opacity-90 group-hover:scale-110 group-hover:translate-x-1 group-hover:-translate-y-1 transition duration-300 drop-shadow-[0_4px_12px_rgba(244,63,94,0.3)]" viewBox="0 0 64 64" fill="none">
+          <svg className="w-16 h-16 sm:w-18 sm:h-18 opacity-90 group-hover:scale-110 group-hover:translate-x-1 group-hover:-translate-y-1 transition duration-300 drop-shadow-[0_0_12px_rgba(244,63,94,0.4)]" viewBox="0 0 64 64" fill="none">
             <path d="M12 50 L28 42 L48 20 C52 16 58 18 56 24 L50 36 L40 40 L34 54 L26 50 L30 42 Z" fill="#f43f5e"/>
             <path d="M4 56 Q20 54 36 44" stroke="#fb7185" strokeWidth="2.5" strokeDasharray="3 3"/>
           </svg>
@@ -78,30 +78,30 @@ export default function GamesGrid({ onSelectGame }) {
       badge: 'TOP CHOICE',
       rtp: '10X Payout',
       accentColor: '#a855f7',
-      gradient: 'from-white via-purple-50/50 to-white',
-      border: 'hover:border-purple-400 border-purple-100',
+      gradient: 'from-[#1a102a] via-[#130f24] to-[#0c121d]',
+      border: 'hover:border-purple-500/60 border-purple-900/30',
       activePlayers: '3,840',
       liveBadge: (
-        <div className="mt-2.5 flex items-center space-x-1.5 bg-purple-50/80 px-2.5 py-1 rounded-xl border border-purple-200/60 backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
-          <span className="text-[10px] font-mono font-bold text-slate-500">TIMER:</span>
-          <span className={`text-xs font-mono font-black ${wingoLive.isLocked ? 'text-rose-600' : 'text-purple-700'}`}>
+        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-purple-500/30 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+          <span className="text-[10px] font-mono font-bold text-slate-400">TIMER:</span>
+          <span className={`text-xs font-mono font-black ${wingoLive.isLocked ? 'text-rose-400' : 'text-purple-300'}`}>
             00:{wingoLive.secondsLeft < 10 ? `0${wingoLive.secondsLeft}` : wingoLive.secondsLeft}
           </span>
-          <div className="flex space-x-1 pl-1.5 border-l border-purple-200">
+          <div className="flex space-x-1 pl-1.5 border-l border-slate-700/60">
             {wingoRecent.map((h, i) => (
               <span key={i} className={`text-[9px] font-mono font-black px-1.5 py-0.2 rounded ${
-                h.color === 'RED' ? 'text-rose-700 bg-rose-100 border border-rose-200' : 'text-emerald-700 bg-emerald-100 border border-emerald-200'
+                h.color === 'RED' ? 'text-rose-300 bg-rose-950/70 border border-rose-500/30' : 'text-emerald-300 bg-emerald-950/70 border border-emerald-500/30'
               }`}>{h.num}</span>
             ))}
           </div>
         </div>
       ),
       previewSvg: (
-        <div className="flex items-center -space-x-2 group-hover:scale-110 transition duration-300 drop-shadow-md">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-xs font-black text-white shadow-md border border-white">7</div>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-xs font-black text-white shadow-md border border-white">3</div>
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-red-500 to-rose-400 flex items-center justify-center text-[10px] font-black text-white shadow-md border border-white">8</div>
+        <div className="flex items-center -space-x-2 group-hover:scale-110 transition duration-300 drop-shadow-lg">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-xs font-black text-white shadow-lg border border-purple-400/40">7</div>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-xs font-black text-white shadow-lg border border-emerald-400/40">3</div>
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-red-500 to-rose-400 flex items-center justify-center text-[10px] font-black text-white shadow-lg border border-rose-400/40">8</div>
         </div>
       )
     },
@@ -113,24 +113,24 @@ export default function GamesGrid({ onSelectGame }) {
       badge: '99% RTP',
       rtp: '10,000x Max',
       accentColor: '#10b981',
-      gradient: 'from-white via-emerald-50/50 to-white',
-      border: 'hover:border-emerald-400 border-emerald-100',
+      gradient: 'from-[#0d2218] via-[#0d1b1c] to-[#0a141f]',
+      border: 'hover:border-emerald-500/60 border-emerald-900/30',
       activePlayers: '2,930',
       liveBadge: (
-        <div className="mt-2.5 flex items-center space-x-1.5 bg-emerald-50/80 px-2.5 py-1 rounded-xl border border-emerald-200/60 backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-mono font-bold text-slate-500">FAIR:</span>
-          <span className="text-xs font-mono font-black text-emerald-700">
+        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-emerald-500/30 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-mono font-bold text-slate-400">FAIR:</span>
+          <span className="text-xs font-mono font-black text-emerald-400">
             SHA-256 Verified
           </span>
         </div>
       ),
       previewSvg: (
         <div className="flex items-center space-x-2 group-hover:scale-110 transition duration-300">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-amber-300 flex items-center justify-center text-amber-500 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-slate-900 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-lg">
             <Bomb className="w-6 h-6 animate-pulse" />
           </div>
-          <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-600 text-sm font-black shadow-sm">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-sm font-black shadow-lg">
             💎
           </div>
         </div>
@@ -143,30 +143,30 @@ export default function GamesGrid({ onSelectGame }) {
       tag: 'PHYSICS PEG BOARD',
       badge: '1000X MULTIPLIER',
       rtp: '99% RTP',
-      accentColor: '#0ea5e9',
-      gradient: 'from-white via-sky-50/50 to-white',
-      border: 'hover:border-sky-400 border-sky-100',
+      accentColor: '#06b6d4',
+      gradient: 'from-[#0b1b26] via-[#0b1622] to-[#09101b]',
+      border: 'hover:border-cyan-500/60 border-cyan-900/30',
       activePlayers: '1,860',
       liveBadge: (
-        <div className="mt-2.5 flex items-center space-x-1.5 bg-sky-50/80 px-2.5 py-1 rounded-xl border border-sky-200/60 backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-          <span className="text-[10px] font-mono font-bold text-slate-500">DROPS:</span>
-          <span className="text-xs font-mono font-black text-sky-700">
+        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-cyan-500/30 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="text-[10px] font-mono font-bold text-slate-400">DROPS:</span>
+          <span className="text-xs font-mono font-black text-cyan-300">
             Continuous
           </span>
         </div>
       ),
       previewSvg: (
         <div className="w-14 h-12 flex flex-col justify-between items-center group-hover:scale-110 transition duration-300">
-          <div className="w-3.5 h-3.5 rounded-full bg-sky-500 shadow-[0_0_10px_#0ea5e9] animate-bounce" />
+          <div className="w-3.5 h-3.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#00e5ff] animate-bounce" />
           <div className="flex space-x-1.5 opacity-60">
-            <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-            <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-            <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
           </div>
-          <div className="flex space-x-1.5 text-[9px] font-mono text-sky-700 font-bold">
+          <div className="flex space-x-1.5 text-[9px] font-mono text-cyan-300 font-bold">
             <span>0.2x</span>
-            <span className="text-amber-500 font-black">1000x</span>
+            <span className="text-amber-400 font-black">1000x</span>
           </div>
         </div>
       )
@@ -178,24 +178,24 @@ export default function GamesGrid({ onSelectGame }) {
       tag: '9-ROW RISK CLIMBER',
       badge: 'HIGH STAKES',
       rtp: '100x Max',
-      accentColor: '#0284c7',
-      gradient: 'from-white via-cyan-50/50 to-white',
-      border: 'hover:border-cyan-400 border-cyan-100',
+      accentColor: '#10b981',
+      gradient: 'from-[#0d2218] via-[#0b1a1c] to-[#09101b]',
+      border: 'hover:border-teal-500/60 border-teal-900/30',
       activePlayers: '1,240',
       liveBadge: (
-        <div className="mt-2.5 flex items-center space-x-1.5 bg-cyan-50/80 px-2.5 py-1 rounded-xl border border-cyan-200/60 backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-          <span className="text-[10px] font-mono font-bold text-slate-500">LEVELS:</span>
-          <span className="text-xs font-mono font-black text-cyan-700">
+        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-emerald-500/30 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-mono font-bold text-slate-400">LEVELS:</span>
+          <span className="text-xs font-mono font-black text-emerald-300">
             9 Difficulty Steps
           </span>
         </div>
       ),
       previewSvg: (
         <div className="flex flex-col space-y-1 group-hover:scale-110 transition duration-300">
-          <div className="w-12 h-2.5 rounded-md bg-cyan-500 shadow-[0_0_8px_#06b6d4]" />
-          <div className="w-12 h-2.5 rounded-md bg-slate-200" />
-          <div className="w-12 h-2.5 rounded-md bg-slate-200" />
+          <div className="w-12 h-2.5 rounded-md bg-emerald-400 shadow-[0_0_8px_#10b981]" />
+          <div className="w-12 h-2.5 rounded-md bg-slate-700/80" />
+          <div className="w-12 h-2.5 rounded-md bg-slate-700/80" />
         </div>
       )
     },
@@ -206,21 +206,21 @@ export default function GamesGrid({ onSelectGame }) {
       tag: 'RAPID 100-PT SLIDER',
       badge: 'INSTANT WIN',
       rtp: '99% RTP',
-      accentColor: '#0ea5e9',
-      gradient: 'from-white via-blue-50/50 to-white',
-      border: 'hover:border-blue-400 border-blue-100',
+      accentColor: '#3b82f6',
+      gradient: 'from-[#101b33] via-[#0e1629] to-[#09101b]',
+      border: 'hover:border-blue-500/60 border-blue-900/30',
       activePlayers: '2,110',
       liveBadge: (
-        <div className="mt-2.5 flex items-center space-x-1.5 bg-blue-50/80 px-2.5 py-1 rounded-xl border border-blue-200/60 backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-          <span className="text-[10px] font-mono font-bold text-slate-500">SPEED:</span>
-          <span className="text-xs font-mono font-black text-blue-700">
+        <div className="mt-2.5 flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-xl border border-blue-500/30 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+          <span className="text-[10px] font-mono font-bold text-slate-400">SPEED:</span>
+          <span className="text-xs font-mono font-black text-blue-300">
             0.1s Result
           </span>
         </div>
       ),
       previewSvg: (
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-cyan-400 flex items-center justify-center font-mono font-black text-white text-base shadow-md group-hover:rotate-12 transition duration-300 border border-white">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-mono font-black text-white text-base shadow-lg group-hover:rotate-12 transition duration-300 border border-blue-400/40">
           88.4
         </div>
       )
@@ -239,21 +239,21 @@ export default function GamesGrid({ onSelectGame }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 px-1">
         <div>
           <div className="flex items-center space-x-2">
-            <Flame className="w-5 h-5 text-sky-500 animate-pulse" />
-            <h3 className="text-xl font-black text-slate-900 tracking-wide font-sans">
+            <Flame className="w-5 h-5 text-emerald-400 animate-pulse" />
+            <h3 className="text-xl font-black text-white tracking-wide font-sans">
               Casino Originals
             </h3>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5">
             Provably Fair • Instant INR Settlements • Zero Latency
           </p>
         </div>
 
         {/* Live Active Players Beacon */}
-        <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-white border border-sky-100 text-xs text-slate-600 shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+        <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-[#0e1726] border border-slate-800 text-xs text-slate-300">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
           <Users className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-mono font-bold text-slate-800">16,080</span>
+          <span className="font-mono font-bold text-white">16,080</span>
           <span className="text-[11px] text-slate-400">Online</span>
         </div>
       </div>
@@ -269,8 +269,8 @@ export default function GamesGrid({ onSelectGame }) {
             }}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition transform active:scale-95 ${
               selectedCategory === cat.id
-                ? 'bg-sky-500 text-white shadow-md shadow-sky-400/30'
-                : 'bg-white border border-sky-100 text-slate-600 hover:text-slate-900 hover:border-sky-300 shadow-sm'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-[#101929] border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
             }`}
           >
             {cat.label}
@@ -287,23 +287,23 @@ export default function GamesGrid({ onSelectGame }) {
               sounds.playClick();
               onSelectGame(game.id);
             }}
-            className={`group relative overflow-hidden rounded-3xl bg-gradient-to-br ${game.gradient} border ${game.border} p-5 flex items-center justify-between cursor-pointer transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-100/80 active:scale-[0.97] shadow-sm`}
+            className={`group relative overflow-hidden rounded-3xl bg-gradient-to-br ${game.gradient} border ${game.border} p-5 flex items-center justify-between cursor-pointer transition-all duration-200 transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/70 active:scale-[0.97]`}
           >
             {/* Ambient Shimmer */}
-            <div className="absolute inset-0 bg-sky-400/[0.04] opacity-0 group-hover:opacity-100 transition duration-300 pointer-events-none" />
+            <div className="absolute inset-0 bg-white/[0.03] opacity-0 group-hover:opacity-100 transition duration-300 pointer-events-none" />
 
             {/* Left Content */}
             <div className="relative z-10 flex-1 pr-3">
               <div className="flex items-center space-x-2 mb-1.5">
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-slate-900/5 text-slate-700 border border-slate-200/50 tracking-wider">
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-white/10 text-white tracking-wider">
                   {game.badge}
                 </span>
-                <span className="text-[10px] font-bold font-mono text-sky-600">
+                <span className="text-[10px] font-bold font-mono text-emerald-400">
                   {game.rtp}
                 </span>
               </div>
 
-              <h4 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight group-hover:text-sky-600 transition">
+              <h4 className="text-xl sm:text-2xl font-black text-white tracking-tight group-hover:text-emerald-300 transition">
                 {game.name}
               </h4>
               <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold tracking-wider uppercase mt-0.5">
@@ -313,8 +313,8 @@ export default function GamesGrid({ onSelectGame }) {
               {/* Real-time continuous live outcomes ticker */}
               {game.liveBadge}
 
-              <div className="inline-flex items-center space-x-1.5 text-xs font-black text-sky-600 mt-3 group-hover:text-sky-700">
-                <div className="w-5 h-5 rounded-lg bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600 group-hover:scale-110 transition shadow-sm">
+              <div className="inline-flex items-center space-x-1.5 text-xs font-black text-emerald-400 mt-3 group-hover:text-emerald-300">
+                <div className="w-5 h-5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition">
                   <Play className="w-2.5 h-2.5 fill-current" />
                 </div>
                 <span>Play Now</span>

@@ -423,17 +423,17 @@ export default function AviatorGame({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-sky-100 text-slate-900 p-3 sm:p-4 pb-28 selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-[#090e17] p-3 sm:p-4 pb-28 selection:bg-emerald-500 selection:text-black">
       <div className="max-w-5xl mx-auto space-y-3 sm:space-y-4">
         {/* Top Header */}
-        <div className="flex items-center justify-between bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-2xl p-3">
+        <div className="flex items-center justify-between bg-[#0f1826] border border-slate-800 rounded-2xl p-3">
           <div className="flex items-center space-x-2.5 sm:space-x-3">
             <button
               onClick={() => {
                 sounds.playClick();
                 onBack();
               }}
-              className="p-2 rounded-xl bg-slate-900 border border-sky-100 hover:border-sky-200 text-slate-300 transition"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -444,7 +444,7 @@ export default function AviatorGame({ onBack }) {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse" />
                   LIVE
                 </span>
-                <span className="text-[10px] bg-slate-900 text-slate-400 border border-sky-200/60 px-2 py-0.5 rounded-full font-mono font-bold">
+                <span className="text-[10px] bg-slate-900 text-slate-400 border border-slate-700/60 px-2 py-0.5 rounded-full font-mono font-bold">
                   {currentRoundId}
                 </span>
               </h1>
@@ -458,7 +458,7 @@ export default function AviatorGame({ onBack }) {
                 sounds.playClick();
                 setShowRulesModal(true);
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-bold text-slate-300 border border-sky-200 transition"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-bold text-slate-300 border border-slate-700 transition"
               title="Game Rules & Provable Fairness"
             >
               ⚖ Rules
@@ -473,7 +473,7 @@ export default function AviatorGame({ onBack }) {
         </div>
 
         {/* Recent Crash Multipliers History Strip */}
-        <div className="bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-2xl px-3 py-2 flex items-center space-x-2 overflow-x-auto select-none no-scrollbar">
+        <div className="bg-[#0f1826] border border-slate-800 rounded-2xl px-3 py-2 flex items-center space-x-2 overflow-x-auto select-none no-scrollbar">
           <History className="w-4 h-4 text-slate-500 shrink-0" />
           <div className="flex items-center space-x-2">
             {crashHistory.map((mult, idx) => (
@@ -498,9 +498,9 @@ export default function AviatorGame({ onBack }) {
           
           {/* LEFT SECTION (approx 55% on lg): Flight Main Stage / Canvas with 2D Animated Plane */}
           <div className="lg:col-span-7 flex flex-col">
-            <div className={`relative bg-white border-sky-100 shadow-md shadow-sky-100/60 border rounded-3xl h-64 sm:h-80 lg:h-full min-h-[260px] overflow-hidden shadow-2xl flex items-center justify-center transition-all duration-300 ${
+            <div className={`relative bg-[#0f1826] border rounded-3xl h-64 sm:h-80 lg:h-full min-h-[260px] overflow-hidden shadow-2xl flex items-center justify-center transition-all duration-300 ${
               gameState === 'CRASHED' ? 'border-rose-600/80 shadow-rose-950/60' :
-              gameState === 'FLYING' ? 'border-emerald-500/30 shadow-emerald-950/20' : 'border-sky-100'
+              gameState === 'FLYING' ? 'border-emerald-500/30 shadow-emerald-950/20' : 'border-slate-800'
             }`}>
               <canvas
                 ref={canvasRef}
@@ -527,7 +527,7 @@ export default function AviatorGame({ onBack }) {
                       </span>
                       <div className="w-16 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent mx-auto mt-1 animate-pulse" />
                     </div>
-                    <p className="text-[11px] text-emerald-400 font-bold mt-2 bg-slate-900/90 px-3 py-1 rounded-full border border-sky-200/80 shadow-sm">
+                    <p className="text-[11px] text-emerald-400 font-bold mt-2 bg-slate-900/90 px-3 py-1 rounded-full border border-slate-700/80 shadow-sm">
                       ⚡ Dual betting open! Set Auto-Cashout or Bet below
                     </p>
                   </div>
@@ -563,8 +563,8 @@ export default function AviatorGame({ onBack }) {
           <div className="lg:col-span-5 flex flex-col space-y-3 sm:space-y-4">
             
             {/* --- BET PANEL 1 --- */}
-            <div className="bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-3xl p-3.5 sm:p-4 shadow-xl space-y-2.5">
-              <div className="flex items-center justify-between border-b border-sky-100 pb-2">
+            <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-3.5 sm:p-4 shadow-xl space-y-2.5">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span className="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                   <span>BET PANEL 1</span>
@@ -576,7 +576,7 @@ export default function AviatorGame({ onBack }) {
                     type="checkbox"
                     checked={panel1AutoBet}
                     onChange={(e) => setPanel1AutoBet(e.target.checked)}
-                    className="rounded border-sky-200 text-emerald-500 bg-slate-900 focus:ring-0"
+                    className="rounded border-slate-700 text-emerald-500 bg-slate-900 focus:ring-0"
                   />
                   <span className="text-slate-300 font-bold text-[11px]">Auto Bet</span>
                 </label>
@@ -591,14 +591,14 @@ export default function AviatorGame({ onBack }) {
                       <button
                         key={amt}
                         onClick={() => setPanel1Amount(String(amt))}
-                        className="px-1.5 py-0.5 rounded bg-slate-900 border border-sky-100 hover:border-sky-200 text-[10px] font-mono text-slate-300"
+                        className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-[10px] font-mono text-slate-300"
                       >
                         ₹{amt}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center bg-sky-50/70 border-sky-200 border border-sky-200 rounded-xl overflow-hidden">
+                <div className="flex items-center bg-[#131f33] border border-slate-700 rounded-xl overflow-hidden">
                   <button
                     onClick={() => setPanel1Amount((p) => String(Math.max(10, Number(p) - 10)))}
                     className="px-3 py-2 text-slate-400 hover:text-white"
@@ -628,7 +628,7 @@ export default function AviatorGame({ onBack }) {
                     type="checkbox"
                     checked={panel1AutoCashout}
                     onChange={(e) => setPanel1AutoCashout(e.target.checked)}
-                    className="rounded border-sky-200 text-emerald-500 bg-slate-900 focus:ring-0"
+                    className="rounded border-slate-700 text-emerald-500 bg-slate-900 focus:ring-0"
                   />
                   <span className="text-slate-300 font-bold text-[11px]">Auto Cashout</span>
                 </label>
@@ -639,7 +639,7 @@ export default function AviatorGame({ onBack }) {
                     disabled={!panel1AutoCashout}
                     value={panel1AutoCashoutTarget}
                     onChange={(e) => setPanel1AutoCashoutTarget(e.target.value)}
-                    className="w-16 bg-sky-50/70 border-sky-200 border border-sky-200 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-center text-emerald-400 focus:outline-none disabled:opacity-40"
+                    className="w-16 bg-[#131f33] border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-center text-emerald-400 focus:outline-none disabled:opacity-40"
                   />
                   <span className="text-slate-500 text-xs">x</span>
                 </div>
@@ -697,8 +697,8 @@ export default function AviatorGame({ onBack }) {
             </div>
 
             {/* --- BET PANEL 2 --- */}
-            <div className="bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-3xl p-3.5 sm:p-4 shadow-xl space-y-2.5">
-              <div className="flex items-center justify-between border-b border-sky-100 pb-2">
+            <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-3.5 sm:p-4 shadow-xl space-y-2.5">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span className="text-xs font-black text-teal-400 uppercase tracking-wider flex items-center space-x-1.5">
                   <span className="w-2 h-2 rounded-full bg-teal-400"></span>
                   <span>BET PANEL 2</span>
@@ -710,7 +710,7 @@ export default function AviatorGame({ onBack }) {
                     type="checkbox"
                     checked={panel2AutoBet}
                     onChange={(e) => setPanel2AutoBet(e.target.checked)}
-                    className="rounded border-sky-200 text-teal-500 bg-slate-900 focus:ring-0"
+                    className="rounded border-slate-700 text-teal-500 bg-slate-900 focus:ring-0"
                   />
                   <span className="text-slate-300 font-bold text-[11px]">Auto Bet</span>
                 </label>
@@ -725,14 +725,14 @@ export default function AviatorGame({ onBack }) {
                       <button
                         key={amt}
                         onClick={() => setPanel2Amount(String(amt))}
-                        className="px-1.5 py-0.5 rounded bg-slate-900 border border-sky-100 hover:border-sky-200 text-[10px] font-mono text-slate-300"
+                        className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-[10px] font-mono text-slate-300"
                       >
                         ₹{amt}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center bg-sky-50/70 border-sky-200 border border-sky-200 rounded-xl overflow-hidden">
+                <div className="flex items-center bg-[#131f33] border border-slate-700 rounded-xl overflow-hidden">
                   <button
                     onClick={() => setPanel2Amount((p) => String(Math.max(10, Number(p) - 10)))}
                     className="px-3 py-2 text-slate-400 hover:text-white"
@@ -762,7 +762,7 @@ export default function AviatorGame({ onBack }) {
                     type="checkbox"
                     checked={panel2AutoCashout}
                     onChange={(e) => setPanel2AutoCashout(e.target.checked)}
-                    className="rounded border-sky-200 text-teal-500 bg-slate-900 focus:ring-0"
+                    className="rounded border-slate-700 text-teal-500 bg-slate-900 focus:ring-0"
                   />
                   <span className="text-slate-300 font-bold text-[11px]">Auto Cashout</span>
                 </label>
@@ -773,7 +773,7 @@ export default function AviatorGame({ onBack }) {
                     disabled={!panel2AutoCashout}
                     value={panel2AutoCashoutTarget}
                     onChange={(e) => setPanel2AutoCashoutTarget(e.target.value)}
-                    className="w-16 bg-sky-50/70 border-sky-200 border border-sky-200 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-center text-teal-400 focus:outline-none disabled:opacity-40"
+                    className="w-16 bg-[#131f33] border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-center text-teal-400 focus:outline-none disabled:opacity-40"
                   />
                   <span className="text-slate-500 text-xs">x</span>
                 </div>
@@ -835,8 +835,8 @@ export default function AviatorGame({ onBack }) {
         {/* Game Rules & Provable Fairness Modal */}
         {showRulesModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-[#0f172a] border border-sky-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
-              <div className="flex items-center justify-between border-b border-sky-100 pb-3">
+            <div className="bg-[#0f172a] border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center space-x-2">
                   <span className="text-xl">✈</span>
                   <h3 className="text-base font-black text-white">Aviator Rules & Provable Fairness</h3>
@@ -850,14 +850,14 @@ export default function AviatorGame({ onBack }) {
               </div>
 
               <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
-                <div className="p-3 rounded-2xl bg-slate-900 border border-sky-100">
+                <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
                   <h4 className="font-black text-rose-400 uppercase tracking-wider mb-1">How To Play</h4>
                   <p>1. Place one or two bets before the round starts during the 5-second countdown.</p>
                   <p>2. Watch the plane climb — the multiplier starts at 1.00x and increases exponentially.</p>
                   <p>3. Hit <strong className="text-amber-400">Cash Out</strong> before the plane crashes to lock in your winnings.</p>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-900 border border-sky-100">
+                <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
                   <h4 className="font-black text-cyan-400 uppercase tracking-wider mb-1">Provable Fairness & Synchronicity</h4>
                   <p>Every round is generated deterministically using a cryptographic non-linear avalanche hash combined with synchronized global atomic UTC time. Outcomes are completely identical on every device across the world in real-time, mathematically unmanipulated, and protected from prediction.</p>
                 </div>

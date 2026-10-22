@@ -91,17 +91,17 @@ export default function QuantumDiceGame({ onBack }) {
   const handleDouble = () => setBetAmount((p) => String(Math.min(user ? user.walletBalance : 10000, Number(p) * 2)));
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-sky-100 text-slate-900 p-3 sm:p-4 pb-24 selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-[#090e17] p-3 sm:p-4 pb-24 selection:bg-emerald-500 selection:text-black">
       <div className="max-w-md mx-auto space-y-3 sm:space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-2xl p-3">
+        <div className="flex items-center justify-between bg-[#0f1826] border border-slate-800 rounded-2xl p-3">
           <div className="flex items-center space-x-2.5">
             <button
               onClick={() => {
                 sounds.playClick();
                 onBack();
               }}
-              className="p-2 rounded-xl bg-slate-900 border border-sky-100 hover:border-sky-200 text-slate-300 transition"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -125,7 +125,7 @@ export default function QuantumDiceGame({ onBack }) {
         </div>
 
         {/* History Strip */}
-        <div className="bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-2xl px-3 py-2 flex items-center space-x-2 overflow-x-auto select-none no-scrollbar">
+        <div className="bg-[#0f1826] border border-slate-800 rounded-2xl px-3 py-2 flex items-center space-x-2 overflow-x-auto select-none no-scrollbar">
           <div className="flex items-center space-x-2">
             {history.map((h, i) => (
               <span
@@ -143,9 +143,9 @@ export default function QuantumDiceGame({ onBack }) {
         </div>
 
         {/* The Massive Digital Target Number Display */}
-        <div className={`bg-white border-sky-100 shadow-md shadow-sky-100/60 border rounded-3xl p-5 sm:p-6 shadow-2xl text-center relative overflow-hidden transition-all duration-300 ${
+        <div className={`bg-[#0f1826] border rounded-3xl p-5 sm:p-6 shadow-2xl text-center relative overflow-hidden transition-all duration-300 ${
           lastOutcome?.won ? 'border-emerald-500/70 shadow-emerald-500/20' :
-          lastOutcome?.won === false ? 'border-rose-500/60 shadow-rose-500/20' : 'border-sky-100'
+          lastOutcome?.won === false ? 'border-rose-500/60 shadow-rose-500/20' : 'border-slate-800'
         }`}>
           {/* Neon background ambient glow */}
           <div className={`absolute inset-0 opacity-15 pointer-events-none transition-all duration-500 ${
@@ -214,7 +214,7 @@ export default function QuantumDiceGame({ onBack }) {
         </div>
 
         {/* Dynamic Odds Calculator Bar */}
-        <div className="grid grid-cols-3 gap-2 bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-2xl p-3 shadow-xl text-center">
+        <div className="grid grid-cols-3 gap-2 bg-[#0f1826] border border-slate-800 rounded-2xl p-3 shadow-xl text-center">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Multiplier</span>
             <span className="text-base sm:text-lg font-black font-mono text-emerald-400">{multiplier}x</span>
@@ -230,7 +230,7 @@ export default function QuantumDiceGame({ onBack }) {
         </div>
 
         {/* Controls & Roll Action */}
-        <div className="bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5">
+        <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5">
           {/* Roll Over / Roll Under Switch */}
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -241,7 +241,7 @@ export default function QuantumDiceGame({ onBack }) {
               className={`py-2.5 rounded-xl text-xs font-black uppercase transition ${
                 rollType === 'over'
                   ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'bg-sky-50/70 border-sky-200 text-slate-400 hover:text-white'
+                  : 'bg-[#131f33] text-slate-400 hover:text-white'
               }`}
             >
               Roll Over ({target.toFixed(0)})
@@ -254,7 +254,7 @@ export default function QuantumDiceGame({ onBack }) {
               className={`py-2.5 rounded-xl text-xs font-black uppercase transition ${
                 rollType === 'under'
                   ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'bg-sky-50/70 border-sky-200 text-slate-400 hover:text-white'
+                  : 'bg-[#131f33] text-slate-400 hover:text-white'
               }`}
             >
               Roll Under ({target.toFixed(0)})
@@ -266,7 +266,7 @@ export default function QuantumDiceGame({ onBack }) {
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
               Bet Amount (₹)
             </label>
-            <div className="flex items-center bg-sky-50/70 border-sky-200 border border-sky-200 rounded-2xl overflow-hidden focus-within:border-emerald-500">
+            <div className="flex items-center bg-[#131f33] border border-slate-700 rounded-2xl overflow-hidden focus-within:border-emerald-500">
               <span className="pl-3.5 pr-2 font-black text-emerald-400 font-mono">₹</span>
               <input
                 type="number"

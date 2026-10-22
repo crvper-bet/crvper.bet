@@ -144,17 +144,17 @@ export default function MinesGame({ onBack }) {
   const handleDouble = () => setBetAmount((prev) => String(Math.min(user ? user.walletBalance : 10000, Number(prev) * 2)));
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-sky-100 text-slate-900 p-3 sm:p-4 pb-24 selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-[#090e17] p-3 sm:p-4 pb-24 selection:bg-emerald-500 selection:text-black">
       <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
         {/* Top Header */}
-        <div className="flex items-center justify-between bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-2xl p-3">
+        <div className="flex items-center justify-between bg-[#0f1826] border border-slate-800 rounded-2xl p-3">
           <div className="flex items-center space-x-2.5">
             <button
               onClick={() => {
                 sounds.playClick();
                 onBack();
               }}
-              className="p-2 rounded-xl bg-slate-900 border border-sky-100 hover:border-sky-200 text-slate-300 transition"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -171,7 +171,7 @@ export default function MinesGame({ onBack }) {
 
           <button
             onClick={() => setShowFairModal(true)}
-            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold flex items-center space-x-1 border border-sky-100"
+            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold flex items-center space-x-1 border border-slate-800"
           >
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
             <span className="hidden sm:inline">Fair Seed</span>
@@ -181,7 +181,7 @@ export default function MinesGame({ onBack }) {
         {/* Desktop Split / Mobile Vertical Layout */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4">
           {/* Controls Panel (Desktop Left / Mobile Bottom) */}
-          <div className="md:col-span-5 bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5 order-2 md:order-1">
+          <div className="md:col-span-5 bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5 order-2 md:order-1">
             {/* Bet Amount */}
             <div>
               <div className="flex justify-between items-center mb-1">
@@ -192,7 +192,7 @@ export default function MinesGame({ onBack }) {
                   Balance: ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
                 </span>
               </div>
-              <div className="relative flex items-center bg-sky-50/70 border-sky-200 border border-sky-200 rounded-2xl overflow-hidden focus-within:border-emerald-500 transition">
+              <div className="relative flex items-center bg-[#131f33] border border-slate-700 rounded-2xl overflow-hidden focus-within:border-emerald-500 transition">
                 <span className="pl-3.5 pr-2 font-black text-emerald-400 font-mono">₹</span>
                 <input
                   type="number"
@@ -235,7 +235,7 @@ export default function MinesGame({ onBack }) {
                 disabled={isPlaying}
                 value={minesCount}
                 onChange={(e) => setMinesCount(Number(e.target.value))}
-                className="w-full bg-sky-50/70 border-sky-200 border border-sky-200 rounded-2xl px-3.5 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-emerald-500"
+                className="w-full bg-[#131f33] border border-slate-700 rounded-2xl px-3.5 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-emerald-500"
               >
                 {Array.from({ length: 15 }, (_, i) => i + 1).map((cnt) => (
                   <option key={cnt} value={cnt}>
@@ -257,7 +257,7 @@ export default function MinesGame({ onBack }) {
                 value={autoCashoutTarget}
                 onChange={(e) => setAutoCashoutTarget(e.target.value)}
                 disabled={isPlaying}
-                className="w-full bg-sky-50/70 border-sky-200 border border-sky-200 rounded-2xl px-3.5 py-2 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-[#131f33] border border-slate-700 rounded-2xl px-3.5 py-2 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -285,7 +285,7 @@ export default function MinesGame({ onBack }) {
 
                 <button
                   onClick={handleQuickPick}
-                  className="w-full py-2 rounded-xl bg-slate-900 border border-sky-100 hover:bg-slate-800 text-xs font-bold text-emerald-400 flex items-center justify-center space-x-1.5 transition"
+                  className="w-full py-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs font-bold text-emerald-400 flex items-center justify-center space-x-1.5 transition"
                 >
                   <Dices className="w-4 h-4" />
                   <span>Quick Pick (Random Gem)</span>
@@ -295,9 +295,9 @@ export default function MinesGame({ onBack }) {
           </div>
 
           {/* Game Board: 4x4 Grid (Desktop Right / Mobile Top) */}
-          <div className="md:col-span-7 bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-sky-100 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col justify-between order-1 md:order-2">
+          <div className="md:col-span-7 bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col justify-between order-1 md:order-2">
             {/* Multipliers Bar */}
-            <div className="flex items-center justify-between mb-3 bg-sky-50/70 border-sky-200 px-3.5 py-2 rounded-2xl border border-sky-200/60">
+            <div className="flex items-center justify-between mb-3 bg-[#131f33] px-3.5 py-2 rounded-2xl border border-slate-700/60">
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Current Locked</span>
                 <span className="text-base sm:text-lg font-black font-mono text-emerald-400">
@@ -315,7 +315,7 @@ export default function MinesGame({ onBack }) {
             {/* 4x4 Tiles Grid */}
             <div className={`grid grid-cols-4 gap-2 sm:gap-2.5 p-2 bg-[#090e17] rounded-2xl border aspect-square max-w-[340px] mx-auto w-full transition-all duration-300 ${
               gameOver && !lastWin ? 'border-rose-500/60 animate-bomb-shake shadow-rose-950/50 shadow-2xl' : 
-              lastWin ? 'border-emerald-400/80 shadow-emerald-500/20 shadow-2xl' : 'border-sky-100/80 shadow-inner'
+              lastWin ? 'border-emerald-400/80 shadow-emerald-500/20 shadow-2xl' : 'border-slate-800/80 shadow-inner'
             }`}>
               {Array.from({ length: 16 }).map((_, idx) => {
                 const isTileRevealed = revealed[idx];
@@ -333,8 +333,8 @@ export default function MinesGame({ onBack }) {
                           ? 'bg-gradient-to-br from-rose-950 to-red-900 border-2 border-rose-500 text-rose-400 shadow-xl shadow-rose-600/40'
                           : 'bg-gradient-to-br from-emerald-950 via-teal-900 to-emerald-900 border-2 border-emerald-400 text-emerald-300 shadow-xl shadow-emerald-500/40 animate-pop-in'
                         : isPlaying
-                        ? 'bg-[#18233c] hover:bg-[#202f50] hover:scale-[1.02] border border-sky-200/80 hover:border-emerald-400 shadow-md cursor-pointer active:brightness-125'
-                        : 'bg-sky-50/70 border-sky-200 border border-sky-100/80 opacity-60 cursor-not-allowed'
+                        ? 'bg-[#18233c] hover:bg-[#202f50] hover:scale-[1.02] border border-slate-700/80 hover:border-emerald-400 shadow-md cursor-pointer active:brightness-125'
+                        : 'bg-[#131f33] border border-slate-800/80 opacity-60 cursor-not-allowed'
                     }`}
                   >
                     {isTileRevealed ? (
@@ -372,7 +372,7 @@ export default function MinesGame({ onBack }) {
                 </div>
               )}
               {!gameOver && isPlaying && (
-                <div className="text-xs text-slate-300 font-medium px-3 py-1 bg-slate-900/60 rounded-full border border-sky-100 flex items-center space-x-2">
+                <div className="text-xs text-slate-300 font-medium px-3 py-1 bg-slate-900/60 rounded-full border border-slate-800 flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                   <span>{revealedCount} Gems uncovered • Pick next or Cash Out!</span>
                 </div>
@@ -388,7 +388,7 @@ export default function MinesGame({ onBack }) {
           onClick={() => setShowFairModal(false)}
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in"
         >
-          <div className="bg-white border-sky-100 shadow-md shadow-sky-100/60 border border-emerald-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl">
+          <div className="bg-[#0f1826] border border-emerald-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl">
             <h3 className="text-sm font-black text-white mb-2 flex items-center space-x-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Provably Fair Verification</span>
