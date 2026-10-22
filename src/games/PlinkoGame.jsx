@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Play, ShieldCheck, Sparkles, AlertTriangle, Trophy, X } from 'lucide-react';
+import { ArrowLeft, Play, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
-
-const PLINKO_WIN_LIMIT = 10000; // ₹10,000 session profit cap
-const WALLET_WIN_CAP = 10000;   // ₹10,000 hard wallet balance cap — block play when reached
 
 // Plinko Multiplier Bins & Row Geometries based on Risk Level:
 // Low: 8 rows, 9 bins (conservative spread, compact pyramid)
@@ -32,23 +29,10 @@ export default function PlinkoGame({ onBack }) {
   const [betAmount, setBetAmount] = useState('20');
   const [ballCount, setBallCount] = useState(1);
   const [lastWin, setLastWin] = useState(null);
-  const [sessionWinnings, setSessionWinnings] = useState(0);
-  const [showWinLimitModal, setShowWinLimitModal] = useState(false);
-  const sessionWinningsRef = useRef(0);
 
   const canvasRef = useRef(null);
   const ballsRef = useRef([]);
   const animFrameRef = useRef(null);
-  // Ref so canvas loop can read latest user balance without stale closure
-  const userRef = useRef(user);
-  useEffect(() => { userRef.current = user; }, [user]);
-
-  // ── Wallet balance cap: block play when wallet >= ₹10,000 ──────────────
-  useEffect(() => {
-    if (user && user.walletBalance >= WALLET_WIN_CAP) {
-      setShowWinLimitModal(true);
-    }
-  }, [user?.walletBalance]);
 
   const currentConfig = RISK_CONFIG[risk];
   const multipliers = currentConfig.multipliers;
@@ -169,31 +153,7 @@ export default function PlinkoGame({ onBack }) {
           const clampedX = Math.max(10, Math.min(w - 11, b.x));
           const binIndex = Math.min(numBins - 1, Math.max(0, Math.floor((clampedX - 10) / binWidth)));
           const landedMultiplier = multipliers[binIndex];
-          const grossWin = Number((b.wager * landedMultiplier).toFixed(2));
-          // Net profit = winnings above the wager already deducted
-          const netProfit = Number((grossWin - b.wager).toFixed(2));
-
-          // Enforce ₹10,000 session winning limit
-          const alreadyWon = sessionWinningsRef.current;
-          const remaining = Math.max(0, PLINKO_WIN_LIMIT - alreadyWon);
-
-          let payoutAmount = grossWin;
-          let limitHit = false;
-
-          if (netProfit > 0 && alreadyWon >= PLINKO_WIN_LIMIT) {
-            // Limit already reached — return only the wager (no profit)
-            payoutAmount = b.wager;
-            limitHit = true;
-          } else if (netProfit > 0 && netProfit > remaining) {
-            // Cap the profit at remaining allowance
-            payoutAmount = Number((b.wager + remaining).toFixed(2));
-            sessionWinningsRef.current = PLINKO_WIN_LIMIT;
-            setSessionWinnings(PLINKO_WIN_LIMIT);
-            limitHit = true;
-          } else if (netProfit > 0) {
-            sessionWinningsRef.current = Number((alreadyWon + netProfit).toFixed(2));
-            setSessionWinnings(sessionWinningsRef.current);
-          }
+          const payoutAmount = Number((b.wager * landedMultiplier).toFixed(2));
 
           // Real-time wallet addition
           modifyBalance(payoutAmount, `Plinko (${landedMultiplier}x)`);
@@ -204,16 +164,6 @@ export default function PlinkoGame({ onBack }) {
           }
 
           setLastWin({ amount: payoutAmount, multiplier: landedMultiplier });
-
-          // Check wallet balance cap after payout (estimate post-payout balance)
-          const estimatedBalance = Number(((userRef.current?.walletBalance || 0) + payoutAmount).toFixed(2));
-          if (estimatedBalance >= WALLET_WIN_CAP) {
-            sessionWinningsRef.current = PLINKO_WIN_LIMIT; // Also lock session tracker
-            setSessionWinnings(PLINKO_WIN_LIMIT);
-            setShowWinLimitModal(true);
-          } else if (limitHit) {
-            setShowWinLimitModal(true);
-          }
 
           currentBalls.splice(i, 1);
           continue;
@@ -239,18 +189,6 @@ export default function PlinkoGame({ onBack }) {
   const handleDropBalls = () => {
     const singleWager = Number(betAmount);
     const totalWager = singleWager * ballCount;
-
-    // Block play if wallet balance has hit the ₹10,000 cap
-    if (user && user.walletBalance >= WALLET_WIN_CAP) {
-      setShowWinLimitModal(true);
-      return;
-    }
-
-    // Block play if session winning limit reached
-    if (sessionWinningsRef.current >= PLINKO_WIN_LIMIT) {
-      setShowWinLimitModal(true);
-      return;
-    }
 
     if (!user || user.walletBalance < totalWager) {
       alert('Insufficient wallet balance!');
@@ -297,37 +235,6 @@ export default function PlinkoGame({ onBack }) {
     <div className="min-h-screen bg-[#090e17] p-3 sm:p-4 pb-24 selection:bg-emerald-500 selection:text-black">
       <div className="max-w-md mx-auto space-y-3 sm:space-y-4">
 
-        {/* ── Win Limit Reached Modal ──────────────────────────────────── */}
-        {showWinLimitModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <div className="bg-[#0f1826] border border-amber-500/60 rounded-3xl p-6 max-w-xs w-full shadow-2xl shadow-amber-900/30 text-center space-y-4">
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/40 mx-auto">
-                <Trophy className="w-7 h-7 text-amber-400" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-white">Winning Limit Reached!</h2>
-                <p className="text-sm text-slate-400 mt-1">
-                  {user && user.walletBalance >= WALLET_WIN_CAP
-                    ? <>Your wallet balance has reached <span className="text-amber-400 font-bold">₹{WALLET_WIN_CAP.toLocaleString()}</span>. Please withdraw your funds to continue playing.</>
-                    : <>You've reached the maximum session win of{' '}<span className="text-amber-400 font-bold">₹{PLINKO_WIN_LIMIT.toLocaleString()}</span> on Plinko. Please withdraw your funds to continue playing.</>
-                  }
-                </p>
-              </div>
-              <button
-                onClick={() => { sounds.playClick(); onBack(); }}
-                className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black rounded-2xl text-sm tracking-wide transition hover:from-amber-400 hover:to-yellow-300"
-              >
-                Withdraw Funds
-              </button>
-              <button
-                onClick={() => setShowWinLimitModal(false)}
-                className="w-full py-2 text-xs text-slate-500 hover:text-slate-300 transition"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        )}
         {/* Header */}
         <div className="flex items-center justify-between bg-[#0f1826] border border-slate-800 rounded-2xl p-3">
           <div className="flex items-center space-x-2.5">
@@ -357,41 +264,6 @@ export default function PlinkoGame({ onBack }) {
               ₹{user ? Number(user.walletBalance).toFixed(2) : '0.00'}
             </span>
           </div>
-        </div>
-
-        {/* ── Session Winning Limit Progress Bar ─── */}
-        <div className="bg-[#0f1826] border border-slate-800 rounded-2xl p-3 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
-              <Trophy className="w-3.5 h-3.5 text-amber-400" />
-              <span>Win Limit (Wallet)</span>
-            </span>
-            <span className={`text-xs font-mono font-black ${(user && user.walletBalance >= WALLET_WIN_CAP) || sessionWinnings >= PLINKO_WIN_LIMIT ? 'text-amber-400' : 'text-emerald-400'}`}>
-              ₹{user ? Number(user.walletBalance).toFixed(0) : 0} / ₹{WALLET_WIN_CAP.toLocaleString()}
-            </span>
-          </div>
-          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                user && user.walletBalance >= WALLET_WIN_CAP
-                  ? 'bg-amber-400'
-                  : user && user.walletBalance >= WALLET_WIN_CAP * 0.8
-                  ? 'bg-orange-400'
-                  : 'bg-emerald-400'
-              }`}
-              style={{ width: `${Math.min(100, ((user?.walletBalance || 0) / WALLET_WIN_CAP) * 100)}%` }}
-            />
-          </div>
-          {(user && user.walletBalance >= WALLET_WIN_CAP) && (
-            <p className="text-[10px] text-amber-400 font-bold text-center">
-              🏆 Wallet limit reached — please withdraw your funds to play again
-            </p>
-          )}
-          {sessionWinnings >= PLINKO_WIN_LIMIT && !(user && user.walletBalance >= WALLET_WIN_CAP) && (
-            <p className="text-[10px] text-amber-400 font-bold text-center">
-              🏆 Max session win reached — please withdraw your funds to play again
-            </p>
-          )}
         </div>
 
         {/* Physics Canvas Pegboard */}
@@ -499,23 +371,13 @@ export default function PlinkoGame({ onBack }) {
           </div>
 
           {/* Drop Button */}
-          {(sessionWinnings >= PLINKO_WIN_LIMIT || (user && user.walletBalance >= WALLET_WIN_CAP)) ? (
-            <button
-              onClick={() => setShowWinLimitModal(true)}
-              className="w-full py-3.5 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-black rounded-2xl text-sm tracking-wide flex items-center justify-center space-x-2 cursor-not-allowed"
-            >
-              <Trophy className="w-5 h-5" />
-              <span>₹10,000 WIN LIMIT REACHED — Withdraw to Play</span>
-            </button>
-          ) : (
-            <button
-              onClick={handleDropBalls}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black rounded-2xl text-base tracking-wide transition transform active:scale-95 shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-2"
-            >
-              <Play className="w-5 h-5 fill-current" />
-              <span>DROP BALLS (₹{Number(betAmount) * ballCount})</span>
-            </button>
-          )}
+          <button
+            onClick={handleDropBalls}
+            className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black rounded-2xl text-base tracking-wide transition transform active:scale-95 shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-2"
+          >
+            <Play className="w-5 h-5 fill-current" />
+            <span>DROP BALLS (₹{Number(betAmount) * ballCount})</span>
+          </button>
         </div>
       </div>
     </div>

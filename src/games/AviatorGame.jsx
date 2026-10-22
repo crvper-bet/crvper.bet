@@ -44,19 +44,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
 
   const [showRulesModal, setShowRulesModal] = useState(false);
 
-  const limitInfo = storage.checkGameWinningLimit(user?.id, 'Aviator');
-  const isLockedByWinningCap = Boolean(limitInfo.isLimitReached);
 
-  // Check winning limit cap
-  const checkWinningCap = () => {
-    const freshUser = storage.getCurrentUser();
-    const freshLimit = storage.checkGameWinningLimit(freshUser?.id, 'Aviator');
-    if (freshLimit.isLimitReached) {
-      if (onOpenMaxLimitModal) onOpenMaxLimitModal();
-      return true;
-    }
-    return false;
-  };
 
   // Persistent live refs so sync interval never resets on user bet changes
   const panel1ActiveBetRef = useRef(panel1ActiveBet);
@@ -230,7 +218,6 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
       sounds.playCashout();
       modifyBalance(winAmount, `Aviator Cashout Panel 1 (${multToAward}x)`);
       setPanel1ActiveBet({ ...p1, cashedOut: true, cashoutMult: multToAward, winAmount });
-      checkWinningCap();
     }
 
     const p2 = panel2ActiveBetRef.current;
@@ -240,14 +227,11 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
       sounds.playCashout();
       modifyBalance(winAmount, `Aviator Cashout Panel 2 (${multToAward}x)`);
       setPanel2ActiveBet({ ...p2, cashedOut: true, cashoutMult: multToAward, winAmount });
-      checkWinningCap();
     }
   };
 
   // Bet Click for Panel 1
   const handleBetClickPanel1 = () => {
-    if (checkWinningCap()) return;
-
     const wager = Number(panel1Amount);
     if (isNaN(wager) || wager < 10) {
       alert('Minimum bet amount is ₹10.');
@@ -275,8 +259,6 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
 
   // Bet Click for Panel 2
   const handleBetClickPanel2 = () => {
-    if (checkWinningCap()) return;
-
     const wager = Number(panel2Amount);
     if (isNaN(wager) || wager < 10) {
       alert('Minimum bet amount is ₹10.');
@@ -492,22 +474,6 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
           </div>
         </div>
 
-        {/* Winning Limit Banner if limit reached */}
-        {isLockedByWinningCap && (
-          <div 
-            onClick={checkWinningCap}
-            className="p-3.5 bg-gradient-to-r from-amber-950/90 to-yellow-950/90 border-2 border-amber-500/70 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-400 transition text-xs text-amber-200 shadow-lg shadow-amber-950/40"
-          >
-            <div className="flex items-center space-x-2.5">
-              <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
-              <span className="font-bold leading-tight">
-                You have reached the winning amount. Please withdraw your funds to play again.
-              </span>
-            </div>
-            <span className="font-black text-amber-400 underline text-xs shrink-0 ml-3">Withdraw →</span>
-          </div>
-        )}
-
         {/* Recent Crash Multipliers History Strip */}
         <div className="bg-[#0f1826] border border-slate-800 rounded-2xl px-3 py-2 flex items-center space-x-2 overflow-x-auto select-none no-scrollbar">
           <History className="w-4 h-4 text-slate-500 shrink-0" />
@@ -627,9 +593,8 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                     {[10, 50, 100, 500].map((amt) => (
                       <button
                         key={amt}
-                        disabled={isLockedByWinningCap}
                         onClick={() => setPanel1Amount(String(amt))}
-                        className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-[10px] font-mono text-slate-300 disabled:opacity-40"
+                        className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-[10px] font-mono text-slate-300"
                       >
                         ₹{amt}
                       </button>
@@ -638,24 +603,21 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                 </div>
                 <div className="flex items-center bg-[#131f33] border border-slate-700 rounded-xl overflow-hidden">
                   <button
-                    disabled={isLockedByWinningCap}
                     onClick={() => setPanel1Amount((p) => String(Math.max(10, Number(p) - 10)))}
-                    className="px-3 py-2 text-slate-400 hover:text-white disabled:opacity-40"
+                    className="px-3 py-2 text-slate-400 hover:text-white"
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
                   <input
                     type="number"
                     min="10"
-                    disabled={isLockedByWinningCap}
                     value={panel1Amount}
                     onChange={(e) => setPanel1Amount(e.target.value)}
-                    className="w-full text-center bg-transparent py-2 text-sm font-black text-white font-mono focus:outline-none disabled:opacity-40"
+                    className="w-full text-center bg-transparent py-2 text-sm font-black text-white font-mono focus:outline-none"
                   />
                   <button
-                    disabled={isLockedByWinningCap}
                     onClick={() => setPanel1Amount((p) => String(Number(p) + 10))}
-                    className="px-3 py-2 text-slate-400 hover:text-white disabled:opacity-40"
+                    className="px-3 py-2 text-slate-400 hover:text-white"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
@@ -667,10 +629,9 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                 <label className="flex items-center space-x-1.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    disabled={isLockedByWinningCap}
                     checked={panel1AutoCashout}
                     onChange={(e) => setPanel1AutoCashout(e.target.checked)}
-                    className="rounded border-slate-700 text-emerald-500 bg-slate-900 focus:ring-0 disabled:opacity-40"
+                    className="rounded border-slate-700 text-emerald-500 bg-slate-900 focus:ring-0"
                   />
                   <span className="text-slate-300 font-bold text-[11px]">Auto Cashout</span>
                 </label>
@@ -678,7 +639,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                   <input
                     type="number"
                     step="0.1"
-                    disabled={!panel1AutoCashout || isLockedByWinningCap}
+                    disabled={!panel1AutoCashout}
                     value={panel1AutoCashoutTarget}
                     onChange={(e) => setPanel1AutoCashoutTarget(e.target.value)}
                     className="w-16 bg-[#131f33] border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-center text-emerald-400 focus:outline-none disabled:opacity-40"
@@ -702,16 +663,13 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                 ) : gameState === 'FLYING' ? (
                   <button
                     onClick={handleBetClickPanel1}
-                    disabled={isLockedByWinningCap}
                     className={`w-full py-3 rounded-xl font-black text-xs transition transform active:scale-95 shadow-md flex flex-col items-center justify-center ${
-                      isLockedByWinningCap
-                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                        : panel1QueuedBet
+                      panel1QueuedBet
                         ? 'bg-purple-950 border border-purple-500 text-purple-300'
                         : 'bg-rose-600 hover:bg-rose-500 text-white'
                     }`}
                   >
-                    <span>{isLockedByWinningCap ? 'WINNING LIMIT REACHED' : panel1QueuedBet ? 'QUEUED FOR NEXT' : 'BET (NEXT ROUND)'}</span>
+                    <span>{panel1QueuedBet ? 'QUEUED FOR NEXT' : 'BET (NEXT ROUND)'}</span>
                     <span className="text-[10px] font-mono mt-0.5">
                       {panel1QueuedBet ? `₹${panel1QueuedBet}` : `₹${panel1Amount}`}
                     </span>
@@ -719,16 +677,14 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                 ) : (
                   <button
                     onClick={handleBetClickPanel1}
-                    disabled={panel1ActiveBet !== null || isLockedByWinningCap}
+                    disabled={panel1ActiveBet !== null}
                     className={`w-full py-3 rounded-xl font-black text-sm transition transform active:scale-95 shadow-md flex flex-col items-center justify-center ${
-                      isLockedByWinningCap
-                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                        : panel1ActiveBet
+                      panel1ActiveBet
                         ? 'bg-emerald-950 border border-emerald-500 text-emerald-300'
                         : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black'
                     }`}
                   >
-                    <span>{isLockedByWinningCap ? 'WINNING LIMIT REACHED' : panel1ActiveBet ? 'BET PLACED ✓' : 'BET'}</span>
+                    <span>{panel1ActiveBet ? 'BET PLACED ✓' : 'BET'}</span>
                     <span className="text-[10px] font-mono mt-0.5">
                       ₹{panel1ActiveBet ? panel1ActiveBet.amount : panel1Amount}
                     </span>
@@ -772,9 +728,8 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                     {[10, 50, 100, 500].map((amt) => (
                       <button
                         key={amt}
-                        disabled={isLockedByWinningCap}
                         onClick={() => setPanel2Amount(String(amt))}
-                        className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-[10px] font-mono text-slate-300 disabled:opacity-40"
+                        className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-[10px] font-mono text-slate-300"
                       >
                         ₹{amt}
                       </button>
@@ -783,24 +738,21 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                 </div>
                 <div className="flex items-center bg-[#131f33] border border-slate-700 rounded-xl overflow-hidden">
                   <button
-                    disabled={isLockedByWinningCap}
                     onClick={() => setPanel2Amount((p) => String(Math.max(10, Number(p) - 10)))}
-                    className="px-3 py-2 text-slate-400 hover:text-white disabled:opacity-40"
+                    className="px-3 py-2 text-slate-400 hover:text-white"
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
                   <input
                     type="number"
                     min="10"
-                    disabled={isLockedByWinningCap}
                     value={panel2Amount}
                     onChange={(e) => setPanel2Amount(e.target.value)}
-                    className="w-full text-center bg-transparent py-2 text-sm font-black text-white font-mono focus:outline-none disabled:opacity-40"
+                    className="w-full text-center bg-transparent py-2 text-sm font-black text-white font-mono focus:outline-none"
                   />
                   <button
-                    disabled={isLockedByWinningCap}
                     onClick={() => setPanel2Amount((p) => String(Number(p) + 10))}
-                    className="px-3 py-2 text-slate-400 hover:text-white disabled:opacity-40"
+                    className="px-3 py-2 text-slate-400 hover:text-white"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
@@ -812,10 +764,9 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                 <label className="flex items-center space-x-1.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    disabled={isLockedByWinningCap}
                     checked={panel2AutoCashout}
                     onChange={(e) => setPanel2AutoCashout(e.target.checked)}
-                    className="rounded border-slate-700 text-teal-500 bg-slate-900 focus:ring-0 disabled:opacity-40"
+                    className="rounded border-slate-700 text-teal-500 bg-slate-900 focus:ring-0"
                   />
                   <span className="text-slate-300 font-bold text-[11px]">Auto Cashout</span>
                 </label>
@@ -823,7 +774,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                   <input
                     type="number"
                     step="0.1"
-                    disabled={!panel2AutoCashout || isLockedByWinningCap}
+                    disabled={!panel2AutoCashout}
                     value={panel2AutoCashoutTarget}
                     onChange={(e) => setPanel2AutoCashoutTarget(e.target.value)}
                     className="w-16 bg-[#131f33] border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-center text-teal-400 focus:outline-none disabled:opacity-40"
@@ -847,16 +798,13 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                 ) : gameState === 'FLYING' ? (
                   <button
                     onClick={handleBetClickPanel2}
-                    disabled={isLockedByWinningCap}
                     className={`w-full py-3 rounded-xl font-black text-xs transition transform active:scale-95 shadow-md flex flex-col items-center justify-center ${
-                      isLockedByWinningCap
-                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                        : panel2QueuedBet
+                      panel2QueuedBet
                         ? 'bg-purple-950 border border-purple-500 text-purple-300'
                         : 'bg-rose-600 hover:bg-rose-500 text-white'
                     }`}
                   >
-                    <span>{isLockedByWinningCap ? 'WINNING LIMIT REACHED' : panel2QueuedBet ? 'QUEUED FOR NEXT' : 'BET (NEXT ROUND)'}</span>
+                    <span>{panel2QueuedBet ? 'QUEUED FOR NEXT' : 'BET (NEXT ROUND)'}</span>
                     <span className="text-[10px] font-mono mt-0.5">
                       {panel2QueuedBet ? `₹${panel2QueuedBet}` : `₹${panel2Amount}`}
                     </span>
@@ -864,16 +812,14 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                 ) : (
                   <button
                     onClick={handleBetClickPanel2}
-                    disabled={panel2ActiveBet !== null || isLockedByWinningCap}
+                    disabled={panel2ActiveBet !== null}
                     className={`w-full py-3 rounded-xl font-black text-sm transition transform active:scale-95 shadow-md flex flex-col items-center justify-center ${
-                      isLockedByWinningCap
-                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                        : panel2ActiveBet
+                      panel2ActiveBet
                         ? 'bg-teal-950 border border-teal-500 text-teal-300'
                         : 'bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black font-black'
                     }`}
                   >
-                    <span>{isLockedByWinningCap ? 'WINNING LIMIT REACHED' : panel2ActiveBet ? 'BET PLACED ✓' : 'BET'}</span>
+                    <span>{panel2ActiveBet ? 'BET PLACED ✓' : 'BET'}</span>
                     <span className="text-[10px] font-mono mt-0.5">
                       ₹{panel2ActiveBet ? panel2ActiveBet.amount : panel2Amount}
                     </span>

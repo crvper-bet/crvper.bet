@@ -34,9 +34,6 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
   const [winningAnnouncement, setWinningAnnouncement] = useState(null);
   const [showRulesModal, setShowRulesModal] = useState(false);
 
-  const limitInfo = storage.checkGameWinningLimit(user?.id, 'WinGo');
-  const isWinningLimitReached = Boolean(limitInfo.isLimitReached);
-
   // Persistent refs so betting does not teardown or restart the clock sync loop
   const currentBetsRef = useRef(currentBets);
   currentBetsRef.current = currentBets;
@@ -78,14 +75,6 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
           sounds.playWin();
           modifyBalance(totalWin, `Win Go Round Won (${result.num} ${result.color})`);
           setWinningAnnouncement(`🎉 YOU WON ₹${totalWin}! (Result: ${result.num} ${result.color} ${result.size})`);
-
-          // Check limit after win
-          setTimeout(() => {
-            const freshLimit = storage.checkGameWinningLimit(user?.id, 'WinGo');
-            if (freshLimit.isLimitReached && onOpenMaxLimitModal) {
-              onOpenMaxLimitModal();
-            }
-          }, 600);
         } else if (activeBets.length > 0) {
           sounds.playLoss();
           setWinningAnnouncement(`Round Result: ${result.num} ${result.color} ${result.size}`);
@@ -100,15 +89,6 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
   }, [user, onOpenMaxLimitModal]);
 
   const handleOpenBetSheet = (type, value) => {
-    const freshLimit = storage.checkGameWinningLimit(user?.id, 'WinGo');
-    if (freshLimit.isLimitReached) {
-      if (onOpenMaxLimitModal) {
-        onOpenMaxLimitModal();
-      } else {
-        alert("You have reached the winning amount. Please withdraw your funds to play again.");
-      }
-      return;
-    }
     if (isLocked) {
       alert('Betting is locked for the final 10 seconds of this round!');
       return;
@@ -124,15 +104,6 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
   const totalBetAmount = wagerBase * selectedMultiplier;
 
   const handleConfirmBet = () => {
-    const freshLimit = storage.checkGameWinningLimit(user?.id, 'WinGo');
-    if (freshLimit.isLimitReached) {
-      if (onOpenMaxLimitModal) {
-        onOpenMaxLimitModal();
-      } else {
-        alert("You have reached the winning amount. Please withdraw your funds to play again.");
-      }
-      return;
-    }
     if (!user || user.walletBalance < totalBetAmount) {
       alert('Insufficient wallet balance!');
       return;
@@ -207,18 +178,6 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
             </div>
           </div>
         </div>
-
-        {/* Winning Limit Banner */}
-        {isWinningLimitReached && (
-          <div className="p-3.5 bg-gradient-to-r from-amber-950/90 to-yellow-950/90 border-2 border-amber-500/70 rounded-2xl flex items-center justify-between text-xs text-amber-200 shadow-lg shadow-amber-950/40">
-            <div className="flex items-center space-x-2.5">
-              <span className="text-amber-400 text-lg">⚠</span>
-              <span className="font-bold leading-tight">
-                You’ve reached the configured winning limit. Please review your balance and withdrawal options.
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* 60s Countdown Clock Header */}
         <div className="bg-[#0f1826] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl text-center relative overflow-hidden">
@@ -559,3 +518,4 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
     </div>
   );
 }
+
