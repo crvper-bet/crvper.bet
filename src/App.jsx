@@ -11,7 +11,6 @@ import Leaderboard from './components/Leaderboard';
 import BottomNav from './components/BottomNav';
 import CustomerSupportModal from './components/CustomerSupportModal';
 import CompulsoryDepositModal from './components/CompulsoryDepositModal';
-import MaxLimitModal from './components/MaxLimitModal';
 import ProfileModal from './components/ProfileModal';
 import ActivityView from './components/ActivityView';
 
@@ -48,7 +47,6 @@ export default function App() {
   // Modals
   const [supportModalOpen, setSupportModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [showMaxLimitModal, setShowMaxLimitModal] = useState(false);
 
   // If user is not logged in and wants to play/transact, prompt AuthPage
   const requireAuth = (callback) => {
@@ -149,50 +147,10 @@ export default function App() {
     return <MinesGame onBack={() => setActiveGame(null)} />;
   }
   if (activeGame === 'wingo') {
-    return (
-      <>
-        <WinGoGame 
-          onBack={() => setActiveGame(null)} 
-          onOpenMaxLimitModal={() => setShowMaxLimitModal(true)}
-        />
-        <MaxLimitModal
-          isOpen={showMaxLimitModal}
-          onClose={() => setShowMaxLimitModal(false)}
-          onGoToWithdraw={() => {
-            setActiveGame(null);
-            setCurrentView('withdraw');
-          }}
-          onGoToDeposit={() => {
-            setActiveGame(null);
-            setCurrentView('deposit');
-          }}
-          hasDeposited={user?.hasDeposited}
-        />
-      </>
-    );
+    return <WinGoGame onBack={() => setActiveGame(null)} />;
   }
   if (activeGame === 'aviator') {
-    return (
-      <>
-        <AviatorGame 
-          onBack={() => setActiveGame(null)} 
-          onOpenMaxLimitModal={() => setShowMaxLimitModal(true)} 
-        />
-        <MaxLimitModal
-          isOpen={showMaxLimitModal}
-          onClose={() => setShowMaxLimitModal(false)}
-          onGoToWithdraw={() => {
-            setActiveGame(null);
-            setCurrentView('withdraw');
-          }}
-          onGoToDeposit={() => {
-            setActiveGame(null);
-            setCurrentView('deposit');
-          }}
-          hasDeposited={user?.hasDeposited}
-        />
-      </>
-    );
+    return <AviatorGame onBack={() => setActiveGame(null)} />;
   }
   if (activeGame === 'tower') {
     return <NeonTowerGame onBack={() => setActiveGame(null)} />;
@@ -268,13 +226,6 @@ export default function App() {
         {/* 2x3 Games Grid */}
         <GamesGrid
           onSelectGame={(gameId) => {
-            if (user) {
-              const limitCheck = storage.checkGameWinningLimit(user.id, gameId);
-              if (limitCheck && limitCheck.isLimitReached) {
-                setShowMaxLimitModal(true);
-                return;
-              }
-            }
             requireAuth(() => setActiveGame(gameId));
           }}
         />
@@ -317,15 +268,6 @@ export default function App() {
         isOpen={showCompulsoryModal}
         onClose={() => setShowCompulsoryModal(false)}
         onGoToDeposit={() => setCurrentView('deposit')}
-      />
-
-      {/* Maximum 100,000 Win Cap Modal */}
-      <MaxLimitModal
-        isOpen={showMaxLimitModal}
-        onClose={() => setShowMaxLimitModal(false)}
-        onGoToWithdraw={() => setCurrentView('withdraw')}
-        onGoToDeposit={() => setCurrentView('deposit')}
-        hasDeposited={Boolean(user && (user.hasDeposited || Number(user.totalDeposited || 0) >= 100))}
       />
 
       {/* Customer Support Floating Chat Modal */}

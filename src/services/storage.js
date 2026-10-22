@@ -946,40 +946,16 @@ export const storage = {
     return newBalance;
   },
 
-  // ── Winning Limit Check for Aviator & WinGo ─────────────────────────────────
+  // ── Winning Limit Check (Disabled platform-wide) ─────────────────────────
   checkGameWinningLimit(userId, gameName = 'Aviator') {
-    const restrictedGames = ['aviator', 'wingo'];
-    const norm = String(gameName).toLowerCase().replace(/[^a-z]/g, '');
-    const isRestricted = restrictedGames.some(g => norm.includes(g));
-
-    if (!isRestricted) {
-      return { isLimitReached: false, threshold: Infinity, currentWinnings: 0, reason: null };
-    }
-
-    const user = this.getCurrentUser()?.id === userId ? this.getCurrentUser() : this.getUsers().find(u => u.id === userId);
-    if (!user) {
-      return { isLimitReached: false, threshold: Infinity, currentWinnings: 0, reason: null };
-    }
-
-    const settings = this.getAdminSettings();
-    const multiplier = Number(settings.aviatorWingoLimitMultiplier ?? 3.0);
-    // Base is user's approved qualifying deposits, or default minimum 100
-    const qualifyingDeposit = Number(user.qualifyingDeposit || (user.hasDeposited ? (user.totalDeposited || 100) : 100));
-    const threshold = Number((qualifyingDeposit * multiplier).toFixed(2));
-    const currentWinnings = Number(user.winningsBalance || 0);
-    const totalProfit = Math.max(0, Number((user.walletBalance || 0) - qualifyingDeposit));
-
-    const isLimitReached = (currentWinnings >= threshold) || (totalProfit >= threshold && totalProfit > 0);
-
     return {
-      isLimitReached,
-      qualifyingDeposit,
-      multiplier,
-      threshold,
-      currentWinnings,
-      message: isLimitReached
-        ? "You have reached the winning amount. Please withdraw your funds to play again."
-        : null
+      isLimitReached: false,
+      qualifyingDeposit: 100,
+      multiplier: Infinity,
+      threshold: Infinity,
+      currentWinnings: 0,
+      reason: null,
+      message: null
     };
   },
 

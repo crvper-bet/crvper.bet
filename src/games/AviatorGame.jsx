@@ -5,7 +5,7 @@ import { storage } from '../services/storage';
 import { sounds } from '../services/audio';
 import { getLiveAviatorState, getAviatorHistory } from '../services/globalGameEngine';
 
-export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
+export default function AviatorGame({ onBack }) {
   const { user, modifyBalance } = useAuth();
 
   // Global Synchronized State from Epoch
@@ -97,13 +97,11 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
         if (live.gameState === 'WAITING') {
           // Reset bets and process queues for new flight
           const freshUser = storage.getCurrentUser();
-          const freshLimit = storage.checkGameWinningLimit(freshUser?.id, 'Aviator');
-          const isCapped = Boolean(freshLimit.isLimitReached);
 
           // Panel 1 auto/queued placement
           const q1 = panel1QueuedBetRef.current;
           const a1 = panel1AutoBetRef.current;
-          if (!isCapped && (q1 || a1)) {
+          if (q1 || a1) {
             const betToPlace = q1 || Number(panel1AmountRef.current);
             if (freshUser && freshUser.walletBalance >= betToPlace && betToPlace >= 10) {
               modifyBalance(-betToPlace, 'Aviator Bet Panel 1');
@@ -119,7 +117,7 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
           // Panel 2 auto/queued placement
           const q2 = panel2QueuedBetRef.current;
           const a2 = panel2AutoBetRef.current;
-          if (!isCapped && (q2 || a2)) {
+          if (q2 || a2) {
             const betToPlace = q2 || Number(panel2AmountRef.current);
             const freshAfterP1 = storage.getCurrentUser();
             if (freshAfterP1 && freshAfterP1.walletBalance >= betToPlace && betToPlace >= 10) {
@@ -864,12 +862,6 @@ export default function AviatorGame({ onBack, onOpenMaxLimitModal }) {
                 <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
                   <h4 className="font-black text-cyan-400 uppercase tracking-wider mb-1">Provable Fairness & Synchronicity</h4>
                   <p>Every round is generated deterministically using a cryptographic non-linear avalanche hash combined with synchronized global atomic UTC time. Outcomes are completely identical on every device across the world in real-time, mathematically unmanipulated, and protected from prediction.</p>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200">
-                  <h4 className="font-black text-amber-400 uppercase tracking-wider mb-1">Winning Limit Policy (Aviator & WinGo)</h4>
-                  <p>To ensure transparent risk controls, a profit threshold policy of <strong>3× qualifying deposit</strong> applies to Aviator and WinGo. (Example: ₹100 deposit → ₹300 winning threshold).</p>
-                  <p className="mt-1">When reached, new wagers on Aviator and WinGo are temporarily paused so you can review your balance and withdraw. <strong>Your funds are 100% safe, never confiscated</strong>, and all other games (Mines, Dice, Plinko, Tower) remain accessible.</p>
                 </div>
               </div>
 

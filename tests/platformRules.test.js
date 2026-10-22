@@ -204,7 +204,7 @@ describe('CRVPER Platform Specifications Test Suite', () => {
     assert.strictEqual(wthReq.amount, 100);
   });
 
-  test('4. Aviator & WinGo Winning-Limit Policy (3x Qualifying Deposit)', async () => {
+  test('4. Winning-Limit Policy: Disabled by default for unrestricted player winnings', async () => {
     const user = await storage.registerUser({
       phone: randomPhone(),
       password: 'password123'
@@ -219,32 +219,25 @@ describe('CRVPER Platform Specifications Test Suite', () => {
     });
     await storage.approveDeposit(depReq.id);
 
-    // Threshold = 100 * 3.0 = ₹300
+    // Limit check before win
     const limitBefore = storage.checkGameWinningLimit(user.id, 'Aviator');
     assert.strictEqual(limitBefore.isLimitReached, false);
-    assert.strictEqual(limitBefore.threshold, 300.00);
 
-    // Add ₹300 profit to winningsBalance
-    await storage.updateWalletBalance(user.id, 300, 'Aviator Win');
+    // Add ₹10,000 profit to winningsBalance
+    await storage.updateWalletBalance(user.id, 10000, 'Aviator Win');
 
-    // Aviator winning limit reached!
+    // Winning limit is NEVER reached - unrestricted player experience
     const limitAviator = storage.checkGameWinningLimit(user.id, 'Aviator');
-    assert.strictEqual(limitAviator.isLimitReached, true);
-    assert.strictEqual(
-      limitAviator.message,
-      'You have reached the winning amount. Please withdraw your funds to play again.'
-    );
+    assert.strictEqual(limitAviator.isLimitReached, false);
 
-    // WinGo winning limit also reached under the policy
     const limitWinGo = storage.checkGameWinningLimit(user.id, 'WinGo');
-    assert.strictEqual(limitWinGo.isLimitReached, true);
+    assert.strictEqual(limitWinGo.isLimitReached, false);
 
-    // Non-restricted games (Mines, Quantum Dice, Plinko, Neon Tower) remain accessible!
     const limitMines = storage.checkGameWinningLimit(user.id, 'Mines');
-    assert.strictEqual(limitMines.isLimitReached, false, 'Mines should remain playable');
+    assert.strictEqual(limitMines.isLimitReached, false);
 
     const limitDice = storage.checkGameWinningLimit(user.id, 'Quantum Dice');
-    assert.strictEqual(limitDice.isLimitReached, false, 'Dice should remain playable');
+    assert.strictEqual(limitDice.isLimitReached, false);
   });
 
   test('5. Provable Fairness & Unpredictability: Cryptographic Avalanche PRNG', () => {

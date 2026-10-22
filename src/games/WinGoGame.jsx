@@ -8,7 +8,7 @@ import { getLiveWinGoState, getWinGoHistory, getWinGoOutcomeForRound } from '../
 const NUMBERS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const PRESET_AMOUNTS = [10, 50, 100, 500, 1000];
 
-export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
+export default function WinGoGame({ onBack }) {
   const { user, modifyBalance } = useAuth();
 
   // Global Synchronized State
@@ -86,7 +86,7 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
     }, 100);
 
     return () => clearInterval(syncInterval);
-  }, [user, onOpenMaxLimitModal]);
+  }, [user]);
 
   const handleOpenBetSheet = (type, value) => {
     if (isLocked) {
@@ -497,12 +497,6 @@ export default function WinGoGame({ onBack, onOpenMaxLimitModal }) {
               <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
                 <h4 className="font-black text-emerald-400 uppercase tracking-wider mb-1">Provable Fairness & Synchronicity</h4>
                 <p>Results are generated using deterministic high-entropy cryptographic avalanche hashing seeded with synchronized global epoch time. Every device worldwide sees the exact same numbers, colors, and countdowns in real-time.</p>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200">
-                <h4 className="font-black text-amber-400 uppercase tracking-wider mb-1">Winning Limit Policy (Aviator & WinGo)</h4>
-                <p>To ensure risk transparency, a profit threshold policy of <strong>3× qualifying deposit</strong> applies to Aviator and WinGo. (Example: ₹100 deposit → ₹300 winning threshold).</p>
-                <p className="mt-1">When reached, new wagers on Aviator and WinGo are temporarily paused so you can review your balance and withdraw. <strong>Your funds are 100% safe, never confiscated</strong>, and all other games remain open.</p>
               </div>
             </div>
 
