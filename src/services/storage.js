@@ -27,7 +27,7 @@ const DEFAULT_ADMIN_SETTINGS = {
   minDeposit: 100,
   minWithdraw: 100,
   maxWithdrawalRequests: 3, // User can only request 3 times
-  maxCombinedWithdrawal: 1000, // Not more than ₹1,000 combined total
+  maxCombinedWithdrawal: 5000, // Not more than ₹5,000 combined total
   withdrawalLimitResetHours: 12, // Limits reset 12 hours after hitting maximum limit
   signupBonus: 150,
   promoActive: true,
@@ -1009,8 +1009,8 @@ export const storage = {
         maxWithdrawalRequests: 3,
         remainingWithdrawalRequests: 3,
         totalWithdrawnAmount: 0,
-        maxCombinedWithdrawal: 1000,
-        remainingCombinedWithdrawal: 1000,
+        maxCombinedWithdrawal: 5000,
+        remainingCombinedWithdrawal: 5000,
         isLimitReached: false,
         limitMessage: null
       };
@@ -1019,11 +1019,13 @@ export const storage = {
     const settings = this.getAdminSettings();
     const minQualifyingDeposit = Number(settings.minQualifyingDeposit ?? 100);
     const totalDep = Number(user.totalDeposited || 0);
-    const hasMetDeposit = Boolean(user.hasDeposited || totalDep >= minQualifyingDeposit);
+    // A user qualifies ONLY if admin has explicitly approved their deposit (hasDeposited flag)
+    // OR their total approved deposits reach the minimum threshold — never from winnings
+    const hasMetDeposit = Boolean(user.hasDeposited === true || totalDep >= minQualifyingDeposit);
     const depositRemaining = Math.max(0, Number((minQualifyingDeposit - totalDep).toFixed(2)));
 
     const depositMessage = !hasMetDeposit
-      ? `A minimum deposit of ₹${minQualifyingDeposit} is required to become eligible for withdrawal under this promotion.`
+      ? `You must make a minimum deposit of ₹${minQualifyingDeposit} before you can withdraw. Bonus winnings cannot be withdrawn without a real deposit.`
       : null;
 
     const wageringRequired = Number(user.wageringRequired || 0);
@@ -1124,11 +1126,12 @@ export const storage = {
     }
 
     // Raw withdrawable balance is depositBalance + winningsBalance when wagering requirements are fulfilled
-    const rawWithdrawable = hasMetWagering
+    // Bonus balance (signup bonus) is NEVER withdrawable directly — only deposit + winnings
+    const rawWithdrawable = hasMetDeposit && hasMetWagering
       ? Number((depositBal + winBal).toFixed(2))
       : 0;
 
-    // Withdrawable balance is capped by remaining allowance under the ₹1,000 policy
+    // Withdrawable balance is capped by remaining allowance under the ₹5,000 / 12h policy
     const withdrawableBalance = isLimitReached
       ? 0
       : Math.min(rawWithdrawable, remainingCombinedWithdrawal);
@@ -1602,14 +1605,14 @@ export const storage = {
 
     const eligibility = this.getWithdrawalEligibility(userId);
 
-    // 1. Minimum deposit requirement validation
+    // 1. Minimum deposit requirement validation — HARD BLOCK: no deposit = no withdrawal
     if (!eligibility.hasDeposited) {
-      throw new Error(eligibility.depositMessage || 'A minimum deposit of ₹100 is required to become eligible for withdrawal under this promotion.');
+      throw new Error(eligibility.depositMessage || 'You must make a minimum deposit of ₹100 before you can withdraw. Bonus winnings cannot be withdrawn without a real deposit.');
     }
 
-    // 2. Promotional Wagering requirement validation
+    // 2. Promotional Wagering requirement validation — user must wager 50% of wallet
     if (!eligibility.hasMetWagering) {
-      throw new Error(eligibility.wageringMessage || `You need to wager ₹${eligibility.wageringRemaining.toFixed(2)} more to meet your promotional requirement.`);
+      throw new Error(eligibility.wageringMessage || `You need to wager ₹${eligibility.wageringRemaining.toFixed(2)} more (50% of your wallet balance) before withdrawing.`);
     }
 
     // 3. Platform Limit: Max 3 withdrawal requests per user

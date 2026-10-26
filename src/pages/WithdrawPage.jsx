@@ -72,7 +72,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
 
     // 1. Mandatory promotional deposit condition
     if (!eligibility.hasDeposited) {
-      setError(eligibility.depositMessage || 'A minimum deposit of ₹100 is required to become eligible for withdrawal under this promotion.');
+      setError('You must make a minimum deposit of ₹100 before you can withdraw. Bonus winnings cannot be withdrawn without a real deposit.');
       return;
     }
 
@@ -88,9 +88,9 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
       return;
     }
 
-    // 4. Platform Limit: Max ₹1,000 combined total withdrawal limit
+    // 4. Platform Limit: Max ₹5,000 combined total withdrawal limit per 12h
     if (eligibility.remainingCombinedWithdrawal <= 0) {
-      setError(`You have reached the maximum combined withdrawal limit of ₹${eligibility.maxCombinedWithdrawal.toLocaleString()}.`);
+      setError(`You have reached the maximum combined withdrawal limit of ₹${eligibility.maxCombinedWithdrawal.toLocaleString()} in 12 hours.`);
       return;
     }
 
@@ -180,7 +180,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
               </div>
 
               <p className="text-xs text-slate-200 leading-relaxed mb-4">
-                A minimum deposit of ₹100 is required to become eligible for withdrawal under this promotion.
+                You must make a minimum deposit of <span className="text-amber-300 font-bold">₹100</span> to unlock withdrawals. Bonus winnings cannot be withdrawn without a real deposit.
               </p>
 
               <button
@@ -236,7 +236,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
               <span>Withdrawal Limit Policy</span>
             </span>
             <span className="text-[10px] text-slate-400 font-bold">
-              Max 3 Requests • ₹1,000 Combined • Resets in 12h
+              Max 3 Requests • ₹5,000 Combined • Resets in 12h
             </span>
           </div>
 
@@ -276,7 +276,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
                 )}
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                {eligibility.limitMessage} Your 3-request allowance and ₹1,000 limit automatically refresh after the 12-hour period.
+                {eligibility.limitMessage} Your 3-request allowance and ₹5,000 limit automatically refresh after the 12-hour period.
               </p>
             </div>
           )}
