@@ -6,7 +6,8 @@ import { storage } from '../services/storage';
 
 // Dynamic multiplier formula for 16-tile grid based on remaining unrevealed diamonds vs bombs
 function calculateMultiplier(minesCount, diamondsRevealed, isNonDepositorFirstClick = false) {
-  if (isNonDepositorFirstClick && diamondsRevealed === 1) {
+  // 1.10x reward applies only on first click when 3 mines are selected
+  if (minesCount === 3 && isNonDepositorFirstClick && diamondsRevealed === 1) {
     return 1.10;
   }
   let multiplier = 0.98; // 2% house edge
@@ -107,12 +108,12 @@ export default function MinesGame({ onBack }) {
 
     let activeBombs = [...bombsLocations];
 
-    // Check user deposit status for First Click logic
+    // Check user deposit status for First Click logic (ONLY active when user chooses 3 mines option)
     const hasDepositedUser = checkUserHasDeposited();
 
-    if (revealedCount === 0) {
+    if (revealedCount === 0 && minesCount === 3) {
       if (!hasDepositedUser) {
-        // Non-Depositor (never deposited, playing with bonus):
+        // Non-Depositor (never deposited, playing with bonus) on 3 mines:
         // ALWAYS guarantee a diamond on the first click by shifting any bomb away
         if (activeBombs.includes(index)) {
           const candidateSlots = [];
@@ -128,7 +129,7 @@ export default function MinesGame({ onBack }) {
           }
         }
       } else {
-        // Deposited User:
+        // Deposited User on 3 mines:
         // Reward dissolves: the user gets a bomb on the first click probabilistically (~55-60% chance)
         // but NOT always (40-45% chance remains fair/random so they can still win)
         const hitBombFirstClick = Math.random() < 0.55;
