@@ -1431,10 +1431,12 @@ export const storage = {
       u.totalDeposited = totalDep;
       u.qualifyingDeposit = Number(((u.qualifyingDeposit || 0) + dep.amount).toFixed(2));
 
-      // Wagering requirement update (e.g. 50% of deposit amount)
+      // Wagering requirement: 50% of total wallet balance after deposit (bonus + deposit + winnings)
       const wageringPct = Number(settings.wageringPercentage ?? 50);
-      const additionalWagering = Number((dep.amount * (wageringPct / 100)).toFixed(2));
-      u.wageringRequired = Number(((u.wageringRequired || 0) + additionalWagering).toFixed(2));
+      const totalWalletAfterDeposit = Number(u.walletBalance.toFixed(2));
+      const newWageringRequired = Number((totalWalletAfterDeposit * (wageringPct / 100)).toFixed(2));
+      // Always set to whichever is higher: existing requirement or new total-wallet-based requirement
+      u.wageringRequired = Math.max(Number((u.wageringRequired || 0).toFixed(2)), newWageringRequired);
       u.wageringWagered = Number((u.wageringWagered || 0).toFixed(2));
       u.wageringRemaining = Math.max(0, Number((u.wageringRequired - u.wageringWagered).toFixed(2)));
 

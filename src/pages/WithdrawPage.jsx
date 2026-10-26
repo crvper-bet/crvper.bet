@@ -204,7 +204,7 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4 text-blue-400" />
-                <span className="text-xs font-black uppercase text-blue-400 tracking-wider">Promotional Wagering</span>
+                <span className="text-xs font-black uppercase text-blue-400 tracking-wider">Betting Requirement</span>
               </div>
               <span className="text-xs font-mono font-bold text-slate-300">
                 ₹{eligibility.wageringWagered.toFixed(2)} / ₹{eligibility.wageringRequired.toFixed(2)}
@@ -212,7 +212,8 @@ export default function WithdrawPage({ onBack, onTriggerCompulsoryModal, onGoToD
             </div>
 
             <p className="text-xs text-slate-200 leading-relaxed mb-3">
-              You need to wager ₹{eligibility.wageringRemaining.toFixed(2)} more to meet your promotional requirement.
+              You must bet <span className="text-emerald-400 font-bold">50% of your wallet balance</span> (₹{eligibility.wageringRequired.toFixed(2)} total) before withdrawal. 
+              ₹{eligibility.wageringRemaining.toFixed(2)} remaining to wager.
             </p>
 
             {/* Progress bar */}

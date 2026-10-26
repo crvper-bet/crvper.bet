@@ -157,7 +157,7 @@ describe('CRVPER Platform Specifications Test Suite', () => {
     const uAfterDep = storage.getCurrentUser();
     assert.strictEqual(uAfterDep.hasDeposited, true, 'User should be marked as deposited');
     assert.strictEqual(uAfterDep.depositBalance, 100.00);
-    // Wagering requirement: 50% of ₹150 (₹75) + 50% of ₹100 (₹50) = ₹125
+    // Wagering requirement: 50% of total wallet balance after deposit (₹150 bonus + ₹100 deposit = ₹250 × 50% = ₹125)
     assert.strictEqual(uAfterDep.wageringRequired, 125.00);
     assert.strictEqual(uAfterDep.wageringRemaining, 125.00);
 
