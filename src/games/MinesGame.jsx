@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Bomb, Diamond, Sparkles, Volume2, ShieldCheck, RefreshCw, Dices } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
+import { storage } from '../services/storage';
 
 // Dynamic multiplier formula for 16-tile grid based on remaining unrevealed diamonds vs bombs
-function calculateMultiplier(minesCount, diamondsRevealed) {
+function calculateMultiplier(minesCount, diamondsRevealed, isNonDepositorFirstClick = false) {
+  if (isNonDepositorFirstClick && diamondsRevealed === 1) {
+    return 1.10;
+  }
   let multiplier = 0.98; // 2% house edge
   for (let i = 0; i < diamondsRevealed; i++) {
     multiplier *= (16 - i) / (16 - minesCount - i);
@@ -28,8 +32,37 @@ export default function MinesGame({ onBack }) {
   const [showFairModal, setShowFairModal] = useState(false);
   const [autoCashoutTarget, setAutoCashoutTarget] = useState('');
 
-  const currentMultiplier = calculateMultiplier(minesCount, revealedCount);
-  const nextMultiplier = calculateMultiplier(minesCount, revealedCount + 1);
+  // Determine if the user has ever deposited based on database/storage records
+  const checkUserHasDeposited = () => {
+    if (!user) return false;
+    // Check user object directly
+    if (user.hasDeposited === true || user.is_deposited === true) return true;
+    if (Number(user.totalDeposited || user.total_deposited || 0) > 0) return true;
+
+    // Check storage user record
+    try {
+      const freshUser = storage.getCurrentUser?.();
+      if (freshUser) {
+        if (freshUser.hasDeposited === true || freshUser.is_deposited === true) return true;
+        if (Number(freshUser.totalDeposited || freshUser.total_deposited || 0) > 0) return true;
+      }
+      const deposits = storage.getDeposits?.() || [];
+      const hasApprovedDeposit = deposits.some(
+        d => (d.userId === user.id || d.user_id === user.id) && (d.status === 'APPROVED' || d.status === 'CONFIRMED')
+      );
+      if (hasApprovedDeposit) return true;
+    } catch (e) {
+      console.error('Error checking user deposit status in Mines:', e);
+    }
+
+    return false;
+  };
+
+  const isUserDeposited = checkUserHasDeposited();
+  const isNonDepositorFirstTile = !isUserDeposited && revealedCount === 1;
+
+  const currentMultiplier = calculateMultiplier(minesCount, revealedCount, !isUserDeposited);
+  const nextMultiplier = calculateMultiplier(minesCount, revealedCount + 1, !isUserDeposited);
   const potentialWinnings = Number((Number(betAmount) * currentMultiplier).toFixed(2));
 
   // Auto-cashout trigger
@@ -72,7 +105,32 @@ export default function MinesGame({ onBack }) {
   const handleTileClick = (index) => {
     if (!isPlaying || revealed[index] || gameOver) return;
 
-    const isBomb = bombsLocations.includes(index);
+    let activeBombs = [...bombsLocations];
+
+    // Check user deposit status for First Click Guarantee
+    const hasDepositedUser = checkUserHasDeposited();
+
+    // Condition 2: If the user HAS NOT deposited (Non-Depositor)
+    if (!hasDepositedUser && revealedCount === 0) {
+      // It is the first click of the round: guarantee safe diamond by shifting bomb if present
+      if (activeBombs.includes(index)) {
+        // Find empty slots that do not contain a bomb and are not the clicked tile
+        const candidateSlots = [];
+        for (let i = 0; i < 16; i++) {
+          if (i !== index && !activeBombs.includes(i)) {
+            candidateSlots.push(i);
+          }
+        }
+        if (candidateSlots.length > 0) {
+          const shiftTarget = candidateSlots[Math.floor(Math.random() * candidateSlots.length)];
+          activeBombs = activeBombs.map(b => (b === index ? shiftTarget : b));
+          setBombsLocations(activeBombs);
+        }
+      }
+    }
+    // Condition 3: If the user HAS deposited (Deposited User) -> Completely bypass this feature (normal random behavior)
+
+    const isBomb = activeBombs.includes(index);
     const newRevealed = [...revealed];
     newRevealed[index] = true;
     setRevealed(newRevealed);
@@ -83,7 +141,7 @@ export default function MinesGame({ onBack }) {
       setIsPlaying(false);
       // Reveal all bombs
       const fullGrid = [...grid];
-      bombsLocations.forEach((bIdx) => {
+      activeBombs.forEach((bIdx) => {
         fullGrid[bIdx] = 'bomb';
         newRevealed[bIdx] = true;
       });
