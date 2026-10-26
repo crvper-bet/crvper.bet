@@ -141,7 +141,7 @@ export default function GamesGrid({ onSelectGame }) {
       category: 'originals',
       name: 'CIRCUIT PLINKO',
       tag: 'PHYSICS PEG BOARD',
-      badge: '1000X MULTIPLIER',
+      badge: '100X MULTIPLIER',
       rtp: '99% RTP',
       accentColor: '#06b6d4',
       gradient: 'from-[#0b1b26] via-[#0b1622] to-[#09101b]',
@@ -166,7 +166,7 @@ export default function GamesGrid({ onSelectGame }) {
           </div>
           <div className="flex space-x-1.5 text-[9px] font-mono text-cyan-300 font-bold">
             <span>0.2x</span>
-            <span className="text-amber-400 font-black">1000x</span>
+            <span className="text-amber-400 font-black">100x</span>
           </div>
         </div>
       )

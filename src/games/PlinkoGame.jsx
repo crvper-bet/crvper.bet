@@ -4,13 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { sounds } from '../services/audio';
 
 // Plinko Multiplier Bins & Row Geometries based on Risk Level:
-// Low: 8 rows, 9 bins (conservative spread, compact pyramid)
-// Medium: 10 rows, 11 bins (balanced spread)
-// High: 12 rows, 13 bins (widest spread with 1000x jackpot potential)
+// Low: 8 rows, 9 bins (maximum 10x)
+// Medium: 10 rows, 11 bins (maximum 50x)
+// High: 12 rows, 13 bins (maximum 100x)
 const RISK_CONFIG = {
   low: {
     rows: 8,
-    multipliers: [12, 4, 1.8, 1.1, 0.5, 1.1, 1.8, 4, 12]
+    multipliers: [10, 4, 1.8, 1.1, 0.5, 1.1, 1.8, 4, 10]
   },
   medium: {
     rows: 10,
@@ -18,7 +18,7 @@ const RISK_CONFIG = {
   },
   high: {
     rows: 12,
-    multipliers: [1000, 100, 10, 2.8, 1.0, 0.5, 0.4, 0.5, 1.0, 2.8, 10, 100, 1000]
+    multipliers: [100, 25, 10, 2.5, 1.0, 0.5, 0.3, 0.5, 1.0, 2.5, 10, 25, 100]
   }
 };
 
@@ -203,18 +203,25 @@ export default function PlinkoGame({ onBack }) {
     modifyBalance(-totalWager, `Circuit Plinko (${ballCount} Balls)`);
 
     // Spawn balls with exact 97% logic:
-    // 97% of balls target middle bins (0.4x - 1.2x: bins 3, 4, 5, 6, 7)
-    // 3% of balls target outer bins >= 2.0x (bins 0, 1, 2, 8, 9, 10)
+    // 97% of balls target middle bins
+    // 3% of balls target outer bins (up to max multiplier: 10x, 50x, 100x)
     for (let i = 0; i < ballCount; i++) {
       setTimeout(() => {
-        const isJackpot = Math.random() < 0.03; // Only 3% chance to hit >= 2.0x!
+        const isJackpot = Math.random() < 0.03; // Only 3% chance to hit outer bins!
+        const mid = Math.floor(numBins / 2);
+        const centerBins = [mid - 1, mid, mid, mid + 1];
+        if (mid - 2 >= 0) centerBins.push(mid - 2);
+        if (mid + 2 < numBins) centerBins.push(mid + 2);
+
+        const outerBins = [];
+        for (let bIdx = 0; bIdx < numBins; bIdx++) {
+          if (!centerBins.includes(bIdx)) outerBins.push(bIdx);
+        }
+
         let chosenBin;
-        if (isJackpot) {
-          const outerBins = [0, 1, 2, 8, 9, 10];
+        if (isJackpot && outerBins.length > 0) {
           chosenBin = outerBins[Math.floor(Math.random() * outerBins.length)];
         } else {
-          // 97% probability hits center bins (0.4x to 1.2x)
-          const centerBins = [3, 4, 5, 5, 5, 6, 7];
           chosenBin = centerBins[Math.floor(Math.random() * centerBins.length)];
         }
 
@@ -304,9 +311,9 @@ export default function PlinkoGame({ onBack }) {
             </span>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'low', label: 'Low (8 Rows • 12x)' },
+                { id: 'low', label: 'Low (8 Rows • 10x)' },
                 { id: 'medium', label: 'Med (10 Rows • 50x)' },
-                { id: 'high', label: 'High (12 Rows • 1000x)' },
+                { id: 'high', label: 'High (12 Rows • 100x)' },
               ].map((r) => (
                 <button
                   key={r.id}
